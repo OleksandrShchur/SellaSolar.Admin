@@ -1,0 +1,6 @@
+@SellaSolar.Admin.Server_HostAddress = http://localhost:5101
+
+GET {{SellaSolar.Admin.Server_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

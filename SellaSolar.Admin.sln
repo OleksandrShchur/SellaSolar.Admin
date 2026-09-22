@@ -1,0 +1,33 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.37628.2 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{54A90642-561A-4BB1-A94E-469ADEE60C69}") = "sellasolar.admin.client", "sellasolar.admin.client\sellasolar.admin.client.esproj", "{5DC4AB67-D170-25C3-6D67-E45C4591C6AB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SellaSolar.Admin.Server", "SellaSolar.Admin.Server\SellaSolar.Admin.Server.csproj", "{440D6E62-2FF0-4E06-87BA-B2D4838C1D00}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5DC4AB67-D170-25C3-6D67-E45C4591C6AB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5DC4AB67-D170-25C3-6D67-E45C4591C6AB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5DC4AB67-D170-25C3-6D67-E45C4591C6AB}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
+		{5DC4AB67-D170-25C3-6D67-E45C4591C6AB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5DC4AB67-D170-25C3-6D67-E45C4591C6AB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5DC4AB67-D170-25C3-6D67-E45C4591C6AB}.Release|Any CPU.Deploy.0 = Release|Any CPU
+		{440D6E62-2FF0-4E06-87BA-B2D4838C1D00}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{440D6E62-2FF0-4E06-87BA-B2D4838C1D00}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{440D6E62-2FF0-4E06-87BA-B2D4838C1D00}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{440D6E62-2FF0-4E06-87BA-B2D4838C1D00}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {52E8704C-B396-4DFD-9F5C-F5256C9ECF23}
+	EndGlobalSection
+EndGlobal
