@@ -1,4 +1,7 @@
-### C#
+### Uploads
+SellaSolar.Admin.Server/wwwroot/uploads/**
+!SellaSolar.Admin.Server/wwwroot/uploads/.gitkeep
+
 # Build results
 [Bb]in/
 [Oo]bj/
