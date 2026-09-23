@@ -1,5 +1,7 @@
 import { apiGet, apiSend, apiUpload } from './client'
 import type {
+  AppRole,
+  CurrentUser,
   ProjectDetail,
   ProjectItem,
   ProjectListItem,
@@ -8,9 +10,38 @@ import type {
   ProjectWorker,
   WarehouseItemDetail,
   WarehouseItemList,
+  UserListItem,
   Worker,
   WorkerType,
 } from './types'
+
+export const authApi = {
+  me: () => apiGet<CurrentUser>('/api/auth/me'),
+  changePassword: (body: { currentPassword: string; newPassword: string }) =>
+    apiSend<void>('/api/auth/change-password', 'POST', body),
+}
+
+export const usersApi = {
+  list: (params?: { isActive?: boolean; isBlocked?: boolean; search?: string }) =>
+    apiGet<UserListItem[]>(
+      `/api/users${qs({
+        isActive: params?.isActive,
+        isBlocked: params?.isBlocked,
+        search: params?.search,
+      })}`,
+    ),
+  suggestUsername: (fullName: string) =>
+    apiGet<{ suggestedUsername: string }>(`/api/users/suggest-username${qs({ fullName })}`),
+  create: (body: { username: string; password: string; fullName: string; role: AppRole }) =>
+    apiSend<UserListItem>('/api/users', 'POST', body),
+  update: (id: string, body: { fullName: string; role: AppRole }) =>
+    apiSend<UserListItem>(`/api/users/${id}`, 'PUT', body),
+  resetPassword: (id: string, body: { newPassword: string }) =>
+    apiSend<void>(`/api/users/${id}/reset-password`, 'POST', body),
+  activate: (id: string) => apiSend<void>(`/api/users/${id}/activate`, 'POST'),
+  deactivate: (id: string) => apiSend<void>(`/api/users/${id}/deactivate`, 'POST'),
+  unblock: (id: string) => apiSend<void>(`/api/users/${id}/unblock`, 'POST'),
+}
 
 function qs(params: Record<string, string | boolean | undefined | null>): string {
   const search = new URLSearchParams()

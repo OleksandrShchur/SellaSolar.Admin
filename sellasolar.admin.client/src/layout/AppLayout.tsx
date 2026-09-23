@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link as RouterLink, Outlet, useLocation } from 'react-router-dom'
+import { Link as RouterLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   AppBar,
   BottomNavigation,
@@ -11,6 +11,8 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  Menu,
+  MenuItem,
   Toolbar,
   Tooltip,
   Typography,
@@ -23,19 +25,20 @@ import SolarPowerIcon from '@mui/icons-material/SolarPower'
 import FolderSpecialIcon from '@mui/icons-material/FolderSpecial'
 import WarehouseIcon from '@mui/icons-material/Warehouse'
 import GroupsIcon from '@mui/icons-material/Groups'
+import ManageAccountsIcon from '@mui/icons-material/ManageAccounts'
+import AssignmentIndIcon from '@mui/icons-material/AssignmentInd'
+import AccountCircleIcon from '@mui/icons-material/AccountCircle'
 import { brandColors } from '../theme'
+import { useAuth } from '../auth/AuthContext'
+import ChangePasswordDialog from '../components/ChangePasswordDialog'
 
 const DRAWER_WIDTH = 260
 const DRAWER_WIDTH_COLLAPSED = 72
 const BOTTOM_NAV_HEIGHT = 64
 
-const navItems = [
-  { to: '/projects', label: 'Проекти', icon: <FolderSpecialIcon /> },
-  { to: '/warehouse', label: 'Склад', icon: <WarehouseIcon /> },
-  { to: '/workers', label: 'Працівники', icon: <GroupsIcon /> },
-] as const
-
 function sectionTitle(pathname: string): string {
+  if (pathname.startsWith('/users')) return 'Користувачі'
+  if (pathname.startsWith('/my-jobs')) return 'Мої завдання'
   if (pathname.startsWith('/warehouse')) return 'Склад'
   if (pathname.startsWith('/workers')) return 'Працівники'
   if (pathname.startsWith('/projects')) return 'Проекти'
@@ -43,10 +46,32 @@ function sectionTitle(pathname: string): string {
 }
 
 export default function AppLayout() {
+  const { user, logout, hasRole } = useAuth()
+  const navigate = useNavigate()
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const [desktopCollapsed, setDesktopCollapsed] = useState(false)
+  const [accountAnchor, setAccountAnchor] = useState<null | HTMLElement>(null)
+  const [passwordOpen, setPasswordOpen] = useState(false)
   const location = useLocation()
+
+  const navItems = useMemo(() => {
+    const items = []
+    const isFieldWorker = hasRole('Worker') && !hasRole('Admin') && !hasRole('Manager')
+    if (isFieldWorker) {
+      items.push({ to: '/my-jobs', label: 'Мої завдання', icon: <AssignmentIndIcon /> })
+    } else {
+      items.push(
+        { to: '/projects', label: 'Проекти', icon: <FolderSpecialIcon /> },
+        { to: '/warehouse', label: 'Склад', icon: <WarehouseIcon /> },
+        { to: '/workers', label: 'Працівники', icon: <GroupsIcon /> },
+      )
+      if (hasRole('Admin')) {
+        items.push({ to: '/users', label: 'Користувачі', icon: <ManageAccountsIcon /> })
+      }
+    }
+    return items
+  }, [hasRole])
 
   const drawerWidth = desktopCollapsed ? DRAWER_WIDTH_COLLAPSED : DRAWER_WIDTH
   const title = useMemo(() => sectionTitle(location.pathname), [location.pathname])
@@ -183,6 +208,44 @@ export default function AppLayout() {
               title
             )}
           </Typography>
+          <Tooltip title={user?.fullName ?? 'Обліковий запис'}>
+            <IconButton
+              aria-label="Меню облікового запису"
+              onClick={(e) => setAccountAnchor(e.currentTarget)}
+              sx={{ flexShrink: 0 }}
+            >
+              <AccountCircleIcon />
+            </IconButton>
+          </Tooltip>
+          <Menu
+            anchorEl={accountAnchor}
+            open={Boolean(accountAnchor)}
+            onClose={() => setAccountAnchor(null)}
+          >
+            <MenuItem disabled sx={{ opacity: 1, fontWeight: 600 }}>
+              {user?.fullName}
+            </MenuItem>
+            <MenuItem disabled sx={{ opacity: 0.7, fontSize: '0.85rem' }}>
+              @{user?.username}
+            </MenuItem>
+            <MenuItem
+              onClick={() => {
+                setAccountAnchor(null)
+                setPasswordOpen(true)
+              }}
+            >
+              Змінити пароль
+            </MenuItem>
+            <MenuItem
+              onClick={() => {
+                setAccountAnchor(null)
+                void logout().then(() => navigate('/login', { replace: true }))
+              }}
+            >
+              Вийти
+            </MenuItem>
+          </Menu>
+          <ChangePasswordDialog open={passwordOpen} onClose={() => setPasswordOpen(false)} />
         </Toolbar>
       </AppBar>
 

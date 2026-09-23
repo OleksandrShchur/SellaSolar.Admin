@@ -1,6 +1,19 @@
 export const statusLabel = (status: string) =>
   status === 'Completed' ? 'Завершено' : 'У роботі'
 
+export const appRoleLabel = (role: string) => {
+  switch (role) {
+    case 'Admin':
+      return 'Адміністратор'
+    case 'Manager':
+      return 'Менеджер'
+    case 'Worker':
+      return 'Виконавець'
+    default:
+      return role
+  }
+}
+
 export const workerTypeLabel = (type: string) =>
   type === 'Assembler' ? 'Складальник' : 'Монтажник'
 

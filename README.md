@@ -19,6 +19,7 @@ database/
   001_CreateSchema.sql
   002_SeedData.sql
 SellaSolar.Admin.Domain/
+SellaSolar.Admin.Infrastructure/ # ASP.NET Identity, auth DbContext, seeding
 SellaSolar.Admin.Data/          # scaffolded entities + DbContext
 SellaSolar.Admin.Application/   # services, DTOs, ProjectMaterialsService
 SellaSolar.Admin.Server/        # REST controllers, uploads, SPA host
@@ -52,6 +53,7 @@ LocalDB (already used in `appsettings`):
 ```powershell
 sqllocaldb start MSSQLLocalDB
 sqlcmd -S "(localdb)\MSSQLLocalDB" -E -i database\001_CreateSchema.sql
+sqlcmd -S "(localdb)\MSSQLLocalDB" -E -i database\004_IdentitySchema.sql
 # Prefer PowerShell seed for correct Ukrainian Unicode:
 powershell -ExecutionPolicy Bypass -File database\003_SeedData.ps1
 # Alternative (may mangle Cyrillic depending on console code page):
@@ -126,17 +128,21 @@ Vite proxies `/api` and `/uploads` to the backend (see `vite.config.ts`).
 | Warehouse | `GET/POST /api/warehouse-items`, `GET/PUT/DELETE /api/warehouse-items/{id}`, `GET /api/warehouse-items/categories` |
 | Workers | `GET/POST /api/workers`, `GET/PUT/DELETE /api/workers/{id}` |
 
-No authentication in this MVP.
+Authentication: cookie session, username + password (see `Auth` in appsettings). Initial admins are seeded on startup when no admin exists yet.
+
+| Auth / users | `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`, `POST /api/auth/change-password`, admin `GET/POST/PUT /api/users`, reset-password, activate, deactivate, unblock |
+
+Recovery SQL if a user is blocked: `database/005_UnblockUserByUsername.sql`.
 
 ## Frontend screens
 
+- **Вхід** — username/password, Ukrainian UI
 - **Проекти** — list (status/search), create, detail tabs: Загальна інформація / Матеріали / Працівники / Фото
 - **Склад** — CRUD, low-stock filter, detail shows projects using the item
 - **Працівники** — CRUD for assemblers (Складальник) and installers (Монтажник)
+- **Користувачі** (Admin) — create/edit users, reset password, activate/deactivate, unblock
 
 ## Known follow-ups
-
-- Authentication / authorization
 - Soft-delete / audit log
 - Purchase orders for `NeedsPurchase` items
 - Optional delayed stock reservation instead of immediate deduction

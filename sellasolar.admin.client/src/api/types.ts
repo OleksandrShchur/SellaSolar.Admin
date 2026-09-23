@@ -1,5 +1,25 @@
 export type ProjectStatus = 'InProgress' | 'Completed'
 export type WorkerType = 'Assembler' | 'Installer'
+export type AppRole = 'Admin' | 'Manager' | 'Worker'
+
+export interface CurrentUser {
+  userId: string
+  username: string
+  fullName: string
+  roles: AppRole[]
+}
+
+export interface UserListItem {
+  id: string
+  username: string
+  fullName: string
+  role: AppRole
+  isActive: boolean
+  isBlocked: boolean
+  blockedAt?: string | null
+  failedLoginCount: number
+  createdAt: string
+}
 
 export interface CustomData {
   key: string

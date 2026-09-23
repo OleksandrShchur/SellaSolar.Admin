@@ -1,5 +1,7 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SellaSolar.Admin.Application.Common;
+using SellaSolar.Admin.Domain.Authorization;
 using SellaSolar.Admin.Application.DTOs;
 using SellaSolar.Admin.Application.Services;
 
@@ -7,6 +9,7 @@ namespace SellaSolar.Admin.Server.Controllers;
 
 [ApiController]
 [Route("api/projects")]
+[Authorize(Policy = AppPolicies.CanManageProjects)]
 public class ProjectsController : ControllerBase
 {
     private readonly ProjectService _projects;
