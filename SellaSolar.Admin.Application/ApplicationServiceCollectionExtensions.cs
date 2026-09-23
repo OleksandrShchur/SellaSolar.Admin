@@ -11,6 +11,8 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<ProjectService>();
         services.AddScoped<WarehouseService>();
         services.AddScoped<WorkerService>();
+        services.AddScoped<AuthService>();
+        services.AddScoped<UserManagementService>();
         return services;
     }
 }

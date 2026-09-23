@@ -28,6 +28,7 @@
     <ProjectReference Include="..\SellaSolar.Admin.Application\SellaSolar.Admin.Application.csproj" />
     <ProjectReference Include="..\SellaSolar.Admin.Data\SellaSolar.Admin.Data.csproj" />
     <ProjectReference Include="..\SellaSolar.Admin.Domain\SellaSolar.Admin.Domain.csproj" />
+    <ProjectReference Include="..\SellaSolar.Admin.Infrastructure\SellaSolar.Admin.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>
