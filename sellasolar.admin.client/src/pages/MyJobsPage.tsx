@@ -7,14 +7,13 @@ import {
   List,
   ListItemButton,
   ListItemText,
-  Paper,
   Stack,
   Typography,
 } from '@mui/material'
 import { Link as RouterLink } from 'react-router-dom'
 import { projectsApi } from '../api'
 import type { ProjectListItem } from '../api/types'
-import { formatDate, statusLabel } from '../utils/labels'
+import { formatDate, statusChipColor, statusLabel } from '../utils/labels'
 import { useAuth } from '../auth/AuthContext'
 
 export default function MyJobsPage() {
@@ -39,23 +38,43 @@ export default function MyJobsPage() {
   }, [])
 
   return (
-    <Stack spacing={2}>
-      <Typography variant="h5" fontWeight={700}>
-        Мої завдання
+    <Stack spacing={2.5}>
+      <Typography variant="body2" color="text.secondary">
+        Проекти, на які вас призначено
       </Typography>
 
-      {error && <Alert severity="error">{error}</Alert>}
+      {error && (
+        <Alert severity="error" onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
 
       {loading ? (
         <Box display="flex" justifyContent="center" py={4}>
           <CircularProgress />
         </Box>
       ) : rows.length === 0 ? (
-        <Paper sx={{ p: 3 }}>
+        <Box
+          sx={{
+            p: 3,
+            borderRadius: 2,
+            border: '1px solid',
+            borderColor: 'divider',
+            bgcolor: 'background.paper',
+          }}
+        >
           <Typography color="text.secondary">На вас ще не призначено жодного проекту.</Typography>
-        </Paper>
+        </Box>
       ) : (
-        <Paper variant="outlined">
+        <Box
+          sx={{
+            borderRadius: 2,
+            border: '1px solid',
+            borderColor: 'divider',
+            bgcolor: 'background.paper',
+            overflow: 'hidden',
+          }}
+        >
           <List disablePadding>
             {rows.map((row) => (
               <ListItemButton
@@ -65,18 +84,23 @@ export default function MyJobsPage() {
                 divider
               >
                 <ListItemText
-                  primary={row.name}
+                  primary={
+                    <Typography fontWeight={600} component="span">
+                      {row.name}
+                    </Typography>
+                  }
                   secondary={`${row.address} · ${row.customerName} · з ${formatDate(row.startDate)}`}
                 />
                 <Chip
                   size="small"
-                  color={row.status === 'Completed' ? 'default' : 'primary'}
+                  color={statusChipColor(row.status)}
+                  variant={row.status === 'Completed' ? 'outlined' : 'filled'}
                   label={statusLabel(row.status)}
                 />
               </ListItemButton>
             ))}
           </List>
-        </Paper>
+        </Box>
       )}
     </Stack>
   )

@@ -36,7 +36,7 @@ public class ProjectService
         if (!string.IsNullOrWhiteSpace(status))
         {
             if (!ProjectStatuses.IsValid(status))
-                throw new ValidationException("Status must be InProgress or Completed.");
+                throw new ValidationException("Status must be Awaiting, InProgress, or Completed.");
             query = query.Where(p => p.Status == status);
         }
 
@@ -162,7 +162,7 @@ public class ProjectService
     public async Task<ProjectDetailDto> UpdateStatusAsync(int id, string status, CancellationToken ct = default)
     {
         if (!ProjectStatuses.IsValid(status))
-            throw new ValidationException("Status must be InProgress or Completed.");
+            throw new ValidationException("Status must be Awaiting, InProgress, or Completed.");
 
         var project = await _db.Projects.FirstOrDefaultAsync(p => p.Id == id, ct)
             ?? throw new NotFoundException($"Project {id} was not found.");
@@ -170,6 +170,8 @@ public class ProjectService
         project.Status = status;
         if (status == ProjectStatuses.Completed && project.EndDate is null)
             project.EndDate = DateTime.UtcNow;
+        if (status == ProjectStatuses.InProgress && project.StartDate is null)
+            project.StartDate = DateTime.UtcNow;
         project.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync(ct);
@@ -309,7 +311,7 @@ public class ProjectService
         if (string.IsNullOrWhiteSpace(customerPhone))
             throw new ValidationException("CustomerPhone is required.");
         if (!ProjectStatuses.IsValid(status))
-            throw new ValidationException("Status must be InProgress or Completed.");
+            throw new ValidationException("Status must be Awaiting, InProgress, or Completed.");
     }
 
     private static string? NormalizeEmail(string? email) =>
