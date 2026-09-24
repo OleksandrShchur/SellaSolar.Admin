@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import {
   Alert,
   Box,
-  Chip,
   CircularProgress,
   List,
   ListItemButton,
@@ -13,7 +12,8 @@ import {
 import { Link as RouterLink } from 'react-router-dom'
 import { projectsApi } from '../api'
 import type { ProjectListItem } from '../api/types'
-import { formatDate, statusChipColor, statusLabel } from '../utils/labels'
+import { formatDate } from '../utils/labels'
+import { ProjectStatusChip } from '../components/StatusChips'
 import { useAuth } from '../auth/AuthContext'
 
 export default function MyJobsPage() {
@@ -91,12 +91,7 @@ export default function MyJobsPage() {
                   }
                   secondary={`${row.address} · ${row.customerName} · з ${formatDate(row.startDate)}`}
                 />
-                <Chip
-                  size="small"
-                  color={statusChipColor(row.status)}
-                  variant={row.status === 'Completed' ? 'outlined' : 'filled'}
-                  label={statusLabel(row.status)}
-                />
+                <ProjectStatusChip status={row.status} />
               </ListItemButton>
             ))}
           </List>

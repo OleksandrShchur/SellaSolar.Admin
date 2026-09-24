@@ -29,8 +29,10 @@ import type {
   WarehouseItemList,
   UserListItem,
 } from '../api/types'
-import { formatDate, formatDateTime, formatNumber, statusChipColor, statusLabel, workerTypeLabel } from '../utils/labels'
+import { formatDate, formatDateTime, formatNumber, workerTypeLabel } from '../utils/labels'
 import { useAuth } from '../auth/AuthContext'
+import { DetailField, DetailFieldGrid, DetailPanel, DetailSection } from '../components/DetailPanel'
+import { ProjectStatusChip } from '../components/StatusChips'
 
 interface TabPanelProps {
   value: number
@@ -276,14 +278,9 @@ export default function ProjectDetailPage() {
               <Typography variant="h6" fontWeight={700} noWrap>
                 {project.name}
               </Typography>
-              <Chip
-                size="small"
-                label={statusLabel(project.status)}
-                color={statusChipColor(project.status)}
-                variant={project.status === 'Completed' ? 'outlined' : 'filled'}
-              />
+              <ProjectStatusChip status={project.status} />
             </Stack>
-            <Typography variant="body2" color="text.secondary" mt={0.5}>
+            <Typography variant="body2" color="text.secondary" mt={0.5} fontWeight={600}>
               {project.address}
             </Typography>
           </Box>
@@ -302,15 +299,7 @@ export default function ProjectDetailPage() {
         </Alert>
       )}
 
-      <Box
-        sx={{
-          borderRadius: 2,
-          border: '1px solid',
-          borderColor: 'divider',
-          bgcolor: 'background.paper',
-          overflow: 'hidden',
-        }}
-      >
+      <DetailPanel sx={{ p: 0, overflow: 'hidden' }}>
         <Tabs
           value={tab}
           onChange={(_, v) => setTab(v)}
@@ -319,8 +308,21 @@ export default function ProjectDetailPage() {
             px: 1,
             borderBottom: '1px solid',
             borderColor: 'divider',
-            bgcolor: 'action.hover',
-            '& .MuiTab-root': { textTransform: 'none', fontWeight: 600 },
+            bgcolor: 'rgba(21, 18, 14, 0.03)',
+            '& .MuiTab-root': {
+              textTransform: 'none',
+              fontWeight: 600,
+              color: 'text.secondary',
+              minHeight: 48,
+            },
+            '& .Mui-selected': {
+              color: 'text.primary',
+            },
+            '& .MuiTabs-indicator': {
+              height: 3,
+              borderRadius: '3px 3px 0 0',
+              backgroundColor: 'primary.dark',
+            },
           }}
         >
           <Tab label="Загальна інформація" />
@@ -329,45 +331,60 @@ export default function ProjectDetailPage() {
           <Tab label="Фото" />
         </Tabs>
 
-        <Box sx={{ p: { xs: 1.5, sm: 2 } }}>
+        <Box sx={{ p: { xs: 2, sm: 2.5 } }}>
           <TabPanel value={tab} index={0}>
-            <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
-              <Box flex={1}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Опис
-                </Typography>
-                <Typography mb={2}>{project.description || '—'}</Typography>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Клієнт
-                </Typography>
-                <Typography>
-                  {project.customerName} · {project.customerPhone}
-                  {project.customerEmail ? ` · ${project.customerEmail}` : ''}
-                </Typography>
-              </Box>
-              <Box flex={1}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Дати
-                </Typography>
-                <Typography>
-                  Початок: {formatDate(project.startDate)} · Кінець: {formatDate(project.endDate)}
-                </Typography>
-                <Typography mt={1} color="text.secondary">
-                  Створено: {formatDateTime(project.createdAt)} · Оновлено:{' '}
-                  {formatDateTime(project.updatedAt)}
-                </Typography>
-              </Box>
-            </Stack>
-            <Typography variant="subtitle1" fontWeight={700} mt={3} mb={1}>
-              Додаткові дані
-            </Typography>
-            {project.customData.length === 0 && (
-              <Typography color="text.secondary">Немає</Typography>
-            )}
-            <Stack direction="row" flexWrap="wrap" gap={1}>
-              {project.customData.map((item) => (
-                <Chip key={`${item.key}-${item.value}`} label={`${item.key}: ${item.value}`} />
-              ))}
+            <Stack spacing={3}>
+              <DetailFieldGrid columns={{ xs: 1, sm: 2 }}>
+                <DetailField label="Опис" value={project.description || '—'} />
+                <DetailField
+                  label="Клієнт"
+                  value={[
+                    project.customerName,
+                    project.customerPhone,
+                    project.customerEmail,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ') || '—'}
+                />
+                <DetailField label="Початок" value={formatDate(project.startDate)} />
+                <DetailField label="Кінець" value={formatDate(project.endDate)} />
+                <DetailField label="Створено" value={formatDateTime(project.createdAt)} />
+                <DetailField label="Оновлено" value={formatDateTime(project.updatedAt)} />
+              </DetailFieldGrid>
+
+              <DetailSection title="Додаткові дані">
+                {project.customData.length === 0 ? (
+                  <Typography color="text.secondary">Немає</Typography>
+                ) : (
+                  <Stack direction="row" flexWrap="wrap" gap={1}>
+                    {project.customData.map((item) => (
+                      <Chip
+                        key={`${item.key}-${item.value}`}
+                        variant="outlined"
+                        color="primary"
+                        label={
+                          <Box component="span" sx={{ display: 'inline-flex', gap: 0.75 }}>
+                            <Box component="span" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+                              {item.key}:
+                            </Box>
+                            <Box component="span" sx={{ color: 'text.primary', fontWeight: 700 }}>
+                              {item.value}
+                            </Box>
+                          </Box>
+                        }
+                        sx={{
+                          height: 'auto',
+                          py: 0.75,
+                          px: 0.25,
+                          borderWidth: 1.5,
+                          bgcolor: 'rgba(240, 166, 31, 0.08)',
+                          '& .MuiChip-label': { px: 1.25 },
+                        }}
+                      />
+                    ))}
+                  </Stack>
+                )}
+              </DetailSection>
             </Stack>
           </TabPanel>
 
@@ -387,10 +404,10 @@ export default function ProjectDetailPage() {
                   sx={{
                     p: 2,
                     borderRadius: 2,
-                    border: '1px solid',
+                    border: '1.5px solid',
                     borderColor: 'divider',
-                    bgcolor: 'background.default',
-                    '&:hover': { boxShadow: 1 },
+                    bgcolor: 'rgba(243, 235, 220, 0.45)',
+                    '&:hover': { boxShadow: 1, borderColor: 'primary.dark' },
                   }}
                 >
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ sm: 'center' }}>
@@ -444,10 +461,10 @@ export default function ProjectDetailPage() {
                   sx={{
                     p: 2,
                     borderRadius: 2,
-                    border: '1px solid',
+                    border: '1.5px solid',
                     borderColor: 'divider',
-                    bgcolor: 'background.default',
-                    '&:hover': { boxShadow: 1 },
+                    bgcolor: 'rgba(243, 235, 220, 0.45)',
+                    '&:hover': { boxShadow: 1, borderColor: 'primary.dark' },
                   }}
                 >
                   <Stack direction="row" alignItems="center" spacing={1}>
@@ -515,9 +532,9 @@ export default function ProjectDetailPage() {
                   sx={{
                     borderRadius: 2,
                     overflow: 'hidden',
-                    border: '1px solid',
+                    border: '1.5px solid',
                     borderColor: 'divider',
-                    bgcolor: 'background.default',
+                    bgcolor: 'rgba(243, 235, 220, 0.45)',
                   }}
                 >
                   <Box
@@ -552,7 +569,7 @@ export default function ProjectDetailPage() {
             )}
           </TabPanel>
         </Box>
-      </Box>
+      </DetailPanel>
 
       <Dialog open={editOpen} onClose={() => setEditOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>Редагувати проект</DialogTitle>

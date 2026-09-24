@@ -17,7 +17,10 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import { warehouseApi } from '../api'
 import type { WarehouseItemDetail } from '../api/types'
-import { formatNumber, statusChipColor, statusLabel } from '../utils/labels'
+import { formatNumber } from '../utils/labels'
+import { DetailField, DetailFieldGrid, DetailPanel } from '../components/DetailPanel'
+import { ProjectStatusChip } from '../components/StatusChips'
+import { brandColors } from '../theme'
 
 export default function WarehouseDetailPage() {
   const { id } = useParams()
@@ -143,45 +146,17 @@ export default function WarehouseDetailPage() {
         </Alert>
       )}
 
-      <Box
-        sx={{
-          p: { xs: 1.5, sm: 2 },
-          borderRadius: 2,
-          border: '1px solid',
-          borderColor: 'divider',
-          bgcolor: 'background.paper',
-        }}
-      >
-        <Stack spacing={1.25}>
-          <Typography>
-            <Typography component="span" color="text.secondary">
-              Ціна:{' '}
-            </Typography>
-            {formatNumber(item.price)}
-          </Typography>
-          <Typography>
-            <Typography component="span" color="text.secondary">
-              Постачальник:{' '}
-            </Typography>
-            {item.supplier || '—'}
-          </Typography>
-          <Typography>
-            <Typography component="span" color="text.secondary">
-              Поріг низького запасу:{' '}
-            </Typography>
-            {formatNumber(item.lowStockThreshold)}
-          </Typography>
-          <Typography>
-            <Typography component="span" color="text.secondary">
-              Примітки:{' '}
-            </Typography>
-            {item.notes || '—'}
-          </Typography>
-        </Stack>
-      </Box>
+      <DetailPanel>
+        <DetailFieldGrid>
+          <DetailField label="Ціна" value={formatNumber(item.price)} />
+          <DetailField label="Постачальник" value={item.supplier || '—'} />
+          <DetailField label="Поріг низького запасу" value={formatNumber(item.lowStockThreshold)} />
+          <DetailField label="Примітки" value={item.notes || '—'} />
+        </DetailFieldGrid>
+      </DetailPanel>
 
       <Box>
-        <Typography variant="subtitle1" fontWeight={700} mb={1.5}>
+        <Typography variant="subtitle1" fontWeight={800} mb={1.5}>
           Використовується в проектах
         </Typography>
         <Stack spacing={1.5}>
@@ -192,26 +167,27 @@ export default function WarehouseDetailPage() {
               to={`/projects/${p.projectId}`}
               sx={{
                 p: 2,
-                borderRadius: 2,
-                bgcolor: 'background.paper',
-                border: '1px solid',
-                borderColor: 'divider',
+                borderRadius: 2.5,
+                bgcolor: brandColors.cream,
+                border: '1.5px solid',
+                borderColor: brandColors.borderStrong,
+                boxShadow: `0 2px 8px -2px ${brandColors.softShadow}`,
                 textDecoration: 'none',
                 color: 'inherit',
-                '&:hover': { boxShadow: 1 },
+                '&:hover': {
+                  boxShadow: 2,
+                  borderColor: 'primary.dark',
+                },
               }}
             >
               <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
                 <Typography fontWeight={700} flex={1} sx={{ minWidth: 0 }} noWrap>
                   {p.projectName}
                 </Typography>
-                <Chip
-                  size="small"
-                  label={statusLabel(p.projectStatus)}
-                  color={statusChipColor(p.projectStatus)}
-                  variant={p.projectStatus === 'Completed' ? 'outlined' : 'filled'}
-                />
-                <Typography variant="body2">Потрібно: {formatNumber(p.quantityNeeded)}</Typography>
+                <ProjectStatusChip status={p.projectStatus} />
+                <Typography variant="body2" fontWeight={600}>
+                  Потрібно: {formatNumber(p.quantityNeeded)}
+                </Typography>
                 {p.needsPurchase && (
                   <Chip size="small" color="warning" label="Потрібно закупіти" />
                 )}

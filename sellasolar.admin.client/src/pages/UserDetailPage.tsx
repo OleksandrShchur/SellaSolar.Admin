@@ -4,7 +4,6 @@ import {
   Alert,
   Box,
   Button,
-  Chip,
   Dialog,
   DialogActions,
   DialogContent,
@@ -21,30 +20,11 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import { usersApi } from '../api'
 import type { AppRole, UserListItem, WorkerType } from '../api/types'
-import { appRoleLabel, workerTypeLabel } from '../utils/labels'
+import { appRoleLabel } from '../utils/labels'
+import { DetailField, DetailFieldGrid, DetailPanel } from '../components/DetailPanel'
+import { UserStatusChip, workerTypeDisplay } from '../components/StatusChips'
 
 const roles: AppRole[] = ['Admin', 'Worker']
-
-function statusChip(row: UserListItem) {
-  if (row.isBlocked) {
-    return <Chip size="small" color="error" label="Заблоковано" />
-  }
-  if (row.isActive) {
-    return <Chip size="small" color="success" label="Активний" />
-  }
-  return <Chip size="small" variant="outlined" label="Деактивовано" />
-}
-
-function statusText(row: UserListItem) {
-  if (row.isBlocked) return 'Заблоковано'
-  if (row.isActive) return 'Активний'
-  return 'Деактивовано'
-}
-
-function typeLabel(row: UserListItem) {
-  if (row.role === 'Admin') return appRoleLabel('Admin')
-  return row.workerType ? workerTypeLabel(row.workerType) : '—'
-}
 
 export default function UserDetailPage() {
   const { id } = useParams()
@@ -101,7 +81,7 @@ export default function UserDetailPage() {
         phone: editForm.phone,
         workerType: editForm.role === 'Worker' ? editForm.workerType : null,
       })
-      setUser(updated)
+      if (updated) setUser(updated)
       setEditOpen(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Не вдалося зберегти')
@@ -181,10 +161,10 @@ export default function UserDetailPage() {
               <Typography variant="h6" fontWeight={700} noWrap>
                 {user.fullName}
               </Typography>
-              {statusChip(user)}
+              <UserStatusChip user={user} />
             </Stack>
-            <Typography variant="body2" color="text.secondary" mt={0.5}>
-              {appRoleLabel(user.role)} · {typeLabel(user)}
+            <Typography variant="body2" color="text.secondary" mt={0.5} fontWeight={600}>
+              {appRoleLabel(user.role)} · {workerTypeDisplay(user)}
             </Typography>
           </Box>
         </Stack>
@@ -226,42 +206,16 @@ export default function UserDetailPage() {
         </Alert>
       )}
 
-      <Box
-        sx={{
-          p: { xs: 1.5, sm: 2 },
-          borderRadius: 2,
-          border: '1px solid',
-          borderColor: 'divider',
-          bgcolor: 'background.paper',
-        }}
-      >
-        <Stack spacing={1.25}>
-          <Typography>
-            <Typography component="span" color="text.secondary">
-              Роль:{' '}
-            </Typography>
-            {appRoleLabel(user.role)}
-          </Typography>
-          <Typography>
-            <Typography component="span" color="text.secondary">
-              Тип:{' '}
-            </Typography>
-            {typeLabel(user)}
-          </Typography>
-          <Typography>
-            <Typography component="span" color="text.secondary">
-              Телефон (логін):{' '}
-            </Typography>
-            {user.phone || '—'}
-          </Typography>
-          <Typography>
-            <Typography component="span" color="text.secondary">
-              Статус:{' '}
-            </Typography>
-            {statusText(user)}
-          </Typography>
-        </Stack>
-      </Box>
+      <DetailPanel>
+        <DetailFieldGrid>
+          <DetailField label="Роль" value={appRoleLabel(user.role)} />
+          <DetailField label="Тип" value={workerTypeDisplay(user)} />
+          <DetailField label="Телефон (логін)" value={user.phone || '—'} />
+          <DetailField label="Статус">
+            <UserStatusChip user={user} />
+          </DetailField>
+        </DetailFieldGrid>
+      </DetailPanel>
 
       <Dialog open={editOpen} onClose={() => setEditOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>Редагування співробітника</DialogTitle>

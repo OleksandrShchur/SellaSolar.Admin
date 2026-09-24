@@ -32,7 +32,8 @@ import ClearIcon from '@mui/icons-material/Clear'
 import SearchIcon from '@mui/icons-material/Search'
 import { projectsApi } from '../api'
 import type { ProjectListItem, ProjectStatus } from '../api/types'
-import { formatDate, statusChipColor, statusLabel } from '../utils/labels'
+import { formatDate } from '../utils/labels'
+import { ProjectStatusChip } from '../components/StatusChips'
 
 type StatusFilter = '' | ProjectStatus
 
@@ -56,14 +57,7 @@ const emptyForm = {
 }
 
 function statusChip(status: ProjectStatus) {
-  return (
-    <Chip
-      size="small"
-      label={statusLabel(status)}
-      color={statusChipColor(status)}
-      variant={status === 'Completed' ? 'outlined' : 'filled'}
-    />
-  )
+  return <ProjectStatusChip status={status} />
 }
 
 export default function ProjectsPage() {

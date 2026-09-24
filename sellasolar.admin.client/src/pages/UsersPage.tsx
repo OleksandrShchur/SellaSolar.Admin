@@ -37,8 +37,9 @@ import PersonOffOutlinedIcon from '@mui/icons-material/PersonOffOutlined'
 import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined'
 import { usersApi } from '../api'
 import type { AppRole, UserListItem, WorkerType } from '../api/types'
-import { appRoleLabel, workerTypeLabel } from '../utils/labels'
+import { appRoleLabel } from '../utils/labels'
 import RowActionsMenu, { type RowActionItem } from '../components/RowActionsMenu'
+import { RoleChip, UserStatusChip, workerTypeDisplay } from '../components/StatusChips'
 
 type RoleFilter = '' | 'Admin' | 'Worker'
 type StatusFilter = 'active' | 'blocked' | 'inactive'
@@ -60,26 +61,6 @@ const emptyCreate = {
   role: 'Worker' as AppRole,
   phone: '',
   workerType: 'Installer' as WorkerType,
-}
-
-function statusChip(row: UserListItem) {
-  if (row.isBlocked) {
-    return <Chip size="small" color="error" label="Заблоковано" />
-  }
-  if (row.isActive) {
-    return <Chip size="small" color="success" label="Активний" />
-  }
-  return <Chip size="small" variant="outlined" label="Деактивовано" />
-}
-
-function roleChip(role: AppRole) {
-  const color = role === 'Admin' ? 'secondary' : 'primary'
-  return <Chip size="small" color={color} label={appRoleLabel(role)} />
-}
-
-function typeLabel(row: UserListItem) {
-  if (row.role === 'Admin') return appRoleLabel('Admin')
-  return row.workerType ? workerTypeLabel(row.workerType) : '—'
 }
 
 export default function UsersPage() {
@@ -259,7 +240,7 @@ export default function UsersPage() {
       width: 150,
       renderCell: (params) => (
         <Box sx={{ display: 'flex', alignItems: 'center', height: '100%' }}>
-          {roleChip(params.value as AppRole)}
+          <RoleChip role={params.value as AppRole} />
         </Box>
       ),
     },
@@ -267,7 +248,7 @@ export default function UsersPage() {
       field: 'workerType',
       headerName: 'Тип',
       width: 130,
-      valueGetter: (_value, row) => typeLabel(row),
+      valueGetter: (_value, row) => workerTypeDisplay(row),
     },
     {
       field: 'phone',
@@ -281,7 +262,7 @@ export default function UsersPage() {
       width: 140,
       renderCell: (params) => (
         <Box sx={{ display: 'flex', alignItems: 'center', height: '100%' }}>
-          {statusChip(params.row)}
+          <UserStatusChip user={params.row} />
         </Box>
       ),
     },
@@ -512,11 +493,11 @@ export default function UsersPage() {
                     {row.fullName}
                   </Typography>
                   <Stack direction="row" spacing={1} mt={1.25} flexWrap="wrap" useFlexGap>
-                    {roleChip(row.role)}
-                    {typeLabel(row) !== '—' && (
-                      <Chip size="small" variant="outlined" label={typeLabel(row)} />
+                    <RoleChip role={row.role} />
+                    {workerTypeDisplay(row) !== '—' && row.role !== 'Admin' && (
+                      <Chip size="small" variant="outlined" label={workerTypeDisplay(row)} />
                     )}
-                    {statusChip(row)}
+                    <UserStatusChip user={row} />
                   </Stack>
                 </CardContent>
               </CardActionArea>
