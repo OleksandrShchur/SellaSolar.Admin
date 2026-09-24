@@ -107,7 +107,6 @@ public class UserManagementService
             PhoneNumber = phone,
             WorkerType = request.Role == AppRoles.Worker ? request.WorkerType : null,
             IsActive = true,
-            Email = null,
             CreatedAt = DateTimeOffset.UtcNow,
         };
 

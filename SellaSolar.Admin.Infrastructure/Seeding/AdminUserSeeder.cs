@@ -67,8 +67,6 @@ public static class AdminUserSeeder
                 PhoneNumber = phone,
                 FullName = string.IsNullOrWhiteSpace(seed.FullName) ? phone : seed.FullName.Trim(),
                 IsActive = true,
-                Email = null,
-                EmailConfirmed = false,
                 CreatedAt = DateTimeOffset.UtcNow,
             };
 

@@ -15,9 +15,14 @@ Internal CRM for a solar panel installation company: projects, warehouse, and wo
 
 ```
 SellaSolar.Admin.sln
-database/
+database/                 # numbered SQL scripts only (apply in order)
   001_CreateSchema.sql
-  002_SeedData.sql
+  002_SeedData.sql        # sample data (run after schema scripts)
+  004_IdentitySchema.sql
+  005_UnblockUserByPhone.sql
+  006_MergeWorkersIntoUsers.sql
+  007_PhoneAsUsername.sql
+  008_DropUnusedIdentityColumns.sql
 SellaSolar.Admin.Domain/
 SellaSolar.Admin.Infrastructure/ # ASP.NET Identity, auth DbContext, seeding
 SellaSolar.Admin.Data/          # scaffolded entities + DbContext
@@ -25,6 +30,8 @@ SellaSolar.Admin.Application/   # services, DTOs, ProjectMaterialsService
 SellaSolar.Admin.Server/        # REST controllers, uploads, SPA host
 sellasolar.admin.client/        # React admin UI
 ```
+
+**Database change rule:** every schema/data change is a new `database/NNN_Description.sql` with the next free number. Do not edit already-applied scripts on shared/production databases — add a new script instead. Scripts should be idempotent when practical (`IF NOT EXISTS` / `COL_LENGTH` checks).
 
 ## Stock deduction assumption (important)
 
@@ -52,13 +59,19 @@ LocalDB (already used in `appsettings`):
 
 ```powershell
 sqllocaldb start MSSQLLocalDB
+
+# Schema (in order). Skip scripts already applied on that database.
 sqlcmd -S "(localdb)\MSSQLLocalDB" -E -i database\001_CreateSchema.sql
 sqlcmd -S "(localdb)\MSSQLLocalDB" -E -i database\004_IdentitySchema.sql
-# Prefer PowerShell seed for correct Ukrainian Unicode:
-powershell -ExecutionPolicy Bypass -File database\003_SeedData.ps1
-# Alternative (may mangle Cyrillic depending on console code page):
-# sqlcmd -S "(localdb)\MSSQLLocalDB" -E -f 65001 -i database\002_SeedData.sql
+sqlcmd -S "(localdb)\MSSQLLocalDB" -E -i database\006_MergeWorkersIntoUsers.sql
+sqlcmd -S "(localdb)\MSSQLLocalDB" -E -i database\007_PhoneAsUsername.sql
+sqlcmd -S "(localdb)\MSSQLLocalDB" -E -i database\008_DropUnusedIdentityColumns.sql
+
+# Optional sample data (UTF-8). Prefer -f 65001 so Ukrainian text is preserved.
+sqlcmd -S "(localdb)\MSSQLLocalDB" -E -f 65001 -i database\002_SeedData.sql
 ```
+
+Utility (run only when needed): `database\005_UnblockUserByPhone.sql`.
 
 Connection string (Development):
 
@@ -100,6 +113,7 @@ Do **not** scaffold `AspNet*` / `AuthSecurityLogs` into the Data project (Identi
 Do **not** use Code-First migrations to drive schema changes — edit SQL scripts first, apply them, then scaffold.
 
 `ApplicationUser.WorkerType` is configured manually in `ApplicationIdentityDbContext` (see `004` / `006`).
+Unused Identity email/2FA columns are ignored in EF and removed by `008_DropUnusedIdentityColumns.sql`.
 
 ## 3. Run the backend
 
@@ -146,6 +160,7 @@ Authentication: cookie session, phone (`0XXXXXXXXX`) + password (see `Auth` in a
 Recovery SQL if a user is blocked: `database/005_UnblockUserByPhone.sql`.
 Schema merge Workers→Users: `database/006_MergeWorkersIntoUsers.sql`.
 Migrate existing usernames to phone logins: `database/007_PhoneAsUsername.sql`.
+Drop unused Identity email/2FA columns: `database/008_DropUnusedIdentityColumns.sql`.
 
 ## Frontend screens
 
