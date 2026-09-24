@@ -2,6 +2,9 @@ import { Box, Stack, Typography, type BoxProps, type SxProps, type Theme } from 
 import type { ReactNode } from 'react'
 import { brandColors } from '../theme'
 
+/** Equal inset on all sides for panels, filters, and tabbed sections. */
+export const panelPad = { xs: 2, sm: 2.5 } as const
+
 /** Shared cream surface used by panels, filters, and tables. */
 export const surfaceSx: SxProps<Theme> = {
   borderRadius: 2.5,
@@ -9,6 +12,41 @@ export const surfaceSx: SxProps<Theme> = {
   borderColor: brandColors.borderStrong,
   bgcolor: brandColors.cream,
   boxShadow: `0 2px 8px -2px ${brandColors.softShadow}`,
+}
+
+/** Shared DataGrid styles — horizontal cell inset matches panelPad / row breathing room. */
+export const dataGridSx: SxProps<Theme> = {
+  border: 'none',
+  '& .MuiDataGrid-columnHeaders': {
+    bgcolor: 'action.hover',
+    borderBottom: '1px solid',
+    borderColor: 'divider',
+  },
+  '& .MuiDataGrid-columnHeader': {
+    px: panelPad,
+  },
+  '& .MuiDataGrid-columnHeaderTitle': {
+    fontWeight: 700,
+    fontSize: '0.8rem',
+  },
+  '& .MuiDataGrid-cell': {
+    display: 'flex',
+    alignItems: 'center',
+    borderColor: 'divider',
+    py: 0.5,
+    px: panelPad,
+  },
+  '& .MuiDataGrid-row:hover': {
+    bgcolor: 'action.hover',
+  },
+  '& .MuiDataGrid-footerContainer': {
+    borderTop: '1px solid',
+    borderColor: 'divider',
+    px: panelPad,
+  },
+  '& .MuiDataGrid-cell:focus, & .MuiDataGrid-cell:focus-within': {
+    outline: 'none',
+  },
 }
 
 type DetailPanelProps = {
@@ -22,7 +60,7 @@ export function DetailPanel({ children, sx, ...rest }: DetailPanelProps) {
       {...rest}
       sx={[
         surfaceSx,
-        { p: { xs: 2, sm: 2.5 } },
+        { p: panelPad },
         ...(Array.isArray(sx) ? sx : sx ? [sx] : []),
       ]}
     >

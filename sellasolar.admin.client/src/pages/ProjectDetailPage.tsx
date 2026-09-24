@@ -31,7 +31,7 @@ import type {
 } from '../api/types'
 import { formatDate, formatDateTime, formatNumber, workerTypeLabel } from '../utils/labels'
 import { useAuth } from '../auth/AuthContext'
-import { DetailField, DetailFieldGrid, DetailPanel, DetailSection } from '../components/DetailPanel'
+import { DetailField, DetailFieldGrid, DetailPanel, DetailSection, panelPad } from '../components/DetailPanel'
 import { ProjectStatusChip } from '../components/StatusChips'
 
 interface TabPanelProps {
@@ -300,43 +300,48 @@ export default function ProjectDetailPage() {
       )}
 
       <DetailPanel sx={{ p: 0, overflow: 'hidden' }}>
-        <Tabs
-          value={tab}
-          onChange={(_, v) => setTab(v)}
-          variant="scrollable"
-          textColor="inherit"
-          sx={{
-            px: { xs: 1, sm: 1.5 },
-            minHeight: 52,
-            borderBottom: '1px solid',
-            borderColor: 'divider',
-            bgcolor: 'transparent',
-            '& .MuiTab-root': {
-              textTransform: 'none',
-              fontWeight: 600,
-              fontSize: '0.9375rem',
-              color: 'text.secondary',
-              minHeight: 52,
-              px: 1.75,
-              '&.Mui-selected': {
-                color: 'text.primary',
-                fontWeight: 700,
+        <Box sx={{ px: panelPad, pt: panelPad }}>
+          <Tabs
+            value={tab}
+            onChange={(_, v) => setTab(v)}
+            variant="scrollable"
+            textColor="inherit"
+            sx={{
+              minHeight: 40,
+              bgcolor: 'transparent',
+              '& .MuiTabs-flexContainer': {
+                gap: 2.5,
               },
-            },
-            '& .MuiTabs-indicator': {
-              height: 3,
-              borderRadius: '3px 3px 0 0',
-              backgroundColor: 'primary.dark',
-            },
-          }}
-        >
-          <Tab label="Загальна інформація" />
-          <Tab label="Матеріали" />
-          <Tab label="Працівники" />
-          <Tab label="Фото" />
-        </Tabs>
+              '& .MuiTab-root': {
+                textTransform: 'none',
+                fontWeight: 600,
+                fontSize: '0.9375rem',
+                color: 'text.secondary',
+                minHeight: 40,
+                minWidth: 0,
+                px: 0,
+                py: 1,
+                '&.Mui-selected': {
+                  color: 'text.primary',
+                  fontWeight: 700,
+                },
+              },
+              '& .MuiTabs-indicator': {
+                height: 3,
+                borderRadius: '3px 3px 0 0',
+                backgroundColor: 'primary.dark',
+              },
+            }}
+          >
+            <Tab label="Загальна інформація" />
+            <Tab label="Матеріали" />
+            <Tab label="Працівники" />
+            <Tab label="Фото" />
+          </Tabs>
+        </Box>
+        <Box sx={{ borderBottom: '1px solid', borderColor: 'divider' }} />
 
-        <Box sx={{ p: { xs: 2, sm: 2.75 } }}>
+        <Box sx={{ p: panelPad }}>
           <TabPanel value={tab} index={0}>
             <Stack spacing={3}>
               <DetailFieldGrid columns={{ xs: 1, sm: 2 }}>

@@ -14,7 +14,7 @@ import { projectsApi } from '../api'
 import type { ProjectListItem } from '../api/types'
 import { formatDate } from '../utils/labels'
 import { ProjectStatusChip } from '../components/StatusChips'
-import { surfaceSx } from '../components/DetailPanel'
+import { surfaceSx, panelPad } from '../components/DetailPanel'
 import { useAuth } from '../auth/AuthContext'
 
 export default function MyJobsPage() {
@@ -57,7 +57,7 @@ export default function MyJobsPage() {
       ) : rows.length === 0 ? (
         <Box
           sx={{
-            p: 3,
+            p: panelPad,
             ...surfaceSx,
           }}
         >

@@ -40,7 +40,7 @@ import type { AppRole, UserListItem, WorkerType } from '../api/types'
 import { appRoleLabel } from '../utils/labels'
 import RowActionsMenu, { type RowActionItem } from '../components/RowActionsMenu'
 import { RoleChip, UserStatusChip, workerTypeDisplay } from '../components/StatusChips'
-import { surfaceSx } from '../components/DetailPanel'
+import { surfaceSx, panelPad, dataGridSx } from '../components/DetailPanel'
 
 type RoleFilter = '' | 'Admin' | 'Worker'
 type StatusFilter = 'active' | 'blocked' | 'inactive'
@@ -403,7 +403,7 @@ export default function UsersPage() {
 
       <Box
         sx={{
-          p: { xs: 1.5, sm: 2 },
+          p: panelPad,
           ...surfaceSx,
         }}
       >
@@ -524,34 +524,9 @@ export default function UsersPage() {
             initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
             onRowClick={(params) => navigate(`/users/${params.id}`)}
             sx={{
-              border: 'none',
-              '& .MuiDataGrid-columnHeaders': {
-                bgcolor: 'action.hover',
-                borderBottom: '1px solid',
-                borderColor: 'divider',
-              },
-              '& .MuiDataGrid-columnHeaderTitle': {
-                fontWeight: 700,
-                fontSize: '0.8rem',
-              },
-              '& .MuiDataGrid-cell': {
-                display: 'flex',
-                alignItems: 'center',
-                borderColor: 'divider',
-                py: 0.5,
-              },
+              ...dataGridSx,
               '& .MuiDataGrid-row': {
                 cursor: 'pointer',
-              },
-              '& .MuiDataGrid-row:hover': {
-                bgcolor: 'action.hover',
-              },
-              '& .MuiDataGrid-footerContainer': {
-                borderTop: '1px solid',
-                borderColor: 'divider',
-              },
-              '& .MuiDataGrid-cell:focus, & .MuiDataGrid-cell:focus-within': {
-                outline: 'none',
               },
             }}
             localeText={{

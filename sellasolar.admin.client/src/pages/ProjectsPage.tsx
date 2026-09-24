@@ -34,7 +34,7 @@ import { projectsApi } from '../api'
 import type { ProjectListItem, ProjectStatus } from '../api/types'
 import { formatDate } from '../utils/labels'
 import { ProjectStatusChip } from '../components/StatusChips'
-import { surfaceSx } from '../components/DetailPanel'
+import { surfaceSx, panelPad, dataGridSx } from '../components/DetailPanel'
 
 type StatusFilter = '' | ProjectStatus
 
@@ -197,7 +197,7 @@ export default function ProjectsPage() {
 
       <Box
         sx={{
-          p: { xs: 1.5, sm: 2 },
+          p: panelPad,
           ...surfaceSx,
         }}
       >
@@ -307,35 +307,7 @@ export default function ProjectsPage() {
             pageSizeOptions={[10, 25, 50]}
             initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
             onRowClick={(params) => navigate(`/projects/${params.id}`)}
-            sx={{
-              border: 'none',
-              cursor: 'pointer',
-              '& .MuiDataGrid-columnHeaders': {
-                bgcolor: 'action.hover',
-                borderBottom: '1px solid',
-                borderColor: 'divider',
-              },
-              '& .MuiDataGrid-columnHeaderTitle': {
-                fontWeight: 700,
-                fontSize: '0.8rem',
-              },
-              '& .MuiDataGrid-cell': {
-                display: 'flex',
-                alignItems: 'center',
-                borderColor: 'divider',
-                py: 0.5,
-              },
-              '& .MuiDataGrid-row:hover': {
-                bgcolor: 'action.hover',
-              },
-              '& .MuiDataGrid-footerContainer': {
-                borderTop: '1px solid',
-                borderColor: 'divider',
-              },
-              '& .MuiDataGrid-cell:focus, & .MuiDataGrid-cell:focus-within': {
-                outline: 'none',
-              },
-            }}
+            sx={{ ...dataGridSx, cursor: 'pointer' }}
             localeText={{
               noRowsLabel: 'Проектів не знайдено',
               MuiTablePagination: {
