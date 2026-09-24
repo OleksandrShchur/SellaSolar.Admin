@@ -124,6 +124,10 @@ public class UsersController : ControllerBase
         {
             return NotFound();
         }
+        catch (ValidationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     [HttpPost("{id}/deactivate")]
@@ -145,10 +149,6 @@ public class UsersController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
-        catch (ConflictException ex)
-        {
-            return Conflict(new { message = ex.Message });
-        }
     }
 
     [HttpPost("{id}/block")]
@@ -162,17 +162,9 @@ public class UsersController : ControllerBase
             await _users.BlockAsync(actorId, id, ct);
             return NoContent();
         }
-        catch (NotFoundException)
-        {
-            return NotFound();
-        }
         catch (ValidationException ex)
         {
             return BadRequest(new { message = ex.Message });
-        }
-        catch (ConflictException ex)
-        {
-            return Conflict(new { message = ex.Message });
         }
     }
 

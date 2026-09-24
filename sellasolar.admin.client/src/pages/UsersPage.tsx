@@ -31,7 +31,6 @@ import SearchIcon from '@mui/icons-material/Search'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import LockResetOutlinedIcon from '@mui/icons-material/LockResetOutlined'
-import BlockOutlinedIcon from '@mui/icons-material/BlockOutlined'
 import LockOpenOutlinedIcon from '@mui/icons-material/LockOpenOutlined'
 import PersonOffOutlinedIcon from '@mui/icons-material/PersonOffOutlined'
 import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined'
@@ -152,15 +151,6 @@ export default function UsersPage() {
     }
   }
 
-  const block = async (id: string) => {
-    try {
-      await usersApi.block(id)
-      await load()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Помилка')
-    }
-  }
-
   const unblock = async (id: string) => {
     try {
       await usersApi.unblock(id)
@@ -170,50 +160,59 @@ export default function UsersPage() {
     }
   }
 
-  const rowActions = (row: UserListItem): RowActionItem[] => [
-    {
-      key: 'edit',
-      label: 'Редагувати',
-      icon: <EditOutlinedIcon fontSize="small" />,
-      onClick: () => openEdit(row),
-    },
-    {
-      key: 'password',
-      label: 'Скинути пароль',
-      icon: <LockResetOutlinedIcon fontSize="small" />,
-      onClick: () => openReset(row),
-    },
-    { kind: 'divider', key: 'div-1' },
-    row.isBlocked
-      ? {
-          key: 'unblock',
-          label: 'Розблокувати',
-          icon: <LockOpenOutlinedIcon fontSize="small" />,
-          onClick: () => void unblock(row.id),
-          tone: 'warning',
-        }
-      : {
-          key: 'block',
-          label: 'Заблокувати',
-          icon: <BlockOutlinedIcon fontSize="small" />,
-          onClick: () => void block(row.id),
-          tone: 'warning',
-        },
-    row.isActive
-      ? {
+  const rowActions = (row: UserListItem): RowActionItem[] => {
+    const actions: RowActionItem[] = [
+      {
+        key: 'edit',
+        label: 'Редагувати',
+        icon: <EditOutlinedIcon fontSize="small" />,
+        onClick: () => openEdit(row),
+      },
+      {
+        key: 'password',
+        label: 'Скинути пароль',
+        icon: <LockResetOutlinedIcon fontSize="small" />,
+        onClick: () => openReset(row),
+      },
+    ]
+
+    const statusActions: RowActionItem[] = []
+
+    if (row.isBlocked) {
+      statusActions.push({
+        key: 'unblock',
+        label: 'Розблокувати',
+        icon: <LockOpenOutlinedIcon fontSize="small" />,
+        onClick: () => void unblock(row.id),
+        tone: 'warning',
+      })
+    }
+
+    if (row.isActive) {
+      if (row.role === 'Worker') {
+        statusActions.push({
           key: 'deactivate',
           label: 'Деактивувати',
           icon: <PersonOffOutlinedIcon fontSize="small" />,
           onClick: () => void deactivate(row.id),
           tone: 'danger',
-        }
-      : {
-          key: 'activate',
-          label: 'Активувати',
-          icon: <PersonOutlineOutlinedIcon fontSize="small" />,
-          onClick: () => void activate(row.id),
-        },
-  ]
+        })
+      }
+    } else if (row.role === 'Worker' || row.role === 'Admin') {
+      statusActions.push({
+        key: 'activate',
+        label: 'Активувати',
+        icon: <PersonOutlineOutlinedIcon fontSize="small" />,
+        onClick: () => void activate(row.id),
+      })
+    }
+
+    if (statusActions.length > 0) {
+      actions.push({ kind: 'divider', key: 'div-1' }, ...statusActions)
+    }
+
+    return actions
+  }
 
   const columns: GridColDef<UserListItem>[] = [
     {

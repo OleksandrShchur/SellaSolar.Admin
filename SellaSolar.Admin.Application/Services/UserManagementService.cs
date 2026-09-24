@@ -186,6 +186,13 @@ public class UserManagementService
     {
         var user = await _userManager.FindByIdAsync(id)
             ?? throw new NotFoundException("Користувача не знайдено.");
+
+        var roles = await _userManager.GetRolesAsync(user);
+        if (!roles.Contains(AppRoles.Worker) && !roles.Contains(AppRoles.Admin))
+        {
+            throw new ValidationException("Можна активувати лише виконавців або адміністраторів.");
+        }
+
         user.IsActive = true;
         await _userManager.UpdateAsync(user);
         await _userManager.UpdateSecurityStampAsync(user);
@@ -201,9 +208,9 @@ public class UserManagementService
         var user = await _userManager.FindByIdAsync(targetUserId)
             ?? throw new NotFoundException("Користувача не знайдено.");
 
-        if (await _userManager.IsInRoleAsync(user, AppRoles.Admin))
+        if (!await _userManager.IsInRoleAsync(user, AppRoles.Worker))
         {
-            await EnsureNotLastActiveAdminAsync(user.Id, ct);
+            throw new ValidationException("Можна деактивувати лише виконавців.");
         }
 
         user.IsActive = false;
@@ -233,35 +240,12 @@ public class UserManagementService
             ct);
     }
 
-    public async Task BlockAsync(string actorUserId, string targetUserId, CancellationToken ct)
+    public Task BlockAsync(string actorUserId, string targetUserId, CancellationToken ct)
     {
-        if (actorUserId == targetUserId)
-        {
-            throw new ValidationException("Не можна заблокувати власний обліковий запис.");
-        }
-
-        var user = await _userManager.FindByIdAsync(targetUserId)
-            ?? throw new NotFoundException("Користувача не знайдено.");
-
-        if (await _userManager.IsInRoleAsync(user, AppRoles.Admin))
-        {
-            await EnsureNotLastActiveAdminAsync(user.Id, ct);
-        }
-
-        user.IsBlocked = true;
-        user.BlockedAt = DateTimeOffset.UtcNow;
-        await _userManager.UpdateAsync(user);
-        await _userManager.UpdateSecurityStampAsync(user);
-    }
-
-    private async Task EnsureNotLastActiveAdminAsync(string excludingUserId, CancellationToken ct)
-    {
-        var admins = await _userManager.GetUsersInRoleAsync(AppRoles.Admin);
-        var activeOthers = admins.Count(a => a.IsActive && !a.IsBlocked && a.Id != excludingUserId);
-        if (activeOthers == 0)
-        {
-            throw new ConflictException("Не можна деактивувати останнього активного адміністратора.");
-        }
+        // Manual block is disabled; lockout happens only via failed login attempts in AuthService.
+        _ = (actorUserId, targetUserId, ct);
+        throw new ValidationException(
+            "Ручне блокування недоступне. Обліковий запис блокується лише після невдалих спроб входу.");
     }
 
     private static UserListItemDto Map(ApplicationUser user, string role) =>
