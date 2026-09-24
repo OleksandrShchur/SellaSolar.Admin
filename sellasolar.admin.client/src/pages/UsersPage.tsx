@@ -11,13 +11,11 @@ import {
   DialogContent,
   DialogTitle,
   FormControl,
-  FormControlLabel,
   InputAdornment,
   InputLabel,
   MenuItem,
   Select,
   Stack,
-  Switch,
   TextField,
   ToggleButton,
   ToggleButtonGroup,
@@ -40,8 +38,18 @@ import { appRoleLabel, workerTypeLabel } from '../utils/labels'
 import RowActionsMenu, { type RowActionItem } from '../components/RowActionsMenu'
 
 type RoleFilter = '' | 'Admin' | 'Worker'
+type StatusFilter = 'active' | 'blocked' | 'inactive'
 
 const roles: AppRole[] = ['Admin', 'Worker']
+
+const toggleButtonSx = {
+  flexShrink: 0,
+  '& .MuiToggleButton-root': {
+    px: 1.75,
+    textTransform: 'none',
+    fontWeight: 600,
+  },
+} as const
 
 const emptyCreate = {
   fullName: '',
@@ -79,9 +87,8 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
-  const [roleFilter, setRoleFilter] = useState<RoleFilter>('')
-  const [onlyBlocked, setOnlyBlocked] = useState(false)
-  const [onlyInactive, setOnlyInactive] = useState(false)
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>('Worker')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('active')
 
   const [createOpen, setCreateOpen] = useState(false)
   const [createForm, setCreateForm] = useState(emptyCreate)
@@ -105,8 +112,8 @@ export default function UsersPage() {
       setRows(
         await usersApi.list({
           role: roleFilter || undefined,
-          isBlocked: onlyBlocked ? true : undefined,
-          isActive: onlyInactive ? false : undefined,
+          isBlocked: statusFilter === 'blocked' ? true : statusFilter === 'active' ? false : undefined,
+          isActive: statusFilter === 'active' ? true : statusFilter === 'inactive' ? false : undefined,
           search: search || undefined,
         }),
       )
@@ -119,7 +126,7 @@ export default function UsersPage() {
 
   useEffect(() => {
     void load()
-  }, [roleFilter, onlyBlocked, onlyInactive])
+  }, [roleFilter, statusFilter])
 
   const openEdit = (row: UserListItem) => {
     setEditUser(row)
@@ -382,14 +389,9 @@ export default function UsersPage() {
         alignItems={{ sm: 'center' }}
         gap={1.5}
       >
-        <Box>
-          <Typography variant="h5" fontWeight={700}>
-            Співробітники
-          </Typography>
-          <Typography variant="body2" color="text.secondary" mt={0.25}>
-            Облікові записи адміністраторів і виконавців
-          </Typography>
-        </Box>
+        <Typography variant="body2" color="text.secondary">
+          Облікові записи адміністраторів і виконавців
+        </Typography>
         <Button startIcon={<AddIcon />} onClick={() => setCreateOpen(true)} sx={{ flexShrink: 0 }}>
           Новий співробітник
         </Button>
@@ -410,92 +412,66 @@ export default function UsersPage() {
           bgcolor: 'background.paper',
         }}
       >
-        <Stack spacing={1.5}>
-          <Stack
-            direction={{ xs: 'column', lg: 'row' }}
-            spacing={1.5}
-            alignItems={{ lg: 'center' }}
-            flexWrap="wrap"
-            useFlexGap
+        <Stack
+          direction={{ xs: 'column', lg: 'row' }}
+          spacing={1.5}
+          alignItems={{ lg: 'center' }}
+          flexWrap="wrap"
+          useFlexGap
+        >
+          <TextField
+            placeholder="Пошук за ПІБ або телефоном"
+            size="small"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && void load()}
+            sx={{ width: { xs: '100%', sm: 300 }, flexShrink: 0 }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" color="action" />
+                </InputAdornment>
+              ),
+            }}
+          />
+
+          <ToggleButtonGroup
+            exclusive
+            size="small"
+            value={roleFilter}
+            onChange={(_, v) => {
+              if (v !== null) setRoleFilter(v as RoleFilter)
+            }}
+            sx={toggleButtonSx}
           >
-            <TextField
-              placeholder="Пошук за ПІБ або телефоном"
-              size="small"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && void load()}
-              sx={{ flex: { lg: '1 1 260px' }, minWidth: { xs: '100%', sm: 240 } }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon fontSize="small" color="action" />
-                  </InputAdornment>
-                ),
-              }}
-            />
+            <ToggleButton value="">Усі</ToggleButton>
+            <ToggleButton value="Admin">Адміни</ToggleButton>
+            <ToggleButton value="Worker">Працівники</ToggleButton>
+          </ToggleButtonGroup>
 
-            <ToggleButtonGroup
-              exclusive
-              size="small"
-              value={roleFilter}
-              onChange={(_, v) => {
-                if (v !== null) setRoleFilter(v as RoleFilter)
-              }}
-              sx={{
-                flexShrink: 0,
-                '& .MuiToggleButton-root': {
-                  px: 1.75,
-                  textTransform: 'none',
-                  fontWeight: 600,
-                },
-              }}
-            >
-              <ToggleButton value="">Усі</ToggleButton>
-              <ToggleButton value="Admin">Адміни</ToggleButton>
-              <ToggleButton value="Worker">Працівники</ToggleButton>
-            </ToggleButtonGroup>
+          <ToggleButtonGroup
+            exclusive
+            size="small"
+            value={statusFilter}
+            onChange={(_, v) => {
+              if (v !== null) setStatusFilter(v as StatusFilter)
+            }}
+            sx={toggleButtonSx}
+          >
+            <ToggleButton value="active">Активні</ToggleButton>
+            <ToggleButton value="blocked">Заблоковані</ToggleButton>
+            <ToggleButton value="inactive">Деактивовані</ToggleButton>
+          </ToggleButtonGroup>
 
-            <Stack
-              direction="row"
-              spacing={0.5}
-              alignItems="center"
-              flexWrap="wrap"
-              useFlexGap
-              sx={{ ml: { lg: 'auto' } }}
-            >
-              <FormControlLabel
-                sx={{ mr: 1, ml: 0 }}
-                control={
-                  <Switch
-                    size="small"
-                    checked={onlyBlocked}
-                    onChange={(e) => setOnlyBlocked(e.target.checked)}
-                  />
-                }
-                label={<Typography variant="body2">Заблоковані</Typography>}
-              />
-              <FormControlLabel
-                sx={{ mr: 1, ml: 0 }}
-                control={
-                  <Switch
-                    size="small"
-                    checked={onlyInactive}
-                    onChange={(e) => setOnlyInactive(e.target.checked)}
-                  />
-                }
-                label={<Typography variant="body2">Деактивовані</Typography>}
-              />
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={<RefreshIcon />}
-                onClick={() => void load()}
-                sx={{ minWidth: 0 }}
-              >
-                Оновити
-              </Button>
-            </Stack>
-          </Stack>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<RefreshIcon />}
+            onClick={() => void load()}
+            sx={{ minWidth: 0, ml: { lg: 'auto' } }}
+          >
+            Оновити
+          </Button>
         </Stack>
       </Box>
 
