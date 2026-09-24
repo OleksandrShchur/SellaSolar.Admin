@@ -25,7 +25,6 @@ import SolarPowerIcon from '@mui/icons-material/SolarPower'
 import FolderSpecialIcon from '@mui/icons-material/FolderSpecial'
 import WarehouseIcon from '@mui/icons-material/Warehouse'
 import GroupsIcon from '@mui/icons-material/Groups'
-import ManageAccountsIcon from '@mui/icons-material/ManageAccounts'
 import AssignmentIndIcon from '@mui/icons-material/AssignmentInd'
 import AccountCircleIcon from '@mui/icons-material/AccountCircle'
 import { brandColors } from '../theme'
@@ -37,10 +36,9 @@ const DRAWER_WIDTH_COLLAPSED = 72
 const BOTTOM_NAV_HEIGHT = 64
 
 function sectionTitle(pathname: string): string {
-  if (pathname.startsWith('/users')) return 'Користувачі'
+  if (pathname.startsWith('/users')) return 'Співробітники'
   if (pathname.startsWith('/my-jobs')) return 'Мої завдання'
   if (pathname.startsWith('/warehouse')) return 'Склад'
-  if (pathname.startsWith('/workers')) return 'Працівники'
   if (pathname.startsWith('/projects')) return 'Проекти'
   return 'Внутрішня CRM'
 }
@@ -61,14 +59,13 @@ export default function AppLayout() {
     if (isFieldWorker) {
       items.push({ to: '/my-jobs', label: 'Мої завдання', icon: <AssignmentIndIcon /> })
     } else {
+      if (hasRole('Admin')) {
+        items.push({ to: '/users', label: 'Співробітники', icon: <GroupsIcon /> })
+      }
       items.push(
         { to: '/projects', label: 'Проекти', icon: <FolderSpecialIcon /> },
         { to: '/warehouse', label: 'Склад', icon: <WarehouseIcon /> },
-        { to: '/workers', label: 'Працівники', icon: <GroupsIcon /> },
       )
-      if (hasRole('Admin')) {
-        items.push({ to: '/users', label: 'Користувачі', icon: <ManageAccountsIcon /> })
-      }
     }
     return items
   }, [hasRole])

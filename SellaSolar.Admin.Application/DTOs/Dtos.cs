@@ -29,10 +29,10 @@ public record ProjectItemDto(
 
 public record ProjectWorkerDto(
     int Id,
-    int WorkerId,
+    string UserId,
     string FullName,
-    string Type,
-    string Phone,
+    string? WorkerType,
+    string? Phone,
     string? RoleOnProject,
     DateTime AssignedAt);
 
@@ -88,7 +88,7 @@ public record UpdateProjectStatusRequest(string Status);
 
 public record AssignProjectItemRequest(int WarehouseItemId, decimal QuantityNeeded);
 
-public record AssignProjectWorkerRequest(int WorkerId, string? RoleOnProject);
+public record AssignProjectWorkerRequest(string UserId, string? RoleOnProject);
 
 public record WarehouseItemListDto(
     int Id,
@@ -143,21 +143,3 @@ public record UpdateWarehouseItemRequest(
     string? Notes,
     decimal? LowStockThreshold);
 
-public record WorkerDto(
-    int Id,
-    string FullName,
-    string Type,
-    string Phone,
-    bool IsActive);
-
-public record CreateWorkerRequest(
-    string FullName,
-    string Type,
-    string Phone,
-    bool IsActive);
-
-public record UpdateWorkerRequest(
-    string FullName,
-    string Type,
-    string Phone,
-    bool IsActive);

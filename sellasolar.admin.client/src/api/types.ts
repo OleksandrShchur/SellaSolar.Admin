@@ -14,6 +14,8 @@ export interface UserListItem {
   username: string
   fullName: string
   role: AppRole
+  phone?: string | null
+  workerType?: WorkerType | null
   isActive: boolean
   isBlocked: boolean
   blockedAt?: string | null
@@ -55,10 +57,10 @@ export interface ProjectItem {
 
 export interface ProjectWorker {
   id: number
-  workerId: number
+  userId: string
   fullName: string
-  type: WorkerType
-  phone: string
+  workerType?: WorkerType | null
+  phone?: string | null
   roleOnProject?: string | null
   assignedAt: string
 }
@@ -113,12 +115,4 @@ export interface WarehouseItemProjectUsage {
 
 export interface WarehouseItemDetail extends Omit<WarehouseItemList, 'usedInProjectsCount'> {
   projects: WarehouseItemProjectUsage[]
-}
-
-export interface Worker {
-  id: number
-  fullName: string
-  type: WorkerType
-  phone: string
-  isActive: boolean
 }

@@ -22,14 +22,15 @@ import {
 } from '@mui/material'
 import DeleteIcon from '@mui/icons-material/Delete'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
-import { projectsApi, warehouseApi, workersApi } from '../api'
+import { projectsApi, warehouseApi, usersApi } from '../api'
 import type {
   ProjectDetail,
   ProjectStatus,
   WarehouseItemList,
-  Worker,
+  UserListItem,
 } from '../api/types'
 import { formatDate, formatDateTime, formatNumber, statusLabel, workerTypeLabel } from '../utils/labels'
+import { useAuth } from '../auth/AuthContext'
 
 interface TabPanelProps {
   value: number
@@ -46,6 +47,8 @@ export default function ProjectDetailPage() {
   const { id } = useParams()
   const projectId = Number(id)
   const navigate = useNavigate()
+  const { hasRole } = useAuth()
+  const canManageUsers = hasRole('Admin')
 
   const [project, setProject] = useState<ProjectDetail | null>(null)
   const [tab, setTab] = useState(0)
@@ -72,8 +75,8 @@ export default function ProjectDetailPage() {
   const [quantityNeeded, setQuantityNeeded] = useState('1')
 
   const [workerOpen, setWorkerOpen] = useState(false)
-  const [workers, setWorkers] = useState<Worker[]>([])
-  const [selectedWorkerId, setSelectedWorkerId] = useState<number | ''>('')
+  const [workers, setWorkers] = useState<UserListItem[]>([])
+  const [selectedWorkerId, setSelectedWorkerId] = useState<string>('')
   const [roleOnProject, setRoleOnProject] = useState('')
 
   const [photoCaption, setPhotoCaption] = useState('')
@@ -99,7 +102,7 @@ export default function ProjectDetailPage() {
 
   const availableWorkers = useMemo(() => {
     if (!project) return []
-    const assigned = new Set(project.workers.map((w) => w.workerId))
+    const assigned = new Set(project.workers.map((w) => w.userId))
     return workers.filter((w) => w.isActive && !assigned.has(w.id))
   }, [workers, project])
 
@@ -193,7 +196,7 @@ export default function ProjectDetailPage() {
   const openAddWorker = async () => {
     setError(null)
     try {
-      setWorkers(await workersApi.list({ isActive: true }))
+      setWorkers(await usersApi.workersForAssignment())
       setSelectedWorkerId('')
       setRoleOnProject('')
       setWorkerOpen(true)
@@ -205,7 +208,7 @@ export default function ProjectDetailPage() {
   const addWorker = async () => {
     if (!selectedWorkerId) return
     try {
-      await projectsApi.assignWorker(projectId, Number(selectedWorkerId), roleOnProject || undefined)
+      await projectsApi.assignWorker(projectId, selectedWorkerId, roleOnProject || undefined)
       setWorkerOpen(false)
       await load()
     } catch (err) {
@@ -384,10 +387,11 @@ export default function ProjectDetailPage() {
               <Stack direction="row" alignItems="center" spacing={1}>
                 <Box flex={1}>
                   <Typography fontWeight={700}>
-                    {worker.fullName} · {workerTypeLabel(worker.type)}
+                    {worker.fullName}
+                    {worker.workerType ? ` · ${workerTypeLabel(worker.workerType)}` : ''}
                   </Typography>
                   <Typography variant="body2">
-                    {worker.phone}
+                    {worker.phone || '—'}
                     {worker.roleOnProject ? ` · Роль: ${worker.roleOnProject}` : ''} ·{' '}
                     {formatDateTime(worker.assignedAt)}
                   </Typography>
@@ -554,11 +558,12 @@ export default function ProjectDetailPage() {
               <Select
                 label="Працівник"
                 value={selectedWorkerId}
-                onChange={(e) => setSelectedWorkerId(e.target.value as number)}
+                onChange={(e) => setSelectedWorkerId(e.target.value)}
               >
                 {availableWorkers.map((worker) => (
                   <MenuItem key={worker.id} value={worker.id}>
-                    {worker.fullName} · {workerTypeLabel(worker.type)}
+                    {worker.fullName}
+                    {worker.workerType ? ` · ${workerTypeLabel(worker.workerType)}` : ''}
                   </MenuItem>
                 ))}
               </Select>
@@ -568,9 +573,12 @@ export default function ProjectDetailPage() {
               value={roleOnProject}
               onChange={(e) => setRoleOnProject(e.target.value)}
             />
-            <Typography variant="body2">
-              Немає потрібного працівника? <RouterLink to="/workers">Керувати працівниками</RouterLink>
-            </Typography>
+            {canManageUsers && (
+              <Typography variant="body2">
+                Немає потрібного працівника?{' '}
+                <RouterLink to="/users">Керувати співробітниками</RouterLink>
+              </Typography>
+            )}
           </Stack>
         </DialogContent>
         <DialogActions>

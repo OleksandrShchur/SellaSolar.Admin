@@ -73,7 +73,8 @@ If you use another SQL Server instance, update `ConnectionStrings:DefaultConnect
 
 ## 2. EF Core scaffold (Database-First)
 
-Entities were generated from the live schema. To re-scaffold after SQL changes:
+Domain entities live in `SellaSolar.Admin.Data` (not Identity tables — those stay in `ApplicationIdentityDbContext`).
+After applying SQL scripts, re-scaffold **domain tables only**:
 
 ```powershell
 dotnet ef dbcontext scaffold `
@@ -86,10 +87,19 @@ dotnet ef dbcontext scaffold `
   --context-dir Context `
   --force `
   --no-onconfiguring `
-  --data-annotations
+  --data-annotations `
+  --table Projects `
+  --table ProjectCustomData `
+  --table ProjectItems `
+  --table ProjectPhotos `
+  --table ProjectWorkers `
+  --table WarehouseItems
 ```
 
+Do **not** scaffold `AspNet*` / `AuthSecurityLogs` into the Data project (Identity owns those).
 Do **not** use Code-First migrations to drive schema changes — edit SQL scripts first, apply them, then scaffold.
+
+`ApplicationUser.WorkerType` is configured manually in `ApplicationIdentityDbContext` (see `004` / `006`).
 
 ## 3. Run the backend
 
@@ -126,21 +136,23 @@ Vite proxies `/api` and `/uploads` to the backend (see `vite.config.ts`).
 | Workers on project | `POST /api/projects/{id}/workers`, `DELETE /api/projects/{id}/workers/{assignmentId}` |
 | Photos | `POST /api/projects/{id}/photos`, `DELETE /api/projects/{id}/photos/{photoId}` |
 | Warehouse | `GET/POST /api/warehouse-items`, `GET/PUT/DELETE /api/warehouse-items/{id}`, `GET /api/warehouse-items/categories` |
-| Workers | `GET/POST /api/workers`, `GET/PUT/DELETE /api/workers/{id}` |
+| My jobs | `GET /api/my-jobs` |
+| Employees (users) | Admin: `GET/POST/PUT /api/users`, reset-password, activate/deactivate, block/unblock; Manager: `GET /api/users/workers` |
 
 Authentication: cookie session, username + password (see `Auth` in appsettings). Initial admins are seeded on startup when no admin exists yet.
 
-| Auth / users | `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`, `POST /api/auth/change-password`, admin `GET/POST/PUT /api/users`, reset-password, activate, deactivate, unblock |
+| Auth | `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`, `POST /api/auth/change-password` |
 
 Recovery SQL if a user is blocked: `database/005_UnblockUserByUsername.sql`.
+Schema merge Workers→Users: `database/006_MergeWorkersIntoUsers.sql`.
 
 ## Frontend screens
 
 - **Вхід** — username/password, Ukrainian UI
 - **Проекти** — list (status/search), create, detail tabs: Загальна інформація / Матеріали / Працівники / Фото
 - **Склад** — CRUD, low-stock filter, detail shows projects using the item
-- **Працівники** — CRUD for assemblers (Складальник) and installers (Монтажник)
-- **Користувачі** (Admin) — create/edit users, reset password, activate/deactivate, unblock
+- **Співробітники** (Admin) — unified users/workers: roles, block/unblock, reset password; worker fields when role = Worker
+- **Мої завдання** (Worker) — projects assigned to the logged-in user
 
 ## Known follow-ups
 - Soft-delete / audit log

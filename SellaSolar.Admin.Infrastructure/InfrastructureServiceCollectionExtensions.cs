@@ -42,7 +42,6 @@ public static class InfrastructureServiceCollectionExtensions
             .AddPolicy(AppPolicies.CanManageUsers, p => p.RequireRole(AppRoles.Admin))
             .AddPolicy(AppPolicies.CanManageProjects, p => p.RequireRole(AppRoles.Admin, AppRoles.Manager))
             .AddPolicy(AppPolicies.CanManageWarehouse, p => p.RequireRole(AppRoles.Admin, AppRoles.Manager))
-            .AddPolicy(AppPolicies.CanManageFieldWorkers, p => p.RequireRole(AppRoles.Admin, AppRoles.Manager))
             .AddPolicy(AppPolicies.CanViewAssignedJobs, p => p.RequireRole(AppRoles.Admin, AppRoles.Manager, AppRoles.Worker));
 
         return services;

@@ -17,7 +17,7 @@ IF OBJECT_ID(N'dbo.ProjectWorkers', N'U') IS NOT NULL DROP TABLE dbo.ProjectWork
 IF OBJECT_ID(N'dbo.ProjectPhotos', N'U') IS NOT NULL DROP TABLE dbo.ProjectPhotos;
 IF OBJECT_ID(N'dbo.ProjectCustomData', N'U') IS NOT NULL DROP TABLE dbo.ProjectCustomData;
 IF OBJECT_ID(N'dbo.Projects', N'U') IS NOT NULL DROP TABLE dbo.Projects;
-IF OBJECT_ID(N'dbo.Workers', N'U') IS NOT NULL DROP TABLE dbo.Workers;
+IF OBJECT_ID(N'dbo.Workers', N'U') IS NOT NULL DROP TABLE dbo.Workers; -- legacy; removed by 006
 IF OBJECT_ID(N'dbo.WarehouseItems', N'U') IS NOT NULL DROP TABLE dbo.WarehouseItems;
 GO
 
@@ -59,26 +59,17 @@ CREATE TABLE dbo.ProjectCustomData
 );
 GO
 
-CREATE TABLE dbo.Workers
-(
-    Id              INT             NOT NULL IDENTITY(1,1) CONSTRAINT PK_Workers PRIMARY KEY,
-    FullName        NVARCHAR(200)   NOT NULL,
-    Type            NVARCHAR(20)    NOT NULL CONSTRAINT CK_Workers_Type CHECK (Type IN (N'Assembler', N'Installer')),
-    Phone           NVARCHAR(50)    NOT NULL,
-    IsActive        BIT             NOT NULL CONSTRAINT DF_Workers_IsActive DEFAULT (1)
-);
-GO
-
+-- Project assignment targets AspNetUsers (created in 004_IdentitySchema.sql).
+-- FK to AspNetUsers is added by 006_MergeWorkersIntoUsers.sql after Identity exists.
 CREATE TABLE dbo.ProjectWorkers
 (
     Id              INT             NOT NULL IDENTITY(1,1) CONSTRAINT PK_ProjectWorkers PRIMARY KEY,
     ProjectId       INT             NOT NULL,
-    WorkerId        INT             NOT NULL,
+    UserId          NVARCHAR(450)   NOT NULL,
     RoleOnProject   NVARCHAR(100)   NULL,
     AssignedAt      DATETIME2       NOT NULL CONSTRAINT DF_ProjectWorkers_AssignedAt DEFAULT (SYSUTCDATETIME()),
     CONSTRAINT FK_ProjectWorkers_Projects FOREIGN KEY (ProjectId) REFERENCES dbo.Projects(Id) ON DELETE CASCADE,
-    CONSTRAINT FK_ProjectWorkers_Workers FOREIGN KEY (WorkerId) REFERENCES dbo.Workers(Id),
-    CONSTRAINT UQ_ProjectWorkers_Project_Worker UNIQUE (ProjectId, WorkerId)
+    CONSTRAINT UQ_ProjectWorkers_Project_User UNIQUE (ProjectId, UserId)
 );
 GO
 
@@ -114,5 +105,5 @@ GO
 CREATE INDEX IX_Projects_Status ON dbo.Projects(Status);
 CREATE INDEX IX_Projects_Name ON dbo.Projects(Name);
 CREATE INDEX IX_WarehouseItems_Category ON dbo.WarehouseItems(Category);
-CREATE INDEX IX_Workers_Type ON dbo.Workers(Type);
+CREATE INDEX IX_ProjectWorkers_UserId ON dbo.ProjectWorkers(UserId);
 GO
