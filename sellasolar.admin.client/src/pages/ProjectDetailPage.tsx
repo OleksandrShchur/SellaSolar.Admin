@@ -304,19 +304,24 @@ export default function ProjectDetailPage() {
           value={tab}
           onChange={(_, v) => setTab(v)}
           variant="scrollable"
+          textColor="inherit"
           sx={{
-            px: 1,
+            px: { xs: 1, sm: 1.5 },
+            minHeight: 52,
             borderBottom: '1px solid',
             borderColor: 'divider',
-            bgcolor: 'rgba(21, 18, 14, 0.03)',
+            bgcolor: 'transparent',
             '& .MuiTab-root': {
               textTransform: 'none',
               fontWeight: 600,
+              fontSize: '0.9375rem',
               color: 'text.secondary',
-              minHeight: 48,
-            },
-            '& .Mui-selected': {
-              color: 'text.primary',
+              minHeight: 52,
+              px: 1.75,
+              '&.Mui-selected': {
+                color: 'text.primary',
+                fontWeight: 700,
+              },
             },
             '& .MuiTabs-indicator': {
               height: 3,
@@ -331,20 +336,18 @@ export default function ProjectDetailPage() {
           <Tab label="Фото" />
         </Tabs>
 
-        <Box sx={{ p: { xs: 2, sm: 2.5 } }}>
+        <Box sx={{ p: { xs: 2, sm: 2.75 } }}>
           <TabPanel value={tab} index={0}>
             <Stack spacing={3}>
               <DetailFieldGrid columns={{ xs: 1, sm: 2 }}>
-                <DetailField label="Опис" value={project.description || '—'} />
+                <DetailField fullWidth label="Опис" value={project.description || '—'} />
+                <DetailField label="Клієнт" value={project.customerName || '—'} />
                 <DetailField
-                  label="Клієнт"
-                  value={[
-                    project.customerName,
-                    project.customerPhone,
-                    project.customerEmail,
-                  ]
-                    .filter(Boolean)
-                    .join(' · ') || '—'}
+                  label="Контакти"
+                  value={
+                    [project.customerPhone, project.customerEmail].filter(Boolean).join(' · ') ||
+                    '—'
+                  }
                 />
                 <DetailField label="Початок" value={formatDate(project.startDate)} />
                 <DetailField label="Кінець" value={formatDate(project.endDate)} />
@@ -360,10 +363,11 @@ export default function ProjectDetailPage() {
                     {project.customData.map((item) => (
                       <Chip
                         key={`${item.key}-${item.value}`}
+                        size="small"
                         variant="outlined"
-                        color="primary"
+                        color="default"
                         label={
-                          <Box component="span" sx={{ display: 'inline-flex', gap: 0.75 }}>
+                          <Box component="span" sx={{ display: 'inline-flex', gap: 0.75, alignItems: 'baseline' }}>
                             <Box component="span" sx={{ color: 'text.secondary', fontWeight: 600 }}>
                               {item.key}:
                             </Box>
@@ -375,10 +379,7 @@ export default function ProjectDetailPage() {
                         sx={{
                           height: 'auto',
                           py: 0.75,
-                          px: 0.25,
-                          borderWidth: 1.5,
-                          bgcolor: 'rgba(240, 166, 31, 0.08)',
-                          '& .MuiChip-label': { px: 1.25 },
+                          '& .MuiChip-label': { px: 1.25, py: 0.25 },
                         }}
                       />
                     ))}
@@ -390,7 +391,7 @@ export default function ProjectDetailPage() {
 
           <TabPanel value={tab} index={1}>
             <Stack direction="row" justifyContent="space-between" mb={2} alignItems="center" gap={1}>
-              <Typography variant="subtitle1" fontWeight={700}>
+              <Typography variant="subtitle1" fontWeight={800} sx={{ letterSpacing: '-0.01em' }}>
                 Матеріали проекту
               </Typography>
               <Button variant="contained" color="primary" onClick={() => void openAddItem()}>
@@ -447,7 +448,7 @@ export default function ProjectDetailPage() {
 
           <TabPanel value={tab} index={2}>
             <Stack direction="row" justifyContent="space-between" mb={2} alignItems="center" gap={1}>
-              <Typography variant="subtitle1" fontWeight={700}>
+              <Typography variant="subtitle1" fontWeight={800} sx={{ letterSpacing: '-0.01em' }}>
                 Призначені працівники
               </Typography>
               <Button variant="contained" color="primary" onClick={() => void openAddWorker()}>

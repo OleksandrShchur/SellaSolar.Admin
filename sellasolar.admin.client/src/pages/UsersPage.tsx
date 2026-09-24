@@ -40,6 +40,7 @@ import type { AppRole, UserListItem, WorkerType } from '../api/types'
 import { appRoleLabel } from '../utils/labels'
 import RowActionsMenu, { type RowActionItem } from '../components/RowActionsMenu'
 import { RoleChip, UserStatusChip, workerTypeDisplay } from '../components/StatusChips'
+import { surfaceSx } from '../components/DetailPanel'
 
 type RoleFilter = '' | 'Admin' | 'Worker'
 type StatusFilter = 'active' | 'blocked' | 'inactive'
@@ -403,10 +404,7 @@ export default function UsersPage() {
       <Box
         sx={{
           p: { xs: 1.5, sm: 2 },
-          borderRadius: 2,
-          border: '1px solid',
-          borderColor: 'divider',
-          bgcolor: 'background.paper',
+          ...surfaceSx,
         }}
       >
         <Stack
@@ -508,10 +506,7 @@ export default function UsersPage() {
         <Box
           sx={{
             width: '100%',
-            borderRadius: 2,
-            border: '1px solid',
-            borderColor: 'divider',
-            bgcolor: 'background.paper',
+            ...surfaceSx,
             overflow: 'hidden',
           }}
         >

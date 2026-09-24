@@ -33,6 +33,7 @@ import SearchIcon from '@mui/icons-material/Search'
 import { warehouseApi } from '../api'
 import type { WarehouseItemList } from '../api/types'
 import { formatNumber } from '../utils/labels'
+import { surfaceSx } from '../components/DetailPanel'
 
 type StockFilter = 'all' | 'low'
 
@@ -214,10 +215,7 @@ export default function WarehousePage() {
       <Box
         sx={{
           p: { xs: 1.5, sm: 2 },
-          borderRadius: 2,
-          border: '1px solid',
-          borderColor: 'divider',
-          bgcolor: 'background.paper',
+          ...surfaceSx,
         }}
       >
         <Stack
@@ -323,10 +321,7 @@ export default function WarehousePage() {
         <Box
           sx={{
             width: '100%',
-            borderRadius: 2,
-            border: '1px solid',
-            borderColor: 'divider',
-            bgcolor: 'background.paper',
+            ...surfaceSx,
             overflow: 'hidden',
           }}
         >

@@ -20,7 +20,6 @@ import type { WarehouseItemDetail } from '../api/types'
 import { formatNumber } from '../utils/labels'
 import { DetailField, DetailFieldGrid, DetailPanel } from '../components/DetailPanel'
 import { ProjectStatusChip } from '../components/StatusChips'
-import { brandColors } from '../theme'
 
 export default function WarehouseDetailPage() {
   const { id } = useParams()
@@ -125,7 +124,7 @@ export default function WarehouseDetailPage() {
               </Typography>
               {item.isLowStock && <Chip size="small" color="warning" label="Низький" />}
             </Stack>
-            <Typography variant="body2" color="text.secondary" mt={0.5}>
+            <Typography variant="body2" color="text.secondary" mt={0.5} fontWeight={600}>
               {item.category} · {formatNumber(item.quantityInStock)} {item.unit}
             </Typography>
           </Box>
@@ -151,12 +150,12 @@ export default function WarehouseDetailPage() {
           <DetailField label="Ціна" value={formatNumber(item.price)} />
           <DetailField label="Постачальник" value={item.supplier || '—'} />
           <DetailField label="Поріг низького запасу" value={formatNumber(item.lowStockThreshold)} />
-          <DetailField label="Примітки" value={item.notes || '—'} />
+          <DetailField fullWidth label="Примітки" value={item.notes || '—'} />
         </DetailFieldGrid>
       </DetailPanel>
 
-      <Box>
-        <Typography variant="subtitle1" fontWeight={800} mb={1.5}>
+      <DetailPanel>
+        <Typography variant="subtitle1" fontWeight={800} mb={1.75} sx={{ letterSpacing: '-0.01em' }}>
           Використовується в проектах
         </Typography>
         <Stack spacing={1.5}>
@@ -167,15 +166,14 @@ export default function WarehouseDetailPage() {
               to={`/projects/${p.projectId}`}
               sx={{
                 p: 2,
-                borderRadius: 2.5,
-                bgcolor: brandColors.cream,
+                borderRadius: 2,
+                bgcolor: 'rgba(243, 235, 220, 0.55)',
                 border: '1.5px solid',
-                borderColor: brandColors.borderStrong,
-                boxShadow: `0 2px 8px -2px ${brandColors.softShadow}`,
+                borderColor: 'divider',
                 textDecoration: 'none',
                 color: 'inherit',
                 '&:hover': {
-                  boxShadow: 2,
+                  boxShadow: 1,
                   borderColor: 'primary.dark',
                 },
               }}
@@ -200,7 +198,7 @@ export default function WarehouseDetailPage() {
             </Typography>
           )}
         </Stack>
-      </Box>
+      </DetailPanel>
 
       <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>Редагувати позицію</DialogTitle>

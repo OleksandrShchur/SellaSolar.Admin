@@ -34,6 +34,7 @@ import { projectsApi } from '../api'
 import type { ProjectListItem, ProjectStatus } from '../api/types'
 import { formatDate } from '../utils/labels'
 import { ProjectStatusChip } from '../components/StatusChips'
+import { surfaceSx } from '../components/DetailPanel'
 
 type StatusFilter = '' | ProjectStatus
 
@@ -197,10 +198,7 @@ export default function ProjectsPage() {
       <Box
         sx={{
           p: { xs: 1.5, sm: 2 },
-          borderRadius: 2,
-          border: '1px solid',
-          borderColor: 'divider',
-          bgcolor: 'background.paper',
+          ...surfaceSx,
         }}
       >
         <Stack
@@ -293,10 +291,7 @@ export default function ProjectsPage() {
         <Box
           sx={{
             width: '100%',
-            borderRadius: 2,
-            border: '1px solid',
-            borderColor: 'divider',
-            bgcolor: 'background.paper',
+            ...surfaceSx,
             overflow: 'hidden',
           }}
         >

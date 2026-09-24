@@ -377,6 +377,31 @@ const theme = createTheme({
         },
       },
     },
+    MuiTabs: {
+      defaultProps: {
+        textColor: 'inherit',
+      },
+      styleOverrides: {
+        indicator: {
+          height: 3,
+          borderRadius: '3px 3px 0 0',
+          backgroundColor: brandColors.primaryDark,
+        },
+      },
+    },
+    MuiTab: {
+      styleOverrides: {
+        root: {
+          textTransform: 'none',
+          fontWeight: 600,
+          color: brandColors.textSecondary,
+          '&.Mui-selected': {
+            color: `${brandColors.slateInk} !important`,
+            fontWeight: 700,
+          },
+        },
+      },
+    },
     MuiChip: {
       styleOverrides: {
         root: {

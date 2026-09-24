@@ -212,7 +212,9 @@ export default function UserDetailPage() {
           <DetailField label="Тип" value={workerTypeDisplay(user)} />
           <DetailField label="Телефон (логін)" value={user.phone || '—'} />
           <DetailField label="Статус">
-            <UserStatusChip user={user} />
+            <Box sx={{ mt: 0.25 }}>
+              <UserStatusChip user={user} />
+            </Box>
           </DetailField>
         </DetailFieldGrid>
       </DetailPanel>

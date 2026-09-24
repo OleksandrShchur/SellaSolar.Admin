@@ -14,6 +14,7 @@ import { projectsApi } from '../api'
 import type { ProjectListItem } from '../api/types'
 import { formatDate } from '../utils/labels'
 import { ProjectStatusChip } from '../components/StatusChips'
+import { surfaceSx } from '../components/DetailPanel'
 import { useAuth } from '../auth/AuthContext'
 
 export default function MyJobsPage() {
@@ -57,10 +58,7 @@ export default function MyJobsPage() {
         <Box
           sx={{
             p: 3,
-            borderRadius: 2,
-            border: '1px solid',
-            borderColor: 'divider',
-            bgcolor: 'background.paper',
+            ...surfaceSx,
           }}
         >
           <Typography color="text.secondary">На вас ще не призначено жодного проекту.</Typography>
@@ -68,10 +66,7 @@ export default function MyJobsPage() {
       ) : (
         <Box
           sx={{
-            borderRadius: 2,
-            border: '1px solid',
-            borderColor: 'divider',
-            bgcolor: 'background.paper',
+            ...surfaceSx,
             overflow: 'hidden',
           }}
         >
