@@ -1,6 +1,6 @@
 export type ProjectStatus = 'InProgress' | 'Completed'
 export type WorkerType = 'Assembler' | 'Installer'
-export type AppRole = 'Admin' | 'Manager' | 'Worker'
+export type AppRole = 'Admin' | 'Worker'
 
 export interface CurrentUser {
   userId: string

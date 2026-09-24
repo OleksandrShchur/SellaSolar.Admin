@@ -63,7 +63,9 @@ public class UserManagementService
         foreach (var user in users)
         {
             var roles = await _userManager.GetRolesAsync(user);
-            var userRole = roles.FirstOrDefault() ?? AppRoles.Worker;
+            var userRole = roles.Contains(AppRoles.Admin)
+                ? AppRoles.Admin
+                : roles.FirstOrDefault() ?? AppRoles.Worker;
             if (!string.IsNullOrWhiteSpace(role) &&
                 !roles.Contains(role, StringComparer.Ordinal))
             {
@@ -76,7 +78,7 @@ public class UserManagementService
         return result;
     }
 
-    /// <summary>Active field workers for project assignment pickers (Admin/Manager).</summary>
+    /// <summary>Active field workers for project assignment pickers.</summary>
     public async Task<IReadOnlyList<UserListItemDto>> GetWorkersForAssignmentAsync(CancellationToken ct)
     {
         var workers = await _userManager.GetUsersInRoleAsync(AppRoles.Worker);

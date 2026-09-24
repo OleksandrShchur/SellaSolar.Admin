@@ -37,7 +37,7 @@ public class UsersController : ControllerBase
         }
     }
 
-    /// <summary>Active workers for project assignment (Admin / Manager).</summary>
+    /// <summary>Active workers for project assignment.</summary>
     [HttpGet("workers")]
     [Authorize(Policy = AppPolicies.CanManageProjects)]
     public async Task<ActionResult<IReadOnlyList<UserListItemDto>>> GetWorkersForAssignment(CancellationToken ct)

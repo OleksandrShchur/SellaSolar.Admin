@@ -41,7 +41,7 @@ import RowActionsMenu, { type RowActionItem } from '../components/RowActionsMenu
 
 type RoleFilter = '' | 'Admin' | 'Worker'
 
-const roles: AppRole[] = ['Admin', 'Manager', 'Worker']
+const roles: AppRole[] = ['Admin', 'Worker']
 
 const emptyCreate = {
   fullName: '',
@@ -62,8 +62,13 @@ function statusChip(row: UserListItem) {
 }
 
 function roleChip(role: AppRole) {
-  const color = role === 'Admin' ? 'secondary' : role === 'Manager' ? 'info' : 'primary'
+  const color = role === 'Admin' ? 'secondary' : 'primary'
   return <Chip size="small" color={color} label={appRoleLabel(role)} />
+}
+
+function typeLabel(row: UserListItem) {
+  if (row.role === 'Admin') return appRoleLabel('Admin')
+  return row.workerType ? workerTypeLabel(row.workerType) : '—'
 }
 
 export default function UsersPage() {
@@ -245,7 +250,7 @@ export default function UsersPage() {
       field: 'workerType',
       headerName: 'Тип',
       width: 130,
-      valueFormatter: (value) => (value ? workerTypeLabel(value as string) : '—'),
+      valueGetter: (_value, row) => typeLabel(row),
     },
     {
       field: 'phone',
@@ -382,7 +387,7 @@ export default function UsersPage() {
             Співробітники
           </Typography>
           <Typography variant="body2" color="text.secondary" mt={0.25}>
-            Облікові записи адміністраторів, менеджерів і виконавців
+            Облікові записи адміністраторів і виконавців
           </Typography>
         </Box>
         <Button startIcon={<AddIcon />} onClick={() => setCreateOpen(true)} sx={{ flexShrink: 0 }}>
@@ -516,8 +521,8 @@ export default function UsersPage() {
                 </Stack>
                 <Stack direction="row" spacing={1} mt={1.25} flexWrap="wrap" useFlexGap>
                   {roleChip(row.role)}
-                  {row.workerType && (
-                    <Chip size="small" variant="outlined" label={workerTypeLabel(row.workerType)} />
+                  {typeLabel(row) !== '—' && (
+                    <Chip size="small" variant="outlined" label={typeLabel(row)} />
                   )}
                   {statusChip(row)}
                 </Stack>

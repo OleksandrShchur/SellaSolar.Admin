@@ -19,7 +19,7 @@ import { useAuth } from '../auth/AuthContext'
 
 export default function MyJobsPage() {
   const { hasRole } = useAuth()
-  const canOpenDetail = hasRole('Admin') || hasRole('Manager')
+  const canOpenDetail = hasRole('Admin')
   const [rows, setRows] = useState<ProjectListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

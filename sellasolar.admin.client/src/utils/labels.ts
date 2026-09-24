@@ -5,8 +5,6 @@ export const appRoleLabel = (role: string) => {
   switch (role) {
     case 'Admin':
       return 'Адміністратор'
-    case 'Manager':
-      return 'Менеджер'
     case 'Worker':
       return 'Виконавець'
     default:
