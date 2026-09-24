@@ -1,4 +1,6 @@
 -- Seed sample data for SellaSolar Admin MVP
+-- Run after 001, 004, and 006 (or after 001+004 on a fresh schema that already includes WorkerType / ProjectWorkers.UserId).
+-- Worker accounts use temp password: TempPass123! (reset via admin UI).
 USE SellaSolarAdmin;
 GO
 
@@ -8,8 +10,26 @@ DELETE FROM dbo.ProjectWorkers;
 DELETE FROM dbo.ProjectPhotos;
 DELETE FROM dbo.ProjectCustomData;
 DELETE FROM dbo.Projects;
-DELETE FROM dbo.Workers;
 DELETE FROM dbo.WarehouseItems;
+
+-- Remove previously seeded demo workers (keep real admins)
+DELETE ur
+FROM dbo.AspNetUserRoles ur
+INNER JOIN dbo.AspNetUsers u ON u.Id = ur.UserId
+WHERE u.Id IN (
+    N'11111111-1111-1111-1111-111111111101',
+    N'11111111-1111-1111-1111-111111111102',
+    N'11111111-1111-1111-1111-111111111103',
+    N'11111111-1111-1111-1111-111111111104',
+    N'11111111-1111-1111-1111-111111111105');
+
+DELETE FROM dbo.AspNetUsers
+WHERE Id IN (
+    N'11111111-1111-1111-1111-111111111101',
+    N'11111111-1111-1111-1111-111111111102',
+    N'11111111-1111-1111-1111-111111111103',
+    N'11111111-1111-1111-1111-111111111104',
+    N'11111111-1111-1111-1111-111111111105');
 GO
 
 SET IDENTITY_INSERT dbo.WarehouseItems ON;
@@ -24,15 +44,46 @@ VALUES
 SET IDENTITY_INSERT dbo.WarehouseItems OFF;
 GO
 
-SET IDENTITY_INSERT dbo.Workers ON;
-INSERT INTO dbo.Workers (Id, FullName, Type, Phone, IsActive)
+-- Ensure Worker role exists
+IF NOT EXISTS (SELECT 1 FROM dbo.AspNetRoles WHERE NormalizedName = N'WORKER')
+BEGIN
+    INSERT INTO dbo.AspNetRoles (Id, Name, NormalizedName, ConcurrencyStamp)
+    VALUES (CONVERT(NVARCHAR(450), NEWID()), N'Worker', N'WORKER', CONVERT(NVARCHAR(MAX), NEWID()));
+END
+GO
+
+DECLARE @WorkerRoleId NVARCHAR(450) =
+    (SELECT TOP (1) Id FROM dbo.AspNetRoles WHERE NormalizedName = N'WORKER');
+DECLARE @TempPasswordHash NVARCHAR(MAX) =
+    N'AQAAAAIAAYagAAAAEN/x78+bIvRkZUZEeANQITAQxqFB4xWj7pegRksChFRTJj4hZmv75rRfXCqc6y1Z9g=='; -- TempPass123!
+
+-- Demo workers (fixed Ids for ProjectWorkers seed)
+INSERT INTO dbo.AspNetUsers
+(
+    Id, UserName, NormalizedUserName,
+    Email, NormalizedEmail, EmailConfirmed,
+    PasswordHash, SecurityStamp, ConcurrencyStamp,
+    PhoneNumber, PhoneNumberConfirmed,
+    TwoFactorEnabled, LockoutEnd, LockoutEnabled, AccessFailedCount,
+    FullName, IsActive, IsBlocked, BlockedAt, FailedLoginCount, CreatedAt, WorkerType
+)
 VALUES
-    (1, N'Іван Петренко', N'Assembler', N'+380501112233', 1),
-    (2, N'Олена Коваленко', N'Assembler', N'+380671234567', 1),
-    (3, N'Микола Шевченко', N'Installer', N'+380931112233', 1),
-    (4, N'Андрій Бондар', N'Installer', N'+380501234567', 1),
-    (5, N'Сергій Мельник', N'Installer', N'+380661112233', 0);
-SET IDENTITY_INSERT dbo.Workers OFF;
+    (N'11111111-1111-1111-1111-111111111101', N'i.petrenko', N'I.PETRENKO', NULL, NULL, 0, @TempPasswordHash, NEWID(), NEWID(), N'+380501112233', 0, 0, NULL, 0, 0, N'Іван Петренко', 1, 0, NULL, 0, SYSUTCDATETIME(), N'Assembler'),
+    (N'11111111-1111-1111-1111-111111111102', N'o.kovalenko', N'O.KOVALENKO', NULL, NULL, 0, @TempPasswordHash, NEWID(), NEWID(), N'+380671234567', 0, 0, NULL, 0, 0, N'Олена Коваленко', 1, 0, NULL, 0, SYSUTCDATETIME(), N'Assembler'),
+    (N'11111111-1111-1111-1111-111111111103', N'm.shevchenko', N'M.SHEVCHENKO', NULL, NULL, 0, @TempPasswordHash, NEWID(), NEWID(), N'+380931112233', 0, 0, NULL, 0, 0, N'Микола Шевченко', 1, 0, NULL, 0, SYSUTCDATETIME(), N'Installer'),
+    (N'11111111-1111-1111-1111-111111111104', N'a.bondar', N'A.BONDAR', NULL, NULL, 0, @TempPasswordHash, NEWID(), NEWID(), N'+380501234567', 0, 0, NULL, 0, 0, N'Андрій Бондар', 1, 0, NULL, 0, SYSUTCDATETIME(), N'Installer'),
+    (N'11111111-1111-1111-1111-111111111105', N's.melnyk', N'S.MELNYK', NULL, NULL, 0, @TempPasswordHash, NEWID(), NEWID(), N'+380661112233', 0, 0, NULL, 0, 0, N'Сергій Мельник', 0, 0, NULL, 0, SYSUTCDATETIME(), N'Installer');
+
+INSERT INTO dbo.AspNetUserRoles (UserId, RoleId)
+SELECT v.Id, @WorkerRoleId
+FROM (VALUES
+    (N'11111111-1111-1111-1111-111111111101'),
+    (N'11111111-1111-1111-1111-111111111102'),
+    (N'11111111-1111-1111-1111-111111111103'),
+    (N'11111111-1111-1111-1111-111111111104'),
+    (N'11111111-1111-1111-1111-111111111105')
+) v(Id)
+WHERE NOT EXISTS (SELECT 1 FROM dbo.AspNetUserRoles ur WHERE ur.UserId = v.Id AND ur.RoleId = @WorkerRoleId);
 GO
 
 SET IDENTITY_INSERT dbo.Projects ON;
@@ -72,21 +123,19 @@ VALUES
     (2, N'Потужність', N'15 кВт');
 GO
 
-INSERT INTO dbo.ProjectWorkers (ProjectId, WorkerId, RoleOnProject, AssignedAt)
+INSERT INTO dbo.ProjectWorkers (ProjectId, UserId, RoleOnProject, AssignedAt)
 VALUES
-    (1, 1, N'Складання панелей', DATEADD(day, -6, SYSUTCDATETIME())),
-    (1, 3, N'Монтаж на даху', DATEADD(day, -5, SYSUTCDATETIME())),
-    (2, 2, N'Складання', DATEADD(day, -50, SYSUTCDATETIME())),
-    (2, 4, N'Монтаж', DATEADD(day, -45, SYSUTCDATETIME()));
+    (1, N'11111111-1111-1111-1111-111111111101', N'Складання панелей', DATEADD(day, -6, SYSUTCDATETIME())),
+    (1, N'11111111-1111-1111-1111-111111111103', N'Монтаж на даху', DATEADD(day, -5, SYSUTCDATETIME())),
+    (2, N'11111111-1111-1111-1111-111111111102', N'Складання', DATEADD(day, -50, SYSUTCDATETIME())),
+    (2, N'11111111-1111-1111-1111-111111111104', N'Монтаж', DATEADD(day, -45, SYSUTCDATETIME()));
 GO
 
--- Sample project items WITHOUT deducting again (stock already at seed levels).
--- For demo: project 1 uses small quantities that match current stock narrative.
 INSERT INTO dbo.ProjectItems (ProjectId, WarehouseItemId, QuantityNeeded, QuantityFromStock, QuantityToPurchase, NeedsPurchase)
 VALUES
     (1, 1, 12, 12, 0, 0),
     (1, 2, 1, 1, 0, 0),
-    (1, 5, 2, 2, 0, 0), -- NeedsPurchase would be true if assigned via API with low stock
+    (1, 5, 2, 2, 0, 0),
     (2, 1, 36, 36, 0, 0),
     (2, 2, 3, 3, 0, 0);
 GO

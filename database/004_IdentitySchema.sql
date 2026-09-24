@@ -56,9 +56,12 @@ BEGIN
         IsBlocked               BIT             NOT NULL CONSTRAINT DF_AspNetUsers_IsBlocked DEFAULT (0),
         BlockedAt               DATETIMEOFFSET  NULL,
         FailedLoginCount        INT             NOT NULL CONSTRAINT DF_AspNetUsers_FailedLoginCount DEFAULT (0),
-        CreatedAt               DATETIMEOFFSET  NOT NULL CONSTRAINT DF_AspNetUsers_CreatedAt DEFAULT (SYSUTCDATETIME())
+        CreatedAt               DATETIMEOFFSET  NOT NULL CONSTRAINT DF_AspNetUsers_CreatedAt DEFAULT (SYSUTCDATETIME()),
+        WorkerType              NVARCHAR(20)    NULL,
+        CONSTRAINT CK_AspNetUsers_WorkerType CHECK (WorkerType IS NULL OR WorkerType IN (N'Assembler', N'Installer'))
     );
     CREATE UNIQUE INDEX UX_AspNetUsers_NormalizedUserName ON dbo.AspNetUsers(NormalizedUserName) WHERE NormalizedUserName IS NOT NULL;
+    CREATE INDEX IX_AspNetUsers_WorkerType ON dbo.AspNetUsers(WorkerType) WHERE WorkerType IS NOT NULL;
 END
 GO
 
