@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Alert,
   Box,
   Button,
   Card,
+  CardActionArea,
   CardContent,
   Chip,
   Dialog,
@@ -83,6 +85,7 @@ function typeLabel(row: UserListItem) {
 export default function UsersPage() {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+  const navigate = useNavigate()
 
   const [rows, setRows] = useState<UserListItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -493,24 +496,24 @@ export default function UsersPage() {
             <Typography color="text.secondary">Співробітників не знайдено</Typography>
           )}
           {rows.map((row) => (
-            <Card key={row.id} variant="outlined" sx={{ '&:hover': { boxShadow: 1 } }}>
-              <CardContent sx={{ '&:last-child': { pb: 2 } }}>
-                <Stack direction="row" justifyContent="space-between" alignItems="flex-start" gap={1}>
-                  <Box sx={{ minWidth: 0, flex: 1 }}>
-                    <Typography fontWeight={700} noWrap>
-                      {row.fullName}
-                    </Typography>
-                  </Box>
-                  <RowActionsMenu items={rowActions(row)} />
-                </Stack>
-                <Stack direction="row" spacing={1} mt={1.25} flexWrap="wrap" useFlexGap>
-                  {roleChip(row.role)}
-                  {typeLabel(row) !== '—' && (
-                    <Chip size="small" variant="outlined" label={typeLabel(row)} />
-                  )}
-                  {statusChip(row)}
-                </Stack>
-              </CardContent>
+            <Card key={row.id} variant="outlined" sx={{ '&:hover': { boxShadow: 1 }, position: 'relative' }}>
+              <Box sx={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}>
+                <RowActionsMenu items={rowActions(row)} />
+              </Box>
+              <CardActionArea onClick={() => navigate(`/users/${row.id}`)}>
+                <CardContent sx={{ '&:last-child': { pb: 2 }, pr: 6 }}>
+                  <Typography fontWeight={700} noWrap>
+                    {row.fullName}
+                  </Typography>
+                  <Stack direction="row" spacing={1} mt={1.25} flexWrap="wrap" useFlexGap>
+                    {roleChip(row.role)}
+                    {typeLabel(row) !== '—' && (
+                      <Chip size="small" variant="outlined" label={typeLabel(row)} />
+                    )}
+                    {statusChip(row)}
+                  </Stack>
+                </CardContent>
+              </CardActionArea>
             </Card>
           ))}
         </Stack>
@@ -537,6 +540,7 @@ export default function UsersPage() {
             rowHeight={52}
             pageSizeOptions={[10, 25, 50]}
             initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
+            onRowClick={(params) => navigate(`/users/${params.id}`)}
             sx={{
               border: 'none',
               '& .MuiDataGrid-columnHeaders': {
@@ -553,6 +557,9 @@ export default function UsersPage() {
                 alignItems: 'center',
                 borderColor: 'divider',
                 py: 0.5,
+              },
+              '& .MuiDataGrid-row': {
+                cursor: 'pointer',
               },
               '& .MuiDataGrid-row:hover': {
                 bgcolor: 'action.hover',

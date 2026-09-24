@@ -12,6 +12,7 @@ import ProjectDetailPage from './pages/ProjectDetailPage'
 import WarehousePage from './pages/WarehousePage'
 import WarehouseDetailPage from './pages/WarehouseDetailPage'
 import UsersPage from './pages/UsersPage'
+import UserDetailPage from './pages/UserDetailPage'
 import MyJobsPage from './pages/MyJobsPage'
 
 export default function App() {
@@ -35,6 +36,7 @@ export default function App() {
                 </Route>
                 <Route element={<ProtectedRoute roles={['Admin']} />}>
                   <Route path="/users" element={<UsersPage />} />
+                  <Route path="/users/:id" element={<UserDetailPage />} />
                 </Route>
               </Route>
             </Route>
