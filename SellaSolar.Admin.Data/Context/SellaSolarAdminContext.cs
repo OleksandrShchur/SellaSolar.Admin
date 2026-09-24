@@ -24,8 +24,6 @@ public partial class SellaSolarAdminContext : DbContext
 
     public virtual DbSet<WarehouseItem> WarehouseItems { get; set; }
 
-    public virtual DbSet<Worker> Workers { get; set; }
-
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Project>(entity =>
@@ -61,14 +59,8 @@ public partial class SellaSolarAdminContext : DbContext
 
             entity.HasOne(d => d.Project).WithMany(p => p.ProjectWorkers).HasConstraintName("FK_ProjectWorkers_Projects");
 
-            entity.HasOne(d => d.Worker).WithMany(p => p.ProjectWorkers)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_ProjectWorkers_Workers");
-        });
-
-        modelBuilder.Entity<Worker>(entity =>
-        {
-            entity.Property(e => e.IsActive).HasDefaultValue(true, "DF_Workers_IsActive");
+            // UserId references AspNetUsers (Identity context); no navigation in this DbContext.
+            entity.Property(e => e.UserId).HasMaxLength(450);
         });
 
         OnModelCreatingPartial(modelBuilder);

@@ -10,4 +10,7 @@ public class ApplicationUser : IdentityUser
     public DateTimeOffset? BlockedAt { get; set; }
     public int FailedLoginCount { get; set; }
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+
+    /// <summary>Assembler / Installer when role is Worker; otherwise null.</summary>
+    public string? WorkerType { get; set; }
 }

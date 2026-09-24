@@ -1,9 +1,12 @@
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using SellaSolar.Admin.Application.Common;
 using SellaSolar.Admin.Application.DTOs;
 using SellaSolar.Admin.Data.Context;
 using SellaSolar.Admin.Data.Entities;
+using SellaSolar.Admin.Domain.Authorization;
 using SellaSolar.Admin.Domain.Constants;
+using SellaSolar.Admin.Infrastructure.Identity;
 
 namespace SellaSolar.Admin.Application.Services;
 
@@ -11,11 +14,16 @@ public class ProjectService
 {
     private readonly SellaSolarAdminContext _db;
     private readonly ProjectMaterialsService _materials;
+    private readonly UserManager<ApplicationUser> _userManager;
 
-    public ProjectService(SellaSolarAdminContext db, ProjectMaterialsService materials)
+    public ProjectService(
+        SellaSolarAdminContext db,
+        ProjectMaterialsService materials,
+        UserManager<ApplicationUser> userManager)
     {
         _db = db;
         _materials = materials;
+        _userManager = userManager;
     }
 
     public async Task<IReadOnlyList<ProjectListItemDto>> GetAllAsync(
@@ -59,17 +67,40 @@ public class ProjectService
             .ToListAsync(ct);
     }
 
+    public async Task<IReadOnlyList<ProjectListItemDto>> GetAssignedToUserAsync(
+        string userId,
+        CancellationToken ct = default)
+    {
+        return await _db.Projects
+            .AsNoTracking()
+            .Where(p => p.ProjectWorkers.Any(pw => pw.UserId == userId))
+            .OrderByDescending(p => p.CreatedAt)
+            .Select(p => new ProjectListItemDto(
+                p.Id,
+                p.Name,
+                p.Address,
+                p.Status,
+                p.CustomerName,
+                p.CustomerPhone,
+                p.StartDate,
+                p.EndDate,
+                p.CreatedAt,
+                p.ProjectWorkers.Count,
+                p.ProjectItems.Any(i => i.NeedsPurchase)))
+            .ToListAsync(ct);
+    }
+
     public async Task<ProjectDetailDto?> GetByIdAsync(int id, CancellationToken ct = default)
     {
         var project = await _db.Projects
             .AsNoTracking()
             .Include(p => p.ProjectCustomData)
             .Include(p => p.ProjectItems).ThenInclude(i => i.WarehouseItem)
-            .Include(p => p.ProjectWorkers).ThenInclude(w => w.Worker)
+            .Include(p => p.ProjectWorkers)
             .Include(p => p.ProjectPhotos)
             .FirstOrDefaultAsync(p => p.Id == id, ct);
 
-        return project is null ? null : MapDetail(project);
+        return project is null ? null : await MapDetailAsync(project, ct);
     }
 
     public async Task<ProjectDetailDto> CreateAsync(CreateProjectRequest request, CancellationToken ct = default)
@@ -125,7 +156,7 @@ public class ProjectService
         ApplyCustomData(project, request.CustomData);
 
         await _db.SaveChangesAsync(ct);
-        return (await GetByIdAsync(id, ct))!;
+        return (await GetByIdAsync(project.Id, ct))!;
     }
 
     public async Task<ProjectDetailDto> UpdateStatusAsync(int id, string status, CancellationToken ct = default)
@@ -172,21 +203,27 @@ public class ProjectService
         var project = await _db.Projects.FirstOrDefaultAsync(p => p.Id == projectId, ct)
             ?? throw new NotFoundException($"Project {projectId} was not found.");
 
-        var worker = await _db.Workers.FirstOrDefaultAsync(w => w.Id == request.WorkerId, ct)
-            ?? throw new NotFoundException($"Worker {request.WorkerId} was not found.");
+        if (string.IsNullOrWhiteSpace(request.UserId))
+            throw new ValidationException("Працівника не вибрано.");
 
-        if (!worker.IsActive)
-            throw new ValidationException("Cannot assign an inactive worker.");
+        var user = await _userManager.FindByIdAsync(request.UserId)
+            ?? throw new NotFoundException("Працівника не знайдено.");
+
+        if (!await _userManager.IsInRoleAsync(user, AppRoles.Worker))
+            throw new ValidationException("Призначати на проект можна лише користувачів з роллю «Виконавець».");
+
+        if (!user.IsActive || user.IsBlocked)
+            throw new ValidationException("Не можна призначити неактивного або заблокованого працівника.");
 
         var exists = await _db.ProjectWorkers
-            .AnyAsync(pw => pw.ProjectId == projectId && pw.WorkerId == request.WorkerId, ct);
+            .AnyAsync(pw => pw.ProjectId == projectId && pw.UserId == request.UserId, ct);
         if (exists)
-            throw new ConflictException("Worker is already assigned to this project.");
+            throw new ConflictException("Працівника вже призначено на цей проект.");
 
         var entity = new ProjectWorker
         {
             ProjectId = project.Id,
-            WorkerId = worker.Id,
+            UserId = user.Id,
             RoleOnProject = string.IsNullOrWhiteSpace(request.RoleOnProject) ? null : request.RoleOnProject.Trim(),
             AssignedAt = DateTime.UtcNow
         };
@@ -197,10 +234,10 @@ public class ProjectService
 
         return new ProjectWorkerDto(
             entity.Id,
-            worker.Id,
-            worker.FullName,
-            worker.Type,
-            worker.Phone,
+            user.Id,
+            user.FullName,
+            user.WorkerType,
+            user.PhoneNumber,
             entity.RoleOnProject,
             entity.AssignedAt);
     }
@@ -251,7 +288,6 @@ public class ProjectService
         var path = photo.FilePathOrUrl;
         var project = await _db.Projects.FirstAsync(p => p.Id == projectId, ct);
         project.UpdatedAt = DateTime.UtcNow;
-
         _db.ProjectPhotos.Remove(photo);
         await _db.SaveChangesAsync(ct);
         return path;
@@ -293,8 +329,15 @@ public class ProjectService
         }
     }
 
-    private static ProjectDetailDto MapDetail(Project project) =>
-        new(
+    private async Task<ProjectDetailDto> MapDetailAsync(Project project, CancellationToken ct)
+    {
+        var userIds = project.ProjectWorkers.Select(w => w.UserId).Distinct().ToList();
+        var users = await _userManager.Users
+            .AsNoTracking()
+            .Where(u => userIds.Contains(u.Id))
+            .ToDictionaryAsync(u => u.Id, ct);
+
+        return new ProjectDetailDto(
             project.Id,
             project.Name,
             project.Description,
@@ -326,18 +369,23 @@ public class ProjectService
                     i.WarehouseItem.QuantityInStock))
                 .ToList(),
             project.ProjectWorkers
-                .OrderBy(w => w.Worker.FullName)
-                .Select(w => new ProjectWorkerDto(
-                    w.Id,
-                    w.WorkerId,
-                    w.Worker.FullName,
-                    w.Worker.Type,
-                    w.Worker.Phone,
-                    w.RoleOnProject,
-                    w.AssignedAt))
+                .OrderBy(w => users.TryGetValue(w.UserId, out var u) ? u.FullName : w.UserId)
+                .Select(w =>
+                {
+                    users.TryGetValue(w.UserId, out var user);
+                    return new ProjectWorkerDto(
+                        w.Id,
+                        w.UserId,
+                        user?.FullName ?? w.UserId,
+                        user?.WorkerType,
+                        user?.PhoneNumber,
+                        w.RoleOnProject,
+                        w.AssignedAt);
+                })
                 .ToList(),
             project.ProjectPhotos
                 .OrderByDescending(p => p.UploadedAt)
                 .Select(p => new ProjectPhotoDto(p.Id, p.FilePathOrUrl, p.Caption, p.UploadedAt))
                 .ToList());
+    }
 }

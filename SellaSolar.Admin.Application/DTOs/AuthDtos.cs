@@ -8,9 +8,19 @@ public record CurrentUserDto(string UserId, string Username, string FullName, IR
 
 public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
 
-public record CreateUserRequest(string Username, string Password, string FullName, string Role);
+public record CreateUserRequest(
+    string Username,
+    string Password,
+    string FullName,
+    string Role,
+    string? Phone,
+    string? WorkerType);
 
-public record UpdateUserRequest(string FullName, string Role);
+public record UpdateUserRequest(
+    string FullName,
+    string Role,
+    string? Phone,
+    string? WorkerType);
 
 public record ResetUserPasswordRequest(string NewPassword);
 
@@ -19,6 +29,8 @@ public record UserListItemDto(
     string Username,
     string FullName,
     string Role,
+    string? Phone,
+    string? WorkerType,
     bool IsActive,
     bool IsBlocked,
     DateTimeOffset? BlockedAt,

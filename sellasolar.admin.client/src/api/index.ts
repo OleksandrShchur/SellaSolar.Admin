@@ -11,7 +11,6 @@ import type {
   WarehouseItemDetail,
   WarehouseItemList,
   UserListItem,
-  Worker,
   WorkerType,
 } from './types'
 
@@ -22,24 +21,45 @@ export const authApi = {
 }
 
 export const usersApi = {
-  list: (params?: { isActive?: boolean; isBlocked?: boolean; search?: string }) =>
+  list: (params?: {
+    role?: AppRole | ''
+    isActive?: boolean
+    isBlocked?: boolean
+    search?: string
+  }) =>
     apiGet<UserListItem[]>(
       `/api/users${qs({
+        role: params?.role,
         isActive: params?.isActive,
         isBlocked: params?.isBlocked,
         search: params?.search,
       })}`,
     ),
+  workersForAssignment: () => apiGet<UserListItem[]>('/api/users/workers'),
   suggestUsername: (fullName: string) =>
     apiGet<{ suggestedUsername: string }>(`/api/users/suggest-username${qs({ fullName })}`),
-  create: (body: { username: string; password: string; fullName: string; role: AppRole }) =>
-    apiSend<UserListItem>('/api/users', 'POST', body),
-  update: (id: string, body: { fullName: string; role: AppRole }) =>
-    apiSend<UserListItem>(`/api/users/${id}`, 'PUT', body),
+  create: (body: {
+    username: string
+    password: string
+    fullName: string
+    role: AppRole
+    phone?: string | null
+    workerType?: WorkerType | null
+  }) => apiSend<UserListItem>('/api/users', 'POST', body),
+  update: (
+    id: string,
+    body: {
+      fullName: string
+      role: AppRole
+      phone?: string | null
+      workerType?: WorkerType | null
+    },
+  ) => apiSend<UserListItem>(`/api/users/${id}`, 'PUT', body),
   resetPassword: (id: string, body: { newPassword: string }) =>
     apiSend<void>(`/api/users/${id}/reset-password`, 'POST', body),
   activate: (id: string) => apiSend<void>(`/api/users/${id}/activate`, 'POST'),
   deactivate: (id: string) => apiSend<void>(`/api/users/${id}/deactivate`, 'POST'),
+  block: (id: string) => apiSend<void>(`/api/users/${id}/block`, 'POST'),
   unblock: (id: string) => apiSend<void>(`/api/users/${id}/unblock`, 'POST'),
 }
 
@@ -56,6 +76,7 @@ function qs(params: Record<string, string | boolean | undefined | null>): string
 export const projectsApi = {
   list: (status?: string, search?: string) =>
     apiGet<ProjectListItem[]>(`/api/projects${qs({ status, search })}`),
+  mine: () => apiGet<ProjectListItem[]>('/api/my-jobs'),
   get: (id: number) => apiGet<ProjectDetail>(`/api/projects/${id}`),
   create: (body: unknown) => apiSend<ProjectDetail>('/api/projects', 'POST', body),
   update: (id: number, body: unknown) => apiSend<ProjectDetail>(`/api/projects/${id}`, 'PUT', body),
@@ -66,8 +87,8 @@ export const projectsApi = {
     apiSend<ProjectItem>(`/api/projects/${id}/items`, 'POST', { warehouseItemId, quantityNeeded }),
   removeItem: (id: number, itemId: number) =>
     apiSend<void>(`/api/projects/${id}/items/${itemId}`, 'DELETE'),
-  assignWorker: (id: number, workerId: number, roleOnProject?: string) =>
-    apiSend<ProjectWorker>(`/api/projects/${id}/workers`, 'POST', { workerId, roleOnProject }),
+  assignWorker: (id: number, userId: string, roleOnProject?: string) =>
+    apiSend<ProjectWorker>(`/api/projects/${id}/workers`, 'POST', { userId, roleOnProject }),
   removeWorker: (id: number, assignmentId: number) =>
     apiSend<void>(`/api/projects/${id}/workers/${assignmentId}`, 'DELETE'),
   uploadPhoto: (id: number, file: File, caption?: string) => {
@@ -95,18 +116,4 @@ export const warehouseApi = {
   update: (id: number, body: unknown) =>
     apiSend<WarehouseItemDetail>(`/api/warehouse-items/${id}`, 'PUT', body),
   remove: (id: number) => apiSend<void>(`/api/warehouse-items/${id}`, 'DELETE'),
-}
-
-export const workersApi = {
-  list: (params?: { type?: WorkerType | ''; isActive?: boolean | ''; search?: string }) =>
-    apiGet<Worker[]>(
-      `/api/workers${qs({
-        type: params?.type || undefined,
-        isActive: params?.isActive === '' ? undefined : params?.isActive,
-        search: params?.search,
-      })}`,
-    ),
-  create: (body: unknown) => apiSend<Worker>('/api/workers', 'POST', body),
-  update: (id: number, body: unknown) => apiSend<Worker>(`/api/workers/${id}`, 'PUT', body),
-  remove: (id: number) => apiSend<void>(`/api/workers/${id}`, 'DELETE'),
 }

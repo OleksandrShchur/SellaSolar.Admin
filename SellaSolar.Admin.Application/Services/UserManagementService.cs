@@ -4,6 +4,7 @@ using SellaSolar.Admin.Application.Auth;
 using SellaSolar.Admin.Application.Common;
 using SellaSolar.Admin.Application.DTOs;
 using SellaSolar.Admin.Domain.Authorization;
+using SellaSolar.Admin.Domain.Constants;
 using SellaSolar.Admin.Infrastructure.Identity;
 using SellaSolar.Admin.Infrastructure.Services;
 
@@ -12,25 +13,28 @@ namespace SellaSolar.Admin.Application.Services;
 public class UserManagementService
 {
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly RoleManager<IdentityRole> _roleManager;
     private readonly AuthSecurityLogger _securityLogger;
 
     public UserManagementService(
         UserManager<ApplicationUser> userManager,
-        RoleManager<IdentityRole> roleManager,
         AuthSecurityLogger securityLogger)
     {
         _userManager = userManager;
-        _roleManager = roleManager;
         _securityLogger = securityLogger;
     }
 
     public async Task<IReadOnlyList<UserListItemDto>> GetAllAsync(
+        string? role,
         bool? isActive,
         bool? isBlocked,
         string? search,
         CancellationToken ct)
     {
+        if (!string.IsNullOrWhiteSpace(role) && !AppRoles.All.Contains(role))
+        {
+            throw new ValidationException("Невідома роль користувача.");
+        }
+
         var query = _userManager.Users.AsNoTracking().AsQueryable();
 
         if (isActive is not null)
@@ -48,7 +52,8 @@ public class UserManagementService
             var term = search.Trim();
             query = query.Where(u =>
                 u.UserName!.Contains(term) ||
-                u.FullName.Contains(term));
+                u.FullName.Contains(term) ||
+                (u.PhoneNumber != null && u.PhoneNumber.Contains(term)));
         }
 
         var users = await query.OrderBy(u => u.FullName).ToListAsync(ct);
@@ -56,10 +61,28 @@ public class UserManagementService
         foreach (var user in users)
         {
             var roles = await _userManager.GetRolesAsync(user);
-            result.Add(Map(user, roles.FirstOrDefault() ?? AppRoles.Worker));
+            var userRole = roles.FirstOrDefault() ?? AppRoles.Worker;
+            if (!string.IsNullOrWhiteSpace(role) &&
+                !roles.Contains(role, StringComparer.Ordinal))
+            {
+                continue;
+            }
+
+            result.Add(Map(user, userRole));
         }
 
         return result;
+    }
+
+    /// <summary>Active field workers for project assignment pickers (Admin/Manager).</summary>
+    public async Task<IReadOnlyList<UserListItemDto>> GetWorkersForAssignmentAsync(CancellationToken ct)
+    {
+        var workers = await _userManager.GetUsersInRoleAsync(AppRoles.Worker);
+        return workers
+            .Where(u => u.IsActive && !u.IsBlocked)
+            .OrderBy(u => u.FullName)
+            .Select(u => Map(u, AppRoles.Worker))
+            .ToList();
     }
 
     public async Task<UserListItemDto> CreateAsync(CreateUserRequest request, CancellationToken ct)
@@ -67,6 +90,7 @@ public class UserManagementService
         ValidateUsername(request.Username);
         ValidatePassword(request.Password);
         ValidateRole(request.Role);
+        ValidateWorkerFields(request.Role, request.Phone, request.WorkerType);
 
         if (!UsernameValidator.IsValid(request.Username))
         {
@@ -84,6 +108,8 @@ public class UserManagementService
         {
             UserName = request.Username.Trim(),
             FullName = request.FullName.Trim(),
+            PhoneNumber = NormalizePhone(request.Phone),
+            WorkerType = request.Role == AppRoles.Worker ? request.WorkerType : null,
             IsActive = true,
             Email = null,
             CreatedAt = DateTimeOffset.UtcNow,
@@ -102,10 +128,15 @@ public class UserManagementService
     public async Task<UserListItemDto> UpdateAsync(string id, UpdateUserRequest request, CancellationToken ct)
     {
         ValidateRole(request.Role);
+        ValidateWorkerFields(request.Role, request.Phone, request.WorkerType);
+
         var user = await _userManager.FindByIdAsync(id)
             ?? throw new NotFoundException("Користувача не знайдено.");
 
         user.FullName = request.FullName.Trim();
+        user.PhoneNumber = NormalizePhone(request.Phone);
+        user.WorkerType = request.Role == AppRoles.Worker ? request.WorkerType : null;
+
         var updateResult = await _userManager.UpdateAsync(user);
         if (!updateResult.Succeeded)
         {
@@ -190,6 +221,27 @@ public class UserManagementService
             ct);
     }
 
+    public async Task BlockAsync(string actorUserId, string targetUserId, CancellationToken ct)
+    {
+        if (actorUserId == targetUserId)
+        {
+            throw new ValidationException("Не можна заблокувати власний обліковий запис.");
+        }
+
+        var user = await _userManager.FindByIdAsync(targetUserId)
+            ?? throw new NotFoundException("Користувача не знайдено.");
+
+        if (await _userManager.IsInRoleAsync(user, AppRoles.Admin))
+        {
+            await EnsureNotLastActiveAdminAsync(user.Id, ct);
+        }
+
+        user.IsBlocked = true;
+        user.BlockedAt = DateTimeOffset.UtcNow;
+        await _userManager.UpdateAsync(user);
+        await _userManager.UpdateSecurityStampAsync(user);
+    }
+
     public async Task<string> SuggestUsernameAsync(string fullName, CancellationToken ct)
     {
         var baseName = UsernameTransliteration.SuggestFromFullName(fullName);
@@ -208,7 +260,7 @@ public class UserManagementService
     private async Task EnsureNotLastActiveAdminAsync(string excludingUserId, CancellationToken ct)
     {
         var admins = await _userManager.GetUsersInRoleAsync(AppRoles.Admin);
-        var activeOthers = admins.Count(a => a.IsActive && a.Id != excludingUserId);
+        var activeOthers = admins.Count(a => a.IsActive && !a.IsBlocked && a.Id != excludingUserId);
         if (activeOthers == 0)
         {
             throw new ConflictException("Не можна деактивувати останнього активного адміністратора.");
@@ -221,6 +273,8 @@ public class UserManagementService
             user.UserName!,
             user.FullName,
             role,
+            user.PhoneNumber,
+            user.WorkerType,
             user.IsActive,
             user.IsBlocked,
             user.BlockedAt,
@@ -250,4 +304,25 @@ public class UserManagementService
             throw new ValidationException("Невідома роль користувача.");
         }
     }
+
+    private static void ValidateWorkerFields(string role, string? phone, string? workerType)
+    {
+        if (role != AppRoles.Worker)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(phone))
+        {
+            throw new ValidationException("Телефон обов'язковий для працівника.");
+        }
+
+        if (!WorkerTypes.IsValid(workerType))
+        {
+            throw new ValidationException("Тип працівника має бути Assembler або Installer.");
+        }
+    }
+
+    private static string? NormalizePhone(string? phone) =>
+        string.IsNullOrWhiteSpace(phone) ? null : phone.Trim();
 }

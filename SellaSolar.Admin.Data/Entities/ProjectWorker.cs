@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace SellaSolar.Admin.Data.Entities;
 
-[Index("ProjectId", "WorkerId", Name = "UQ_ProjectWorkers_Project_Worker", IsUnique = true)]
+[Index("ProjectId", "UserId", Name = "UQ_ProjectWorkers_Project_User", IsUnique = true)]
 public partial class ProjectWorker
 {
     [Key]
@@ -14,7 +14,8 @@ public partial class ProjectWorker
 
     public int ProjectId { get; set; }
 
-    public int WorkerId { get; set; }
+    [StringLength(450)]
+    public string UserId { get; set; } = null!;
 
     [StringLength(100)]
     public string? RoleOnProject { get; set; }
@@ -24,8 +25,4 @@ public partial class ProjectWorker
     [ForeignKey("ProjectId")]
     [InverseProperty("ProjectWorkers")]
     public virtual Project Project { get; set; } = null!;
-
-    [ForeignKey("WorkerId")]
-    [InverseProperty("ProjectWorkers")]
-    public virtual Worker Worker { get; set; } = null!;
 }
