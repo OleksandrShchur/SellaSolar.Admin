@@ -416,7 +416,7 @@ export default function UsersPage() {
           useFlexGap
         >
           <TextField
-            placeholder="Пошук за ПІБ або телефоном"
+            placeholder="ПІБ або телефон"
             size="small"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -507,6 +507,7 @@ export default function UsersPage() {
             loading={loading}
             disableRowSelectionOnClick
             disableColumnSelector
+            disableColumnMenu
             autoHeight
             rowHeight={52}
             pageSizeOptions={[10, 25, 50]}
@@ -541,6 +542,9 @@ export default function UsersPage() {
             }}
             localeText={{
               noRowsLabel: 'Співробітників не знайдено',
+              MuiTablePagination: {
+                labelRowsPerPage: 'Рядків на сторінці:',
+              },
             }}
           />
         </Box>
