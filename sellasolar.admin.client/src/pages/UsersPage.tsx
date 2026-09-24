@@ -11,6 +11,7 @@ import {
   DialogContent,
   DialogTitle,
   FormControl,
+  IconButton,
   InputAdornment,
   InputLabel,
   MenuItem,
@@ -25,6 +26,7 @@ import {
 } from '@mui/material'
 import { DataGrid, type GridColDef } from '@mui/x-data-grid'
 import AddIcon from '@mui/icons-material/Add'
+import ClearIcon from '@mui/icons-material/Clear'
 import SearchIcon from '@mui/icons-material/Search'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import LockResetOutlinedIcon from '@mui/icons-material/LockResetOutlined'
@@ -85,6 +87,7 @@ export default function UsersPage() {
   const [rows, setRows] = useState<UserListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('Worker')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('active')
@@ -124,8 +127,16 @@ export default function UsersPage() {
   }
 
   useEffect(() => {
+    const trimmed = searchInput.trim()
+    const timer = window.setTimeout(() => {
+      setSearch(trimmed.length >= 2 ? trimmed : '')
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [searchInput])
+
+  useEffect(() => {
     void load()
-  }, [roleFilter, statusFilter])
+  }, [roleFilter, statusFilter, search])
 
   const openEdit = (row: UserListItem) => {
     setEditUser(row)
@@ -416,11 +427,10 @@ export default function UsersPage() {
           useFlexGap
         >
           <TextField
-            placeholder="Пошук за ПІБ або телефоном"
+            placeholder="ПІБ або телефон"
             size="small"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && void load()}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
             sx={{ width: { xs: '100%', sm: 300 }, flexShrink: 0 }}
             InputProps={{
               startAdornment: (
@@ -428,6 +438,21 @@ export default function UsersPage() {
                   <SearchIcon fontSize="small" color="action" />
                 </InputAdornment>
               ),
+              endAdornment: searchInput ? (
+                <InputAdornment position="end">
+                  <IconButton
+                    size="small"
+                    aria-label="Очистити пошук"
+                    onClick={() => {
+                      setSearchInput('')
+                      setSearch('')
+                    }}
+                    edge="end"
+                  >
+                    <ClearIcon fontSize="small" />
+                  </IconButton>
+                </InputAdornment>
+              ) : undefined,
             }}
           />
 
@@ -507,6 +532,7 @@ export default function UsersPage() {
             loading={loading}
             disableRowSelectionOnClick
             disableColumnSelector
+            disableColumnMenu
             autoHeight
             rowHeight={52}
             pageSizeOptions={[10, 25, 50]}
@@ -541,6 +567,9 @@ export default function UsersPage() {
             }}
             localeText={{
               noRowsLabel: 'Співробітників не знайдено',
+              MuiTablePagination: {
+                labelRowsPerPage: 'Рядків на сторінці:',
+              },
             }}
           />
         </Box>
