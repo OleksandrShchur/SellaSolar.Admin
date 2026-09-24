@@ -123,7 +123,7 @@ export default function WarehouseDetailPage() {
               <Typography variant="h6" fontWeight={700} noWrap>
                 {item.name}
               </Typography>
-              {item.isLowStock && <Chip size="small" color="warning" label="Низький запас" />}
+              {item.isLowStock && <Chip size="small" color="warning" label="Низький" />}
             </Stack>
             <Typography variant="body2" color="text.secondary" mt={0.5}>
               {item.category} · {formatNumber(item.quantityInStock)} {item.unit}

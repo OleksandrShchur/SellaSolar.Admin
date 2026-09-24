@@ -140,7 +140,7 @@ export default function WarehousePage() {
       width: 140,
       renderCell: (params) =>
         params.value ? (
-          <Chip size="small" color="warning" label="Низький запас" />
+          <Chip size="small" color="warning" label="Низький" />
         ) : (
           <Chip size="small" color="success" variant="outlined" label="OK" />
         ),
@@ -283,7 +283,7 @@ export default function WarehousePage() {
             sx={toggleButtonSx}
           >
             <ToggleButton value="all">Усі</ToggleButton>
-            <ToggleButton value="low">Низький запас</ToggleButton>
+            <ToggleButton value="low">Низький</ToggleButton>
           </ToggleButtonGroup>
         </Stack>
       </Box>
@@ -306,7 +306,7 @@ export default function WarehousePage() {
                   </Typography>
                   <Stack direction="row" spacing={1} mt={1.25} flexWrap="wrap" useFlexGap>
                     {row.isLowStock ? (
-                      <Chip size="small" color="warning" label="Низький запас" />
+                      <Chip size="small" color="warning" label="Низький" />
                     ) : (
                       <Chip size="small" color="success" variant="outlined" label="OK" />
                     )}
