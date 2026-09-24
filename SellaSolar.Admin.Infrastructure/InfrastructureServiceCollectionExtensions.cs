@@ -40,9 +40,9 @@ public static class InfrastructureServiceCollectionExtensions
 
         services.AddAuthorizationBuilder()
             .AddPolicy(AppPolicies.CanManageUsers, p => p.RequireRole(AppRoles.Admin))
-            .AddPolicy(AppPolicies.CanManageProjects, p => p.RequireRole(AppRoles.Admin, AppRoles.Manager))
-            .AddPolicy(AppPolicies.CanManageWarehouse, p => p.RequireRole(AppRoles.Admin, AppRoles.Manager))
-            .AddPolicy(AppPolicies.CanViewAssignedJobs, p => p.RequireRole(AppRoles.Admin, AppRoles.Manager, AppRoles.Worker));
+            .AddPolicy(AppPolicies.CanManageProjects, p => p.RequireRole(AppRoles.Admin))
+            .AddPolicy(AppPolicies.CanManageWarehouse, p => p.RequireRole(AppRoles.Admin))
+            .AddPolicy(AppPolicies.CanViewAssignedJobs, p => p.RequireRole(AppRoles.Admin, AppRoles.Worker));
 
         return services;
     }

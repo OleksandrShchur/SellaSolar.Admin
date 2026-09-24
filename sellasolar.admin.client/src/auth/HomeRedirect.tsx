@@ -3,7 +3,7 @@ import { useAuth } from './AuthContext'
 
 export default function HomeRedirect() {
   const { hasRole } = useAuth()
-  if (hasRole('Worker') && !hasRole('Admin') && !hasRole('Manager')) {
+  if (hasRole('Worker') && !hasRole('Admin')) {
     return <Navigate to="/my-jobs" replace />
   }
   if (hasRole('Admin')) {

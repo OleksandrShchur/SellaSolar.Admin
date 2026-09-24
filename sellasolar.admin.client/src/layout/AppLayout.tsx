@@ -55,7 +55,7 @@ export default function AppLayout() {
 
   const navItems = useMemo(() => {
     const items = []
-    const isFieldWorker = hasRole('Worker') && !hasRole('Admin') && !hasRole('Manager')
+    const isFieldWorker = hasRole('Worker') && !hasRole('Admin')
     if (isFieldWorker) {
       items.push({ to: '/my-jobs', label: 'Мої завдання', icon: <AssignmentIndIcon /> })
     } else {
@@ -223,7 +223,7 @@ export default function AppLayout() {
               {user?.fullName}
             </MenuItem>
             <MenuItem disabled sx={{ opacity: 0.7, fontSize: '0.85rem' }}>
-              @{user?.username}
+              {user?.username}
             </MenuItem>
             <MenuItem
               onClick={() => {

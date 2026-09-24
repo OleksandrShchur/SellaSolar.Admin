@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using SellaSolar.Admin.Application.Auth;
 using SellaSolar.Admin.Application.Common;
 using SellaSolar.Admin.Application.DTOs;
 using SellaSolar.Admin.Domain.Authorization;
@@ -12,6 +11,9 @@ namespace SellaSolar.Admin.Application.Services;
 
 public class UserManagementService
 {
+    private const string InvalidPhoneMessage =
+        "Телефон має бути у форматі 0XXXXXXXXX (10 цифр, починається з 0).";
+
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly AuthSecurityLogger _securityLogger;
 
@@ -61,7 +63,9 @@ public class UserManagementService
         foreach (var user in users)
         {
             var roles = await _userManager.GetRolesAsync(user);
-            var userRole = roles.FirstOrDefault() ?? AppRoles.Worker;
+            var userRole = roles.Contains(AppRoles.Admin)
+                ? AppRoles.Admin
+                : roles.FirstOrDefault() ?? AppRoles.Worker;
             if (!string.IsNullOrWhiteSpace(role) &&
                 !roles.Contains(role, StringComparer.Ordinal))
             {
@@ -74,7 +78,7 @@ public class UserManagementService
         return result;
     }
 
-    /// <summary>Active field workers for project assignment pickers (Admin/Manager).</summary>
+    /// <summary>Active field workers for project assignment pickers.</summary>
     public async Task<IReadOnlyList<UserListItemDto>> GetWorkersForAssignmentAsync(CancellationToken ct)
     {
         var workers = await _userManager.GetUsersInRoleAsync(AppRoles.Worker);
@@ -87,31 +91,24 @@ public class UserManagementService
 
     public async Task<UserListItemDto> CreateAsync(CreateUserRequest request, CancellationToken ct)
     {
-        ValidateUsername(request.Username);
         ValidatePassword(request.Password);
         ValidateRole(request.Role);
-        ValidateWorkerFields(request.Role, request.Phone, request.WorkerType);
+        ValidateWorkerType(request.Role, request.WorkerType);
+        var phone = RequireCanonicalPhone(request.Phone);
 
-        if (!UsernameValidator.IsValid(request.Username))
-        {
-            throw new ValidationException(
-                "Ім'я користувача може містити лише латинські літери, цифри та символи .-_");
-        }
-
-        var normalized = UsernameValidator.NormalizeForLookup(request.Username);
+        var normalized = PhoneValidator.NormalizeForLookup(phone);
         if (await _userManager.Users.AnyAsync(u => u.NormalizedUserName == normalized, ct))
         {
-            throw new ConflictException("Користувач з таким ім'ям уже існує.");
+            throw new ConflictException("Користувач з таким телефоном уже існує.");
         }
 
         var user = new ApplicationUser
         {
-            UserName = request.Username.Trim(),
+            UserName = phone,
             FullName = request.FullName.Trim(),
-            PhoneNumber = NormalizePhone(request.Phone),
+            PhoneNumber = phone,
             WorkerType = request.Role == AppRoles.Worker ? request.WorkerType : null,
             IsActive = true,
-            Email = null,
             CreatedAt = DateTimeOffset.UtcNow,
         };
 
@@ -128,14 +125,31 @@ public class UserManagementService
     public async Task<UserListItemDto> UpdateAsync(string id, UpdateUserRequest request, CancellationToken ct)
     {
         ValidateRole(request.Role);
-        ValidateWorkerFields(request.Role, request.Phone, request.WorkerType);
+        ValidateWorkerType(request.Role, request.WorkerType);
+        var phone = RequireCanonicalPhone(request.Phone);
 
         var user = await _userManager.FindByIdAsync(id)
             ?? throw new NotFoundException("Користувача не знайдено.");
 
+        var normalized = PhoneValidator.NormalizeForLookup(phone);
+        if (await _userManager.Users.AnyAsync(
+                u => u.NormalizedUserName == normalized && u.Id != id, ct))
+        {
+            throw new ConflictException("Користувач з таким телефоном уже існує.");
+        }
+
         user.FullName = request.FullName.Trim();
-        user.PhoneNumber = NormalizePhone(request.Phone);
+        user.PhoneNumber = phone;
         user.WorkerType = request.Role == AppRoles.Worker ? request.WorkerType : null;
+
+        if (!string.Equals(user.UserName, phone, StringComparison.Ordinal))
+        {
+            var setNameResult = await _userManager.SetUserNameAsync(user, phone);
+            if (!setNameResult.Succeeded)
+            {
+                throw new ValidationException(string.Join(" ", setNameResult.Errors.Select(e => e.Description)));
+            }
+        }
 
         var updateResult = await _userManager.UpdateAsync(user);
         if (!updateResult.Succeeded)
@@ -174,6 +188,13 @@ public class UserManagementService
     {
         var user = await _userManager.FindByIdAsync(id)
             ?? throw new NotFoundException("Користувача не знайдено.");
+
+        var roles = await _userManager.GetRolesAsync(user);
+        if (!roles.Contains(AppRoles.Worker) && !roles.Contains(AppRoles.Admin))
+        {
+            throw new ValidationException("Можна активувати лише виконавців або адміністраторів.");
+        }
+
         user.IsActive = true;
         await _userManager.UpdateAsync(user);
         await _userManager.UpdateSecurityStampAsync(user);
@@ -189,9 +210,9 @@ public class UserManagementService
         var user = await _userManager.FindByIdAsync(targetUserId)
             ?? throw new NotFoundException("Користувача не знайдено.");
 
-        if (await _userManager.IsInRoleAsync(user, AppRoles.Admin))
+        if (!await _userManager.IsInRoleAsync(user, AppRoles.Worker))
         {
-            await EnsureNotLastActiveAdminAsync(user.Id, ct);
+            throw new ValidationException("Можна деактивувати лише виконавців.");
         }
 
         user.IsActive = false;
@@ -221,50 +242,12 @@ public class UserManagementService
             ct);
     }
 
-    public async Task BlockAsync(string actorUserId, string targetUserId, CancellationToken ct)
+    public Task BlockAsync(string actorUserId, string targetUserId, CancellationToken ct)
     {
-        if (actorUserId == targetUserId)
-        {
-            throw new ValidationException("Не можна заблокувати власний обліковий запис.");
-        }
-
-        var user = await _userManager.FindByIdAsync(targetUserId)
-            ?? throw new NotFoundException("Користувача не знайдено.");
-
-        if (await _userManager.IsInRoleAsync(user, AppRoles.Admin))
-        {
-            await EnsureNotLastActiveAdminAsync(user.Id, ct);
-        }
-
-        user.IsBlocked = true;
-        user.BlockedAt = DateTimeOffset.UtcNow;
-        await _userManager.UpdateAsync(user);
-        await _userManager.UpdateSecurityStampAsync(user);
-    }
-
-    public async Task<string> SuggestUsernameAsync(string fullName, CancellationToken ct)
-    {
-        var baseName = UsernameTransliteration.SuggestFromFullName(fullName);
-        var candidate = baseName;
-        var suffix = 2;
-        while (await _userManager.Users.AnyAsync(
-                   u => u.NormalizedUserName == UsernameValidator.NormalizeForLookup(candidate), ct))
-        {
-            candidate = $"{baseName}{suffix}";
-            suffix++;
-        }
-
-        return candidate;
-    }
-
-    private async Task EnsureNotLastActiveAdminAsync(string excludingUserId, CancellationToken ct)
-    {
-        var admins = await _userManager.GetUsersInRoleAsync(AppRoles.Admin);
-        var activeOthers = admins.Count(a => a.IsActive && !a.IsBlocked && a.Id != excludingUserId);
-        if (activeOthers == 0)
-        {
-            throw new ConflictException("Не можна деактивувати останнього активного адміністратора.");
-        }
+        // Manual block is disabled; lockout happens only via failed login attempts in AuthService.
+        _ = (actorUserId, targetUserId, ct);
+        throw new ValidationException(
+            "Ручне блокування недоступне. Обліковий запис блокується лише після невдалих спроб входу.");
     }
 
     private static UserListItemDto Map(ApplicationUser user, string role) =>
@@ -281,12 +264,20 @@ public class UserManagementService
             user.FailedLoginCount,
             user.CreatedAt);
 
-    private static void ValidateUsername(string username)
+    private static string RequireCanonicalPhone(string? phone)
     {
-        if (string.IsNullOrWhiteSpace(username))
+        if (string.IsNullOrWhiteSpace(phone))
         {
-            throw new ValidationException("Ім'я користувача обов'язкове.");
+            throw new ValidationException("Телефон обов'язковий.");
         }
+
+        // Create/update accept only canonical form (no +380 auto-cast in API).
+        if (!PhoneValidator.IsValid(phone))
+        {
+            throw new ValidationException(InvalidPhoneMessage);
+        }
+
+        return PhoneValidator.NormalizeForLookup(phone);
     }
 
     private static void ValidatePassword(string password)
@@ -305,16 +296,11 @@ public class UserManagementService
         }
     }
 
-    private static void ValidateWorkerFields(string role, string? phone, string? workerType)
+    private static void ValidateWorkerType(string role, string? workerType)
     {
         if (role != AppRoles.Worker)
         {
             return;
-        }
-
-        if (string.IsNullOrWhiteSpace(phone))
-        {
-            throw new ValidationException("Телефон обов'язковий для працівника.");
         }
 
         if (!WorkerTypes.IsValid(workerType))
@@ -322,7 +308,4 @@ public class UserManagementService
             throw new ValidationException("Тип працівника має бути Assembler або Installer.");
         }
     }
-
-    private static string? NormalizePhone(string? phone) =>
-        string.IsNullOrWhiteSpace(phone) ? null : phone.Trim();
 }

@@ -36,14 +36,11 @@ export const usersApi = {
       })}`,
     ),
   workersForAssignment: () => apiGet<UserListItem[]>('/api/users/workers'),
-  suggestUsername: (fullName: string) =>
-    apiGet<{ suggestedUsername: string }>(`/api/users/suggest-username${qs({ fullName })}`),
   create: (body: {
-    username: string
     password: string
     fullName: string
     role: AppRole
-    phone?: string | null
+    phone: string
     workerType?: WorkerType | null
   }) => apiSend<UserListItem>('/api/users', 'POST', body),
   update: (
@@ -51,7 +48,7 @@ export const usersApi = {
     body: {
       fullName: string
       role: AppRole
-      phone?: string | null
+      phone: string
       workerType?: WorkerType | null
     },
   ) => apiSend<UserListItem>(`/api/users/${id}`, 'PUT', body),

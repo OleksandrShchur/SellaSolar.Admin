@@ -26,7 +26,7 @@ export default function LoginPage() {
   const location = useLocation()
   const from = (location.state as { from?: string } | null)?.from ?? '/projects'
 
-  const [username, setUsername] = useState('')
+  const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -47,7 +47,7 @@ export default function LoginPage() {
     setLoading(true)
     setError(null)
     try {
-      await login(username.trim(), password)
+      await login(phone.trim(), password)
       navigate(from, { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Не вдалося увійти')
@@ -84,7 +84,7 @@ export default function LoginPage() {
                   SellaSolar Admin
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Увійдіть за іменем користувача та паролем
+                  Увійдіть за номером телефону та паролем
                 </Typography>
               </Stack>
 
@@ -95,10 +95,13 @@ export default function LoginPage() {
               )}
 
               <TextField
-                label="Ім'я користувача"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                autoComplete="username"
+                label="Телефон"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                autoComplete="tel"
+                inputMode="numeric"
+                placeholder="0982441170"
+                helperText="Формат: 0XXXXXXXXX"
                 required
                 fullWidth
                 disabled={loading}

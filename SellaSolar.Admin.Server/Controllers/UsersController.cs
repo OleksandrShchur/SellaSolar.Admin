@@ -37,22 +37,12 @@ public class UsersController : ControllerBase
         }
     }
 
-    /// <summary>Active workers for project assignment (Admin / Manager).</summary>
+    /// <summary>Active workers for project assignment.</summary>
     [HttpGet("workers")]
     [Authorize(Policy = AppPolicies.CanManageProjects)]
     public async Task<ActionResult<IReadOnlyList<UserListItemDto>>> GetWorkersForAssignment(CancellationToken ct)
     {
         return Ok(await _users.GetWorkersForAssignmentAsync(ct));
-    }
-
-    [HttpGet("suggest-username")]
-    [Authorize(Policy = AppPolicies.CanManageUsers)]
-    public async Task<ActionResult<SuggestUsernameResponse>> SuggestUsername(
-        [FromQuery] string fullName,
-        CancellationToken ct)
-    {
-        var suggested = await _users.SuggestUsernameAsync(fullName, ct);
-        return Ok(new SuggestUsernameResponse(suggested));
     }
 
     [HttpPost]
@@ -93,6 +83,10 @@ public class UsersController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
+        catch (ConflictException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
     }
 
     [HttpPost("{id}/reset-password")]
@@ -130,6 +124,10 @@ public class UsersController : ControllerBase
         {
             return NotFound();
         }
+        catch (ValidationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     [HttpPost("{id}/deactivate")]
@@ -151,10 +149,6 @@ public class UsersController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
-        catch (ConflictException ex)
-        {
-            return Conflict(new { message = ex.Message });
-        }
     }
 
     [HttpPost("{id}/block")]
@@ -168,17 +162,9 @@ public class UsersController : ControllerBase
             await _users.BlockAsync(actorId, id, ct);
             return NoContent();
         }
-        catch (NotFoundException)
-        {
-            return NotFound();
-        }
         catch (ValidationException ex)
         {
             return BadRequest(new { message = ex.Message });
-        }
-        catch (ConflictException ex)
-        {
-            return Conflict(new { message = ex.Message });
         }
     }
 

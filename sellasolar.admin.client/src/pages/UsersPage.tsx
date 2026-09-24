@@ -31,7 +31,6 @@ import SearchIcon from '@mui/icons-material/Search'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import LockResetOutlinedIcon from '@mui/icons-material/LockResetOutlined'
-import BlockOutlinedIcon from '@mui/icons-material/BlockOutlined'
 import LockOpenOutlinedIcon from '@mui/icons-material/LockOpenOutlined'
 import PersonOffOutlinedIcon from '@mui/icons-material/PersonOffOutlined'
 import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined'
@@ -42,11 +41,10 @@ import RowActionsMenu, { type RowActionItem } from '../components/RowActionsMenu
 
 type RoleFilter = '' | 'Admin' | 'Worker'
 
-const roles: AppRole[] = ['Admin', 'Manager', 'Worker']
+const roles: AppRole[] = ['Admin', 'Worker']
 
 const emptyCreate = {
   fullName: '',
-  username: '',
   password: '',
   role: 'Worker' as AppRole,
   phone: '',
@@ -64,8 +62,13 @@ function statusChip(row: UserListItem) {
 }
 
 function roleChip(role: AppRole) {
-  const color = role === 'Admin' ? 'secondary' : role === 'Manager' ? 'info' : 'primary'
+  const color = role === 'Admin' ? 'secondary' : 'primary'
   return <Chip size="small" color={color} label={appRoleLabel(role)} />
+}
+
+function typeLabel(row: UserListItem) {
+  if (row.role === 'Admin') return appRoleLabel('Admin')
+  return row.workerType ? workerTypeLabel(row.workerType) : '—'
 }
 
 export default function UsersPage() {
@@ -118,16 +121,6 @@ export default function UsersPage() {
     void load()
   }, [roleFilter, onlyBlocked, onlyInactive])
 
-  const suggestUsername = async (fullName: string) => {
-    if (!fullName.trim()) return
-    try {
-      const { suggestedUsername } = await usersApi.suggestUsername(fullName)
-      setCreateForm((f) => ({ ...f, username: suggestedUsername }))
-    } catch {
-      // ignore suggest errors
-    }
-  }
-
   const openEdit = (row: UserListItem) => {
     setEditUser(row)
     setEditForm({
@@ -163,15 +156,6 @@ export default function UsersPage() {
     }
   }
 
-  const block = async (id: string) => {
-    try {
-      await usersApi.block(id)
-      await load()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Помилка')
-    }
-  }
-
   const unblock = async (id: string) => {
     try {
       await usersApi.unblock(id)
@@ -181,50 +165,59 @@ export default function UsersPage() {
     }
   }
 
-  const rowActions = (row: UserListItem): RowActionItem[] => [
-    {
-      key: 'edit',
-      label: 'Редагувати',
-      icon: <EditOutlinedIcon fontSize="small" />,
-      onClick: () => openEdit(row),
-    },
-    {
-      key: 'password',
-      label: 'Скинути пароль',
-      icon: <LockResetOutlinedIcon fontSize="small" />,
-      onClick: () => openReset(row),
-    },
-    { kind: 'divider', key: 'div-1' },
-    row.isBlocked
-      ? {
-          key: 'unblock',
-          label: 'Розблокувати',
-          icon: <LockOpenOutlinedIcon fontSize="small" />,
-          onClick: () => void unblock(row.id),
-          tone: 'warning',
-        }
-      : {
-          key: 'block',
-          label: 'Заблокувати',
-          icon: <BlockOutlinedIcon fontSize="small" />,
-          onClick: () => void block(row.id),
-          tone: 'warning',
-        },
-    row.isActive
-      ? {
+  const rowActions = (row: UserListItem): RowActionItem[] => {
+    const actions: RowActionItem[] = [
+      {
+        key: 'edit',
+        label: 'Редагувати',
+        icon: <EditOutlinedIcon fontSize="small" />,
+        onClick: () => openEdit(row),
+      },
+      {
+        key: 'password',
+        label: 'Скинути пароль',
+        icon: <LockResetOutlinedIcon fontSize="small" />,
+        onClick: () => openReset(row),
+      },
+    ]
+
+    const statusActions: RowActionItem[] = []
+
+    if (row.isBlocked) {
+      statusActions.push({
+        key: 'unblock',
+        label: 'Розблокувати',
+        icon: <LockOpenOutlinedIcon fontSize="small" />,
+        onClick: () => void unblock(row.id),
+        tone: 'warning',
+      })
+    }
+
+    if (row.isActive) {
+      if (row.role === 'Worker') {
+        statusActions.push({
           key: 'deactivate',
           label: 'Деактивувати',
           icon: <PersonOffOutlinedIcon fontSize="small" />,
           onClick: () => void deactivate(row.id),
           tone: 'danger',
-        }
-      : {
-          key: 'activate',
-          label: 'Активувати',
-          icon: <PersonOutlineOutlinedIcon fontSize="small" />,
-          onClick: () => void activate(row.id),
-        },
-  ]
+        })
+      }
+    } else if (row.role === 'Worker' || row.role === 'Admin') {
+      statusActions.push({
+        key: 'activate',
+        label: 'Активувати',
+        icon: <PersonOutlineOutlinedIcon fontSize="small" />,
+        onClick: () => void activate(row.id),
+      })
+    }
+
+    if (statusActions.length > 0) {
+      actions.push({ kind: 'divider', key: 'div-1' }, ...statusActions)
+    }
+
+    return actions
+  }
 
   const columns: GridColDef<UserListItem>[] = [
     {
@@ -238,7 +231,7 @@ export default function UsersPage() {
             {params.row.fullName}
           </Typography>
           <Typography variant="caption" color="text.secondary" noWrap display="block">
-            @{params.row.username}
+            {params.row.phone || params.row.username}
           </Typography>
         </Box>
       ),
@@ -257,12 +250,12 @@ export default function UsersPage() {
       field: 'workerType',
       headerName: 'Тип',
       width: 130,
-      valueFormatter: (value) => (value ? workerTypeLabel(value as string) : '—'),
+      valueGetter: (_value, row) => typeLabel(row),
     },
     {
       field: 'phone',
-      headerName: 'Телефон',
-      width: 140,
+      headerName: 'Телефон (логін)',
+      width: 150,
       valueFormatter: (v) => v || '—',
     },
     {
@@ -297,8 +290,10 @@ export default function UsersPage() {
     setError(null)
     try {
       await usersApi.create({
-        ...createForm,
-        phone: createForm.role === 'Worker' ? createForm.phone : null,
+        password: createForm.password,
+        fullName: createForm.fullName,
+        role: createForm.role,
+        phone: createForm.phone,
         workerType: createForm.role === 'Worker' ? createForm.workerType : null,
       })
       setCreateOpen(false)
@@ -319,7 +314,7 @@ export default function UsersPage() {
       await usersApi.update(editUser.id, {
         fullName: editForm.fullName,
         role: editForm.role,
-        phone: editForm.role === 'Worker' ? editForm.phone : null,
+        phone: editForm.phone,
         workerType: editForm.role === 'Worker' ? editForm.workerType : null,
       })
       setEditOpen(false)
@@ -345,16 +340,25 @@ export default function UsersPage() {
     }
   }
 
-  const workerFields = (
+  const phoneAndWorkerFields = (
     role: AppRole,
     phone: string,
     workerType: WorkerType,
     onPhone: (v: string) => void,
     onType: (v: WorkerType) => void,
-  ) =>
-    role === 'Worker' ? (
-      <>
-        <TextField label="Телефон" required value={phone} onChange={(e) => onPhone(e.target.value)} fullWidth />
+  ) => (
+    <>
+      <TextField
+        label="Телефон (логін)"
+        required
+        value={phone}
+        onChange={(e) => onPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+        inputMode="numeric"
+        placeholder="0982441170"
+        helperText="Формат: 0XXXXXXXXX"
+        fullWidth
+      />
+      {role === 'Worker' ? (
         <FormControl fullWidth>
           <InputLabel>Тип працівника</InputLabel>
           <Select
@@ -366,8 +370,9 @@ export default function UsersPage() {
             <MenuItem value="Installer">Монтажник</MenuItem>
           </Select>
         </FormControl>
-      </>
-    ) : null
+      ) : null}
+    </>
+  )
 
   return (
     <Stack spacing={2.5}>
@@ -382,7 +387,7 @@ export default function UsersPage() {
             Співробітники
           </Typography>
           <Typography variant="body2" color="text.secondary" mt={0.25}>
-            Облікові записи адміністраторів, менеджерів і виконавців
+            Облікові записи адміністраторів і виконавців
           </Typography>
         </Box>
         <Button startIcon={<AddIcon />} onClick={() => setCreateOpen(true)} sx={{ flexShrink: 0 }}>
@@ -414,7 +419,7 @@ export default function UsersPage() {
             useFlexGap
           >
             <TextField
-              placeholder="Пошук за ПІБ, логіном або телефоном"
+              placeholder="Пошук за ПІБ або телефоном"
               size="small"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -509,16 +514,15 @@ export default function UsersPage() {
                       {row.fullName}
                     </Typography>
                     <Typography variant="body2" color="text.secondary" noWrap>
-                      @{row.username}
-                      {row.phone ? ` · ${row.phone}` : ''}
+                      {row.phone || row.username}
                     </Typography>
                   </Box>
                   <RowActionsMenu items={rowActions(row)} />
                 </Stack>
                 <Stack direction="row" spacing={1} mt={1.25} flexWrap="wrap" useFlexGap>
                   {roleChip(row.role)}
-                  {row.workerType && (
-                    <Chip size="small" variant="outlined" label={workerTypeLabel(row.workerType)} />
+                  {typeLabel(row) !== '—' && (
+                    <Chip size="small" variant="outlined" label={typeLabel(row)} />
                   )}
                   {statusChip(row)}
                 </Stack>
@@ -591,17 +595,8 @@ export default function UsersPage() {
               label="Повне ім'я"
               value={createForm.fullName}
               onChange={(e) => setCreateForm((f) => ({ ...f, fullName: e.target.value }))}
-              onBlur={() => void suggestUsername(createForm.fullName)}
               required
               fullWidth
-            />
-            <TextField
-              label="Ім'я користувача (логін)"
-              value={createForm.username}
-              onChange={(e) => setCreateForm((f) => ({ ...f, username: e.target.value }))}
-              required
-              fullWidth
-              helperText="Латинські літери, цифри, .-_"
             />
             <TextField
               label="Пароль"
@@ -626,7 +621,7 @@ export default function UsersPage() {
                 ))}
               </Select>
             </FormControl>
-            {workerFields(
+            {phoneAndWorkerFields(
               createForm.role,
               createForm.phone,
               createForm.workerType,
@@ -649,7 +644,6 @@ export default function UsersPage() {
         <DialogTitle>Редагування співробітника</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField label="Логін" value={editUser?.username ?? ''} disabled fullWidth />
             <TextField
               label="Повне ім'я"
               value={editForm.fullName}
@@ -670,7 +664,7 @@ export default function UsersPage() {
                 ))}
               </Select>
             </FormControl>
-            {workerFields(
+            {phoneAndWorkerFields(
               editForm.role,
               editForm.phone,
               editForm.workerType,

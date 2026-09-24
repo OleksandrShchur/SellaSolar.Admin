@@ -18,6 +18,20 @@ public class ApplicationIdentityDbContext : IdentityDbContext<ApplicationUser>
 
         builder.Entity<ApplicationUser>(entity =>
         {
+            // Phone-only auth: unused Identity columns are not mapped (see database/008).
+            entity.Ignore(u => u.Email);
+            entity.Ignore(u => u.NormalizedEmail);
+            entity.Ignore(u => u.EmailConfirmed);
+            entity.Ignore(u => u.PhoneNumberConfirmed);
+            entity.Ignore(u => u.TwoFactorEnabled);
+
+            foreach (var index in entity.Metadata.GetIndexes()
+                         .Where(i => i.GetDatabaseName() == "EmailIndex")
+                         .ToList())
+            {
+                entity.Metadata.RemoveIndex(index);
+            }
+
             entity.Property(u => u.FullName).HasMaxLength(200);
             entity.Property(u => u.IsActive).HasDefaultValue(true);
             entity.Property(u => u.IsBlocked).HasDefaultValue(false);
