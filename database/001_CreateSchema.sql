@@ -27,7 +27,7 @@ CREATE TABLE dbo.Projects
     Name            NVARCHAR(200)   NOT NULL,
     Description     NVARCHAR(MAX)   NULL,
     Address         NVARCHAR(500)   NOT NULL,
-    Status          NVARCHAR(20)    NOT NULL CONSTRAINT CK_Projects_Status CHECK (Status IN (N'InProgress', N'Completed')),
+    Status          NVARCHAR(20)    NOT NULL CONSTRAINT CK_Projects_Status CHECK (Status IN (N'Awaiting', N'InProgress', N'Completed')),
     CustomerName    NVARCHAR(200)   NOT NULL,
     CustomerPhone   NVARCHAR(50)    NOT NULL,
     CustomerEmail   NVARCHAR(200)   NULL,
