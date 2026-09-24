@@ -223,7 +223,7 @@ export default function AppLayout() {
               {user?.fullName}
             </MenuItem>
             <MenuItem disabled sx={{ opacity: 0.7, fontSize: '0.85rem' }}>
-              @{user?.username}
+              {user?.username}
             </MenuItem>
             <MenuItem
               onClick={() => {

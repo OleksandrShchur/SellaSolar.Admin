@@ -94,7 +94,7 @@ BEGIN
         N'AQAAAAIAAYagAAAAEN/x78+bIvRkZUZEeANQITAQxqFB4xWj7pegRksChFRTJj4hZmv75rRfXCqc6y1Z9g==';
 
     DECLARE @WorkerId INT, @FullName NVARCHAR(200), @Type NVARCHAR(20), @Phone NVARCHAR(50), @IsActive BIT;
-    DECLARE @UserId NVARCHAR(450), @BaseUserName NVARCHAR(256), @UserName NVARCHAR(256), @Suffix INT;
+    DECLARE @UserId NVARCHAR(450), @CanonicalPhone NVARCHAR(20), @Digits NVARCHAR(50);
 
     DECLARE worker_cursor CURSOR LOCAL FAST_FORWARD FOR
         SELECT w.Id, w.FullName, w.Type, w.Phone, w.IsActive
@@ -107,17 +107,19 @@ BEGIN
     WHILE @@FETCH_STATUS = 0
     BEGIN
         SET @UserId = CONVERT(NVARCHAR(450), NEWID());
-        SET @BaseUserName = N'worker' + CAST(@WorkerId AS NVARCHAR(20));
-        SET @UserName = @BaseUserName;
-        SET @Suffix = 2;
 
-        WHILE EXISTS (
-            SELECT 1 FROM dbo.AspNetUsers
-            WHERE NormalizedUserName = UPPER(@UserName))
-        BEGIN
-            SET @UserName = @BaseUserName + CAST(@Suffix AS NVARCHAR(10));
-            SET @Suffix += 1;
-        END
+        -- Canonical UA phone: skip country 38 → 0XXXXXXXXX
+        SET @Digits = REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+            ISNULL(@Phone, N''), N'+', N''), N' ', N''), N'-', N''), N'(', N''), N')', N''), N'.', N'');
+        IF @Digits LIKE N'380%' AND LEN(@Digits) >= 12
+            SET @CanonicalPhone = N'0' + SUBSTRING(@Digits, 4, 9);
+        ELSE IF @Digits LIKE N'0%' AND LEN(@Digits) = 10
+            SET @CanonicalPhone = @Digits;
+        ELSE
+            SET @CanonicalPhone = N'090' + RIGHT(N'0000000' + CAST(@WorkerId AS NVARCHAR(10)), 7);
+
+        IF EXISTS (SELECT 1 FROM dbo.AspNetUsers WHERE NormalizedUserName = @CanonicalPhone)
+            SET @CanonicalPhone = N'090' + RIGHT(N'0000000' + CAST(@WorkerId AS NVARCHAR(10)), 7);
 
         INSERT INTO dbo.AspNetUsers
         (
@@ -131,10 +133,10 @@ BEGIN
         )
         VALUES
         (
-            @UserId, @UserName, UPPER(@UserName),
+            @UserId, @CanonicalPhone, @CanonicalPhone,
             NULL, NULL, 0,
             @TempPasswordHash, CONVERT(NVARCHAR(MAX), NEWID()), CONVERT(NVARCHAR(MAX), NEWID()),
-            @Phone, 0,
+            @CanonicalPhone, 0,
             0, NULL, 0, 0,
             @FullName, @IsActive, 0, NULL, 0, SYSUTCDATETIME(),
             @Type
@@ -151,7 +153,13 @@ BEGIN
     UPDATE u
     SET
         u.WorkerType = COALESCE(u.WorkerType, w.Type),
-        u.PhoneNumber = COALESCE(NULLIF(u.PhoneNumber, N''), w.Phone),
+        u.PhoneNumber = COALESCE(
+            NULLIF(u.PhoneNumber, N''),
+            CASE
+                WHEN REPLACE(REPLACE(REPLACE(ISNULL(w.Phone, N''), N'+', N''), N' ', N''), N'-', N'') LIKE N'380%'
+                    THEN N'0' + SUBSTRING(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(w.Phone, N'+', N''), N' ', N''), N'-', N''), N'(', N''), N')', N''), N'.', N''), 4, 9)
+                ELSE w.Phone
+            END),
         u.IsActive = CASE WHEN u.IsActive = 0 THEN w.IsActive ELSE u.IsActive END
     FROM dbo.AspNetUsers u
     INNER JOIN #WorkerUserMap m ON m.UserId = u.Id

@@ -68,11 +68,11 @@ INSERT INTO dbo.AspNetUsers
     FullName, IsActive, IsBlocked, BlockedAt, FailedLoginCount, CreatedAt, WorkerType
 )
 VALUES
-    (N'11111111-1111-1111-1111-111111111101', N'i.petrenko', N'I.PETRENKO', NULL, NULL, 0, @TempPasswordHash, NEWID(), NEWID(), N'+380501112233', 0, 0, NULL, 0, 0, N'Іван Петренко', 1, 0, NULL, 0, SYSUTCDATETIME(), N'Assembler'),
-    (N'11111111-1111-1111-1111-111111111102', N'o.kovalenko', N'O.KOVALENKO', NULL, NULL, 0, @TempPasswordHash, NEWID(), NEWID(), N'+380671234567', 0, 0, NULL, 0, 0, N'Олена Коваленко', 1, 0, NULL, 0, SYSUTCDATETIME(), N'Assembler'),
-    (N'11111111-1111-1111-1111-111111111103', N'm.shevchenko', N'M.SHEVCHENKO', NULL, NULL, 0, @TempPasswordHash, NEWID(), NEWID(), N'+380931112233', 0, 0, NULL, 0, 0, N'Микола Шевченко', 1, 0, NULL, 0, SYSUTCDATETIME(), N'Installer'),
-    (N'11111111-1111-1111-1111-111111111104', N'a.bondar', N'A.BONDAR', NULL, NULL, 0, @TempPasswordHash, NEWID(), NEWID(), N'+380501234567', 0, 0, NULL, 0, 0, N'Андрій Бондар', 1, 0, NULL, 0, SYSUTCDATETIME(), N'Installer'),
-    (N'11111111-1111-1111-1111-111111111105', N's.melnyk', N'S.MELNYK', NULL, NULL, 0, @TempPasswordHash, NEWID(), NEWID(), N'+380661112233', 0, 0, NULL, 0, 0, N'Сергій Мельник', 0, 0, NULL, 0, SYSUTCDATETIME(), N'Installer');
+    (N'11111111-1111-1111-1111-111111111101', N'0501112233', N'0501112233', NULL, NULL, 0, @TempPasswordHash, NEWID(), NEWID(), N'0501112233', 0, 0, NULL, 0, 0, N'Іван Петренко', 1, 0, NULL, 0, SYSUTCDATETIME(), N'Assembler'),
+    (N'11111111-1111-1111-1111-111111111102', N'0671234567', N'0671234567', NULL, NULL, 0, @TempPasswordHash, NEWID(), NEWID(), N'0671234567', 0, 0, NULL, 0, 0, N'Олена Коваленко', 1, 0, NULL, 0, SYSUTCDATETIME(), N'Assembler'),
+    (N'11111111-1111-1111-1111-111111111103', N'0931112233', N'0931112233', NULL, NULL, 0, @TempPasswordHash, NEWID(), NEWID(), N'0931112233', 0, 0, NULL, 0, 0, N'Микола Шевченко', 1, 0, NULL, 0, SYSUTCDATETIME(), N'Installer'),
+    (N'11111111-1111-1111-1111-111111111104', N'0501234567', N'0501234567', NULL, NULL, 0, @TempPasswordHash, NEWID(), NEWID(), N'0501234567', 0, 0, NULL, 0, 0, N'Андрій Бондар', 1, 0, NULL, 0, SYSUTCDATETIME(), N'Installer'),
+    (N'11111111-1111-1111-1111-111111111105', N'0661112233', N'0661112233', NULL, NULL, 0, @TempPasswordHash, NEWID(), NEWID(), N'0661112233', 0, 0, NULL, 0, 0, N'Сергій Мельник', 0, 0, NULL, 0, SYSUTCDATETIME(), N'Installer');
 
 INSERT INTO dbo.AspNetUserRoles (UserId, RoleId)
 SELECT v.Id, @WorkerRoleId

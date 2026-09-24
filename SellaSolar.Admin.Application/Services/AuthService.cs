@@ -31,12 +31,18 @@ public class AuthService
 
     public async Task<LoginResponse> LoginAsync(LoginRequest request, string? ipAddress, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
+        if (string.IsNullOrWhiteSpace(request.Phone) || string.IsNullOrWhiteSpace(request.Password))
         {
             throw new ValidationException(AuthMessages.InvalidCredentials);
         }
 
-        var normalized = UsernameValidator.NormalizeForLookup(request.Username);
+        // Login accepts only canonical 0XXXXXXXXX (no auto-normalization of +380).
+        if (!PhoneValidator.IsValid(request.Phone))
+        {
+            throw new ValidationException(AuthMessages.InvalidCredentials);
+        }
+
+        var normalized = PhoneValidator.NormalizeForLookup(request.Phone);
         var user = await _userManager.Users
             .FirstOrDefaultAsync(u => u.NormalizedUserName == normalized, ct);
 

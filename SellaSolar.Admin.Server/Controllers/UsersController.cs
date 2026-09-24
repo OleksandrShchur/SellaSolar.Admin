@@ -45,16 +45,6 @@ public class UsersController : ControllerBase
         return Ok(await _users.GetWorkersForAssignmentAsync(ct));
     }
 
-    [HttpGet("suggest-username")]
-    [Authorize(Policy = AppPolicies.CanManageUsers)]
-    public async Task<ActionResult<SuggestUsernameResponse>> SuggestUsername(
-        [FromQuery] string fullName,
-        CancellationToken ct)
-    {
-        var suggested = await _users.SuggestUsernameAsync(fullName, ct);
-        return Ok(new SuggestUsernameResponse(suggested));
-    }
-
     [HttpPost]
     [Authorize(Policy = AppPolicies.CanManageUsers)]
     public async Task<ActionResult<UserListItemDto>> Create([FromBody] CreateUserRequest request, CancellationToken ct)
@@ -92,6 +82,10 @@ public class UsersController : ControllerBase
         catch (ValidationException ex)
         {
             return BadRequest(new { message = ex.Message });
+        }
+        catch (ConflictException ex)
+        {
+            return Conflict(new { message = ex.Message });
         }
     }
 

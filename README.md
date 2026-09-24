@@ -139,19 +139,20 @@ Vite proxies `/api` and `/uploads` to the backend (see `vite.config.ts`).
 | My jobs | `GET /api/my-jobs` |
 | Employees (users) | Admin: `GET/POST/PUT /api/users`, reset-password, activate/deactivate, block/unblock; Manager: `GET /api/users/workers` |
 
-Authentication: cookie session, username + password (see `Auth` in appsettings). Initial admins are seeded on startup when no admin exists yet.
+Authentication: cookie session, phone (`0XXXXXXXXX`) + password (see `Auth` in appsettings). Initial admins are seeded on startup when no admin exists yet.
 
 | Auth | `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`, `POST /api/auth/change-password` |
 
-Recovery SQL if a user is blocked: `database/005_UnblockUserByUsername.sql`.
+Recovery SQL if a user is blocked: `database/005_UnblockUserByPhone.sql`.
 Schema merge Workers→Users: `database/006_MergeWorkersIntoUsers.sql`.
+Migrate existing usernames to phone logins: `database/007_PhoneAsUsername.sql`.
 
 ## Frontend screens
 
-- **Вхід** — username/password, Ukrainian UI
+- **Вхід** — phone/password, Ukrainian UI
 - **Проекти** — list (status/search), create, detail tabs: Загальна інформація / Матеріали / Працівники / Фото
 - **Склад** — CRUD, low-stock filter, detail shows projects using the item
-- **Співробітники** (Admin) — unified users/workers: roles, block/unblock, reset password; worker fields when role = Worker
+- **Співробітники** (Admin) — unified users/workers: roles, phone as login, block/unblock, reset password; worker type when role = Worker
 - **Мої завдання** (Worker) — projects assigned to the logged-in user
 
 ## Known follow-ups

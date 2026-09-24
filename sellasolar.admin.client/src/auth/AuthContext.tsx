@@ -13,7 +13,7 @@ import type { AppRole, CurrentUser } from '../api/types'
 type AuthState = {
   user: CurrentUser | null
   loading: boolean
-  login: (username: string, password: string) => Promise<void>
+  login: (phone: string, password: string) => Promise<void>
   logout: () => Promise<void>
   refresh: () => Promise<void>
   hasRole: (...roles: AppRole[]) => boolean
@@ -48,9 +48,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })()
   }, [refresh])
 
-  const login = useCallback(async (username: string, password: string) => {
+  const login = useCallback(async (phone: string, password: string) => {
     await ensureCsrfToken()
-    const response = await apiLogin<CurrentUser>('/api/auth/login', { username, password })
+    const response = await apiLogin<CurrentUser>('/api/auth/login', { phone, password })
     setUser({
       userId: response.userId,
       username: response.username,

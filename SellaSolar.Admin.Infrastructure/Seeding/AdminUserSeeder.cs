@@ -37,22 +37,25 @@ public static class AdminUserSeeder
 
         foreach (var seed in authOptions.SeedAdmins)
         {
-            if (string.IsNullOrWhiteSpace(seed.Username) || string.IsNullOrWhiteSpace(seed.Password))
+            if (string.IsNullOrWhiteSpace(seed.Phone) || string.IsNullOrWhiteSpace(seed.Password))
             {
                 logger.LogWarning(
-                    "Skipping seed admin {Username}: username or password not configured (use user-secrets).",
-                    seed.Username);
+                    "Skipping seed admin {Phone}: phone or password not configured (use user-secrets).",
+                    seed.Phone);
                 continue;
             }
 
-            if (!UsernameValidator.IsValid(seed.Username))
+            if (!PhoneValidator.IsValid(seed.Phone))
             {
-                logger.LogWarning("Skipping seed admin {Username}: invalid username format.", seed.Username);
+                logger.LogWarning(
+                    "Skipping seed admin {Phone}: phone must be 0XXXXXXXXX.",
+                    seed.Phone);
                 continue;
             }
 
+            var phone = PhoneValidator.NormalizeForLookup(seed.Phone);
             var existing = await userManager.Users
-                .FirstOrDefaultAsync(u => u.NormalizedUserName == UsernameValidator.NormalizeForLookup(seed.Username), ct);
+                .FirstOrDefaultAsync(u => u.NormalizedUserName == phone, ct);
             if (existing is not null)
             {
                 continue;
@@ -60,8 +63,9 @@ public static class AdminUserSeeder
 
             var user = new ApplicationUser
             {
-                UserName = seed.Username.Trim(),
-                FullName = string.IsNullOrWhiteSpace(seed.FullName) ? seed.Username : seed.FullName.Trim(),
+                UserName = phone,
+                PhoneNumber = phone,
+                FullName = string.IsNullOrWhiteSpace(seed.FullName) ? phone : seed.FullName.Trim(),
                 IsActive = true,
                 Email = null,
                 EmailConfirmed = false,
@@ -72,14 +76,14 @@ public static class AdminUserSeeder
             if (!result.Succeeded)
             {
                 logger.LogError(
-                    "Failed to create seed admin {Username}: {Errors}",
-                    seed.Username,
+                    "Failed to create seed admin {Phone}: {Errors}",
+                    phone,
                     string.Join(", ", result.Errors.Select(e => e.Description)));
                 continue;
             }
 
             await userManager.AddToRoleAsync(user, AppRoles.Admin);
-            logger.LogInformation("Created seed admin user {UserId} ({Username}).", user.Id, user.UserName);
+            logger.LogInformation("Created seed admin user {UserId} ({Phone}).", user.Id, user.UserName);
         }
     }
 }

@@ -46,7 +46,6 @@ const roles: AppRole[] = ['Admin', 'Manager', 'Worker']
 
 const emptyCreate = {
   fullName: '',
-  username: '',
   password: '',
   role: 'Worker' as AppRole,
   phone: '',
@@ -117,16 +116,6 @@ export default function UsersPage() {
   useEffect(() => {
     void load()
   }, [roleFilter, onlyBlocked, onlyInactive])
-
-  const suggestUsername = async (fullName: string) => {
-    if (!fullName.trim()) return
-    try {
-      const { suggestedUsername } = await usersApi.suggestUsername(fullName)
-      setCreateForm((f) => ({ ...f, username: suggestedUsername }))
-    } catch {
-      // ignore suggest errors
-    }
-  }
 
   const openEdit = (row: UserListItem) => {
     setEditUser(row)
@@ -238,7 +227,7 @@ export default function UsersPage() {
             {params.row.fullName}
           </Typography>
           <Typography variant="caption" color="text.secondary" noWrap display="block">
-            @{params.row.username}
+            {params.row.phone || params.row.username}
           </Typography>
         </Box>
       ),
@@ -261,8 +250,8 @@ export default function UsersPage() {
     },
     {
       field: 'phone',
-      headerName: 'Телефон',
-      width: 140,
+      headerName: 'Телефон (логін)',
+      width: 150,
       valueFormatter: (v) => v || '—',
     },
     {
@@ -297,8 +286,10 @@ export default function UsersPage() {
     setError(null)
     try {
       await usersApi.create({
-        ...createForm,
-        phone: createForm.role === 'Worker' ? createForm.phone : null,
+        password: createForm.password,
+        fullName: createForm.fullName,
+        role: createForm.role,
+        phone: createForm.phone,
         workerType: createForm.role === 'Worker' ? createForm.workerType : null,
       })
       setCreateOpen(false)
@@ -319,7 +310,7 @@ export default function UsersPage() {
       await usersApi.update(editUser.id, {
         fullName: editForm.fullName,
         role: editForm.role,
-        phone: editForm.role === 'Worker' ? editForm.phone : null,
+        phone: editForm.phone,
         workerType: editForm.role === 'Worker' ? editForm.workerType : null,
       })
       setEditOpen(false)
@@ -345,16 +336,25 @@ export default function UsersPage() {
     }
   }
 
-  const workerFields = (
+  const phoneAndWorkerFields = (
     role: AppRole,
     phone: string,
     workerType: WorkerType,
     onPhone: (v: string) => void,
     onType: (v: WorkerType) => void,
-  ) =>
-    role === 'Worker' ? (
-      <>
-        <TextField label="Телефон" required value={phone} onChange={(e) => onPhone(e.target.value)} fullWidth />
+  ) => (
+    <>
+      <TextField
+        label="Телефон (логін)"
+        required
+        value={phone}
+        onChange={(e) => onPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+        inputMode="numeric"
+        placeholder="0982441170"
+        helperText="Формат: 0XXXXXXXXX"
+        fullWidth
+      />
+      {role === 'Worker' ? (
         <FormControl fullWidth>
           <InputLabel>Тип працівника</InputLabel>
           <Select
@@ -366,8 +366,9 @@ export default function UsersPage() {
             <MenuItem value="Installer">Монтажник</MenuItem>
           </Select>
         </FormControl>
-      </>
-    ) : null
+      ) : null}
+    </>
+  )
 
   return (
     <Stack spacing={2.5}>
@@ -414,7 +415,7 @@ export default function UsersPage() {
             useFlexGap
           >
             <TextField
-              placeholder="Пошук за ПІБ, логіном або телефоном"
+              placeholder="Пошук за ПІБ або телефоном"
               size="small"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -509,8 +510,7 @@ export default function UsersPage() {
                       {row.fullName}
                     </Typography>
                     <Typography variant="body2" color="text.secondary" noWrap>
-                      @{row.username}
-                      {row.phone ? ` · ${row.phone}` : ''}
+                      {row.phone || row.username}
                     </Typography>
                   </Box>
                   <RowActionsMenu items={rowActions(row)} />
@@ -591,17 +591,8 @@ export default function UsersPage() {
               label="Повне ім'я"
               value={createForm.fullName}
               onChange={(e) => setCreateForm((f) => ({ ...f, fullName: e.target.value }))}
-              onBlur={() => void suggestUsername(createForm.fullName)}
               required
               fullWidth
-            />
-            <TextField
-              label="Ім'я користувача (логін)"
-              value={createForm.username}
-              onChange={(e) => setCreateForm((f) => ({ ...f, username: e.target.value }))}
-              required
-              fullWidth
-              helperText="Латинські літери, цифри, .-_"
             />
             <TextField
               label="Пароль"
@@ -626,7 +617,7 @@ export default function UsersPage() {
                 ))}
               </Select>
             </FormControl>
-            {workerFields(
+            {phoneAndWorkerFields(
               createForm.role,
               createForm.phone,
               createForm.workerType,
@@ -649,7 +640,6 @@ export default function UsersPage() {
         <DialogTitle>Редагування співробітника</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField label="Логін" value={editUser?.username ?? ''} disabled fullWidth />
             <TextField
               label="Повне ім'я"
               value={editForm.fullName}
@@ -670,7 +660,7 @@ export default function UsersPage() {
                 ))}
               </Select>
             </FormControl>
-            {workerFields(
+            {phoneAndWorkerFields(
               editForm.role,
               editForm.phone,
               editForm.workerType,
