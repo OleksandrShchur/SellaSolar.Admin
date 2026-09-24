@@ -155,20 +155,133 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           borderRadius: 999,
+          fontWeight: 600,
+          letterSpacing: '0.01em',
           transition:
-            'background-color 200ms ease-in-out, box-shadow 200ms ease-in-out, transform 150ms ease-in-out, filter 200ms ease-in-out',
+            'background-color 200ms ease-in-out, border-color 200ms ease-in-out, box-shadow 200ms ease-in-out, transform 150ms ease-in-out, filter 200ms ease-in-out, color 200ms ease-in-out',
           '&:active': {
             transform: 'scale(0.98)',
           },
         },
+        sizeMedium: {
+          minHeight: 40,
+          paddingInline: 18,
+        },
+        sizeLarge: {
+          minHeight: 48,
+          paddingInline: 22,
+        },
         containedPrimary: {
           background: brandColors.ctaGradient,
           color: brandColors.slateInk,
-          boxShadow: `0 10px 32px rgba(240, 166, 31, 0.42)`,
+          boxShadow: `0 8px 24px rgba(240, 166, 31, 0.38)`,
           '&:hover': {
             background: brandColors.ctaGradient,
-            filter: 'brightness(1.08)',
-            boxShadow: `0 0 44px rgba(240, 166, 31, 0.62)`,
+            filter: 'brightness(1.06)',
+            boxShadow: `0 10px 28px rgba(240, 166, 31, 0.48)`,
+          },
+        },
+        containedSuccess: {
+          backgroundColor: '#3D6B4F',
+          color: '#FFFFFF',
+          boxShadow: '0 6px 18px rgba(61, 107, 79, 0.28)',
+          '&:hover': {
+            backgroundColor: '#335A43',
+            boxShadow: '0 8px 22px rgba(61, 107, 79, 0.36)',
+          },
+        },
+        containedError: {
+          backgroundColor: '#B42318',
+          color: '#FFFFFF',
+          boxShadow: '0 6px 18px rgba(180, 35, 24, 0.28)',
+          '&:hover': {
+            backgroundColor: '#912018',
+            boxShadow: '0 8px 22px rgba(180, 35, 24, 0.36)',
+          },
+        },
+        containedWarning: {
+          backgroundColor: brandColors.secondary,
+          color: '#FFFFFF',
+          boxShadow: `0 6px 18px ${alpha(brandColors.secondary, 0.32)}`,
+          '&:hover': {
+            backgroundColor: brandColors.secondaryDark,
+            boxShadow: `0 8px 22px ${alpha(brandColors.secondary, 0.4)}`,
+          },
+        },
+        // Soft filled outlines — readable on cream surfaces (avoids pale yellow-on-beige)
+        outlined: {
+          borderWidth: 1.5,
+          backgroundColor: brandColors.morningBg,
+          boxShadow: `0 1px 2px ${alpha(brandColors.slateInk, 0.04)}`,
+          '&:hover': {
+            borderWidth: 1.5,
+            backgroundColor: '#FFFFFF',
+            boxShadow: `0 4px 12px ${alpha(brandColors.slateInk, 0.1)}`,
+          },
+        },
+        outlinedPrimary: {
+          borderColor: brandColors.primaryDark,
+          color: brandColors.slateInk,
+          '&:hover': {
+            borderColor: brandColors.slateInk,
+            backgroundColor: alpha(brandColors.primary, 0.12),
+            color: brandColors.slateInk,
+          },
+        },
+        outlinedSecondary: {
+          borderColor: brandColors.secondaryDark,
+          color: brandColors.secondaryDark,
+          '&:hover': {
+            borderColor: brandColors.secondaryDark,
+            backgroundColor: alpha(brandColors.secondary, 0.12),
+          },
+        },
+        outlinedError: {
+          borderColor: '#B42318',
+          color: '#912018',
+          backgroundColor: alpha('#B42318', 0.06),
+          '&:hover': {
+            borderColor: '#912018',
+            backgroundColor: alpha('#B42318', 0.12),
+            color: '#912018',
+          },
+        },
+        outlinedWarning: {
+          borderColor: brandColors.secondaryDark,
+          color: brandColors.secondaryDark,
+          backgroundColor: alpha(brandColors.secondary, 0.08),
+          '&:hover': {
+            borderColor: brandColors.secondaryDark,
+            backgroundColor: alpha(brandColors.secondary, 0.16),
+          },
+        },
+        outlinedSuccess: {
+          borderColor: '#3D6B4F',
+          color: '#335A43',
+          backgroundColor: alpha('#3D6B4F', 0.08),
+          '&:hover': {
+            borderColor: '#335A43',
+            backgroundColor: alpha('#3D6B4F', 0.14),
+          },
+        },
+        text: {
+          color: brandColors.textSecondary,
+          '&:hover': {
+            backgroundColor: alpha(brandColors.slateInk, 0.06),
+            color: brandColors.slateInk,
+          },
+        },
+        textPrimary: {
+          color: brandColors.primaryDark,
+          '&:hover': {
+            backgroundColor: alpha(brandColors.primary, 0.12),
+            color: brandColors.slateInk,
+          },
+        },
+        textError: {
+          color: '#B42318',
+          '&:hover': {
+            backgroundColor: alpha('#B42318', 0.1),
           },
         },
       },
@@ -227,12 +340,38 @@ const theme = createTheme({
     MuiIconButton: {
       styleOverrides: {
         root: ({ theme: t }) => ({
+          color: brandColors.textSecondary,
           // Comfortable thumb targets on touch devices
           [t.breakpoints.down('md')]: {
             minWidth: 44,
             minHeight: 44,
           },
+          '&:hover': {
+            backgroundColor: alpha(brandColors.slateInk, 0.06),
+            color: brandColors.slateInk,
+          },
         }),
+      },
+    },
+    MuiToggleButton: {
+      styleOverrides: {
+        root: {
+          textTransform: 'none',
+          fontWeight: 600,
+          borderColor: brandColors.borderStrong,
+          color: brandColors.textSecondary,
+          '&.Mui-selected': {
+            backgroundColor: alpha(brandColors.primary, 0.18),
+            color: brandColors.slateInk,
+            borderColor: brandColors.primaryDark,
+            '&:hover': {
+              backgroundColor: alpha(brandColors.primary, 0.26),
+            },
+          },
+          '&:hover': {
+            backgroundColor: alpha(brandColors.slateInk, 0.04),
+          },
+        },
       },
     },
     MuiBottomNavigation: {

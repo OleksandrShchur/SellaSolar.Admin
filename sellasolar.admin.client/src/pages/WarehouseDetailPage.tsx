@@ -128,7 +128,7 @@ export default function WarehouseDetailPage() {
           </Box>
         </Stack>
         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ flexShrink: 0 }}>
-          <Button variant="outlined" onClick={openEdit}>
+          <Button variant="outlined" color="primary" onClick={openEdit}>
             Редагувати
           </Button>
           <Button color="error" variant="outlined" onClick={() => void remove()}>
@@ -289,7 +289,9 @@ export default function WarehouseDetailPage() {
           <Button variant="text" onClick={() => setOpen(false)}>
             Скасувати
           </Button>
-          <Button onClick={() => void save()}>Зберегти</Button>
+          <Button variant="contained" color="primary" onClick={() => void save()}>
+            Зберегти
+          </Button>
         </DialogActions>
       </Dialog>
     </Stack>

@@ -242,13 +242,19 @@ export default function ProjectDetailPage() {
 
   const statusAction =
     project.status === 'Awaiting' ? (
-      <Button onClick={() => void changeStatus('InProgress')}>Почати роботу</Button>
+      <Button variant="contained" color="primary" onClick={() => void changeStatus('InProgress')}>
+        Почати роботу
+      </Button>
     ) : project.status === 'InProgress' ? (
-      <Button color="success" onClick={() => void changeStatus('Completed')}>
+      <Button variant="contained" color="success" onClick={() => void changeStatus('Completed')}>
         Завершити
       </Button>
     ) : (
-      <Button variant="outlined" onClick={() => void changeStatus('InProgress')}>
+      <Button
+        variant="outlined"
+        color="primary"
+        onClick={() => void changeStatus('InProgress')}
+      >
         Повернути в роботу
       </Button>
     )
@@ -283,7 +289,7 @@ export default function ProjectDetailPage() {
           </Box>
         </Stack>
         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ flexShrink: 0 }}>
-          <Button variant="outlined" onClick={openEdit}>
+          <Button variant="outlined" color="primary" onClick={openEdit}>
             Редагувати
           </Button>
           {statusAction}
@@ -370,7 +376,9 @@ export default function ProjectDetailPage() {
               <Typography variant="subtitle1" fontWeight={700}>
                 Матеріали проекту
               </Typography>
-              <Button onClick={() => void openAddItem()}>Додати матеріал</Button>
+              <Button variant="contained" color="primary" onClick={() => void openAddItem()}>
+                Додати матеріал
+              </Button>
             </Stack>
             <Stack spacing={1.5}>
               {project.items.map((item) => (
@@ -425,7 +433,9 @@ export default function ProjectDetailPage() {
               <Typography variant="subtitle1" fontWeight={700}>
                 Призначені працівники
               </Typography>
-              <Button onClick={() => void openAddWorker()}>Призначити</Button>
+              <Button variant="contained" color="primary" onClick={() => void openAddWorker()}>
+                Призначити
+              </Button>
             </Stack>
             <Stack spacing={1.5}>
               {project.workers.map((worker) => (
@@ -482,7 +492,7 @@ export default function ProjectDetailPage() {
                 onChange={(e) => setPhotoCaption(e.target.value)}
                 fullWidth
               />
-              <Button variant="outlined" component="label" disabled={uploading}>
+              <Button variant="outlined" color="primary" component="label" disabled={uploading}>
                 {uploading ? 'Завантаження...' : 'Завантажити фото'}
                 <input
                   hidden
@@ -628,7 +638,9 @@ export default function ProjectDetailPage() {
           <Button variant="text" onClick={() => setEditOpen(false)}>
             Скасувати
           </Button>
-          <Button onClick={() => void saveEdit()}>Зберегти</Button>
+          <Button variant="contained" color="primary" onClick={() => void saveEdit()}>
+            Зберегти
+          </Button>
         </DialogActions>
       </Dialog>
 
@@ -667,7 +679,12 @@ export default function ProjectDetailPage() {
           <Button variant="text" onClick={() => setItemOpen(false)}>
             Скасувати
           </Button>
-          <Button onClick={() => void addItem()} disabled={!selectedItemId}>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => void addItem()}
+            disabled={!selectedItemId}
+          >
             Додати
           </Button>
         </DialogActions>
@@ -710,7 +727,12 @@ export default function ProjectDetailPage() {
           <Button variant="text" onClick={() => setWorkerOpen(false)}>
             Скасувати
           </Button>
-          <Button onClick={() => void addWorker()} disabled={!selectedWorkerId}>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => void addWorker()}
+            disabled={!selectedWorkerId}
+          >
             Призначити
           </Button>
         </DialogActions>

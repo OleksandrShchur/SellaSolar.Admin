@@ -106,8 +106,10 @@ export default function ChangePasswordDialog({ open, onClose }: Props) {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleClose}>Скасувати</Button>
-          <Button type="submit" disabled={saving}>
+          <Button variant="text" onClick={handleClose}>
+            Скасувати
+          </Button>
+          <Button type="submit" variant="contained" color="primary" disabled={saving}>
             {saving ? 'Збереження…' : 'Зберегти'}
           </Button>
         </DialogActions>

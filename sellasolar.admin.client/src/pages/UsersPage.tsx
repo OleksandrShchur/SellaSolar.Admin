@@ -402,7 +402,13 @@ export default function UsersPage() {
         <Typography variant="body2" color="text.secondary">
           Облікові записи адміністраторів і виконавців
         </Typography>
-        <Button startIcon={<AddIcon />} onClick={() => setCreateOpen(true)} sx={{ flexShrink: 0 }}>
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<AddIcon />}
+          onClick={() => setCreateOpen(true)}
+          sx={{ flexShrink: 0 }}
+        >
           Новий співробітник
         </Button>
       </Stack>
@@ -629,7 +635,12 @@ export default function UsersPage() {
           <Button variant="text" onClick={() => setCreateOpen(false)}>
             Скасувати
           </Button>
-          <Button onClick={() => void createUser()} disabled={saving}>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => void createUser()}
+            disabled={saving}
+          >
             Створити
           </Button>
         </DialogActions>
@@ -672,7 +683,7 @@ export default function UsersPage() {
           <Button variant="text" onClick={() => setEditOpen(false)}>
             Скасувати
           </Button>
-          <Button onClick={() => void saveEdit()} disabled={saving}>
+          <Button variant="contained" color="primary" onClick={() => void saveEdit()} disabled={saving}>
             Зберегти
           </Button>
         </DialogActions>
@@ -695,7 +706,12 @@ export default function UsersPage() {
           <Button variant="text" onClick={() => setResetOpen(false)}>
             Скасувати
           </Button>
-          <Button onClick={() => void resetPassword()} disabled={saving}>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => void resetPassword()}
+            disabled={saving}
+          >
             Зберегти
           </Button>
         </DialogActions>

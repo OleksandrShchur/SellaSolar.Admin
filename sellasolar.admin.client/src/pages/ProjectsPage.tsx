@@ -183,7 +183,13 @@ export default function ProjectsPage() {
         <Typography variant="body2" color="text.secondary">
           Монтажні обʼєкти: статуси, клієнти та закупівлі
         </Typography>
-        <Button startIcon={<AddIcon />} onClick={() => setOpen(true)} sx={{ flexShrink: 0 }}>
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<AddIcon />}
+          onClick={() => setOpen(true)}
+          sx={{ flexShrink: 0 }}
+        >
           Новий проект
         </Button>
       </Stack>
@@ -415,7 +421,12 @@ export default function ProjectsPage() {
           <Button variant="text" onClick={() => setOpen(false)}>
             Скасувати
           </Button>
-          <Button onClick={() => void handleCreate()} disabled={saving}>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => void handleCreate()}
+            disabled={saving}
+          >
             Створити
           </Button>
         </DialogActions>

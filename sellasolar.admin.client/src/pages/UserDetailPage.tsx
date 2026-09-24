@@ -189,11 +189,12 @@ export default function UserDetailPage() {
           </Box>
         </Stack>
         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ flexShrink: 0 }}>
-          <Button variant="outlined" onClick={openEdit}>
+          <Button variant="outlined" color="primary" onClick={openEdit}>
             Редагувати
           </Button>
           <Button
             variant="outlined"
+            color="primary"
             onClick={() => {
               setNewPassword('')
               setResetOpen(true)
@@ -202,7 +203,7 @@ export default function UserDetailPage() {
             Скинути пароль
           </Button>
           {user.isBlocked && (
-            <Button color="warning" variant="outlined" onClick={() => void unblock()}>
+            <Button color="warning" variant="contained" onClick={() => void unblock()}>
               Розблокувати
             </Button>
           )}
@@ -212,7 +213,7 @@ export default function UserDetailPage() {
             </Button>
           )}
           {!user.isActive && (
-            <Button variant="outlined" onClick={() => void activate()}>
+            <Button color="success" variant="contained" onClick={() => void activate()}>
               Активувати
             </Button>
           )}
@@ -322,7 +323,7 @@ export default function UserDetailPage() {
           <Button variant="text" onClick={() => setEditOpen(false)}>
             Скасувати
           </Button>
-          <Button onClick={() => void saveEdit()} disabled={saving}>
+          <Button variant="contained" color="primary" onClick={() => void saveEdit()} disabled={saving}>
             Зберегти
           </Button>
         </DialogActions>
@@ -345,7 +346,12 @@ export default function UserDetailPage() {
           <Button variant="text" onClick={() => setResetOpen(false)}>
             Скасувати
           </Button>
-          <Button onClick={() => void resetPassword()} disabled={saving}>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => void resetPassword()}
+            disabled={saving}
+          >
             Зберегти
           </Button>
         </DialogActions>

@@ -14,7 +14,7 @@ export default function NoAccessPage() {
           У вашого облікового запису немає доступу до цієї сторінки. Зверніться до адміністратора, якщо
           вважаєте, що це помилка.
         </Typography>
-        <Button component={RouterLink} to="/projects" variant="contained">
+        <Button component={RouterLink} to="/projects" variant="contained" color="primary">
           На головну
         </Button>
       </Paper>

@@ -194,7 +194,13 @@ export default function WarehousePage() {
         <Typography variant="body2" color="text.secondary">
           Матеріали, залишки та постачальники
         </Typography>
-        <Button startIcon={<AddIcon />} onClick={openCreate} sx={{ flexShrink: 0 }}>
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<AddIcon />}
+          onClick={openCreate}
+          sx={{ flexShrink: 0 }}
+        >
           Додати позицію
         </Button>
       </Stack>
@@ -442,7 +448,7 @@ export default function WarehousePage() {
           <Button variant="text" onClick={() => setOpen(false)}>
             Скасувати
           </Button>
-          <Button onClick={() => void save()} disabled={saving}>
+          <Button variant="contained" color="primary" onClick={() => void save()} disabled={saving}>
             Зберегти
           </Button>
         </DialogActions>
