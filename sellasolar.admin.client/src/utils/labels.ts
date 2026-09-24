@@ -21,7 +21,7 @@ export const statusChipColor = (status: string): ChipProps['color'] => {
     case 'Completed':
       return 'success'
     case 'InProgress':
-      return 'default'
+      return 'info'
     default:
       return 'default'
   }

@@ -4,8 +4,10 @@ import { appRoleLabel, statusLabel, workerTypeLabel } from '../utils/labels'
 
 /**
  * Status color language (consistent app-wide):
- * - Positive / done / active → solid green
- * - Neutral ongoing / inactive → gray
+ * Soft tint backgrounds + dark text (not neon fills).
+ * - Positive / done / active → green
+ * - In progress → blue
+ * - Inactive / deactivated → gray
  * - Waiting / attention → amber
  * - Blocked / danger → red
  */
@@ -27,11 +29,11 @@ export function ProjectStatusChip({
     ProjectStatus,
     { color: ChipProps['color']; variant: ChipProps['variant'] }
   > = {
-    // Waiting to start — amber so it is not confused with gray "in progress"
+    // Waiting to start — amber
     Awaiting: { color: 'warning', variant: 'filled' },
-    // Ongoing work — neutral gray
-    InProgress: { color: 'default', variant: 'filled' },
-    // Done — solid green
+    // Ongoing work — blue
+    InProgress: { color: 'info', variant: 'filled' },
+    // Done — soft green
     Completed: { color: 'success', variant: 'filled' },
   }
 

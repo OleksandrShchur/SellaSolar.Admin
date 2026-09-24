@@ -66,7 +66,10 @@ const theme = createTheme({
       main: '#B42318',
     },
     info: {
-      main: brandColors.primaryDark,
+      main: '#2F6FED',
+      dark: '#1D4ED8',
+      light: '#60A5FA',
+      contrastText: '#FFFFFF',
     },
   },
   typography: {
@@ -378,73 +381,92 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           fontWeight: 700,
-          // Neutral gray — in progress / default
+          // Soft tint badges — readable color, no neon fills
           '&.MuiChip-colorDefault.MuiChip-filled': {
-            backgroundColor: alpha(brandColors.slateInk, 0.14),
-            color: brandColors.slateInk,
+            backgroundColor: alpha(brandColors.slateInk, 0.1),
+            color: brandColors.textSecondary,
+            border: `1px solid ${brandColors.borderStrong}`,
           },
           '&.MuiChip-colorDefault.MuiChip-outlined': {
             borderWidth: 1.5,
             borderColor: brandColors.borderStrong,
             color: brandColors.textMuted,
-            backgroundColor: alpha(brandColors.slateInk, 0.03),
+            backgroundColor: alpha(brandColors.slateInk, 0.04),
           },
-          // Active / finished — solid green
+          // Active / finished — soft green
           '&.MuiChip-colorSuccess.MuiChip-filled': {
-            backgroundColor: '#3D6B4F',
-            color: '#FFFFFF',
-            '& .MuiChip-label': { color: '#FFFFFF' },
+            backgroundColor: alpha('#3D6B4F', 0.14),
+            color: '#2A4A37',
+            border: `1px solid ${alpha('#3D6B4F', 0.35)}`,
+            '& .MuiChip-label': { color: '#2A4A37' },
           },
           '&.MuiChip-colorSuccess.MuiChip-outlined': {
             borderWidth: 1.5,
-            borderColor: '#3D6B4F',
-            color: '#335A43',
-            backgroundColor: alpha('#3D6B4F', 0.1),
+            borderColor: alpha('#3D6B4F', 0.45),
+            color: '#2A4A37',
+            backgroundColor: alpha('#3D6B4F', 0.08),
           },
-          // Blocked / danger
+          // Blocked / danger — soft red
           '&.MuiChip-colorError.MuiChip-filled': {
-            backgroundColor: '#B42318',
-            color: '#FFFFFF',
-            '& .MuiChip-label': { color: '#FFFFFF' },
+            backgroundColor: alpha('#B42318', 0.12),
+            color: '#912018',
+            border: `1px solid ${alpha('#B42318', 0.35)}`,
+            '& .MuiChip-label': { color: '#912018' },
           },
           '&.MuiChip-colorError.MuiChip-outlined': {
             borderWidth: 1.5,
-            borderColor: '#B42318',
+            borderColor: alpha('#B42318', 0.4),
             color: '#912018',
-            backgroundColor: alpha('#B42318', 0.08),
+            backgroundColor: alpha('#B42318', 0.06),
           },
-          // Awaiting / attention — amber
+          // In progress — soft blue
+          '&.MuiChip-colorInfo.MuiChip-filled': {
+            backgroundColor: alpha('#2F6FED', 0.12),
+            color: '#1D4ED8',
+            border: `1px solid ${alpha('#2F6FED', 0.35)}`,
+            '& .MuiChip-label': { color: '#1D4ED8' },
+          },
+          '&.MuiChip-colorInfo.MuiChip-outlined': {
+            borderWidth: 1.5,
+            borderColor: alpha('#1D4ED8', 0.4),
+            color: '#1D4ED8',
+            backgroundColor: alpha('#2F6FED', 0.08),
+          },
+          // Awaiting / attention — soft amber
           '&.MuiChip-colorWarning.MuiChip-filled': {
-            backgroundColor: brandColors.secondary,
-            color: '#FFFFFF',
-            '& .MuiChip-label': { color: '#FFFFFF' },
+            backgroundColor: alpha(brandColors.secondary, 0.14),
+            color: brandColors.secondaryDark,
+            border: `1px solid ${alpha(brandColors.secondary, 0.4)}`,
+            '& .MuiChip-label': { color: brandColors.secondaryDark },
           },
           '&.MuiChip-colorWarning.MuiChip-outlined': {
             borderWidth: 1.5,
-            borderColor: brandColors.secondaryDark,
+            borderColor: alpha(brandColors.secondaryDark, 0.45),
             color: brandColors.secondaryDark,
-            backgroundColor: alpha(brandColors.secondary, 0.1),
+            backgroundColor: alpha(brandColors.secondary, 0.08),
           },
           // Role / brand chips
           '&.MuiChip-colorPrimary.MuiChip-filled': {
-            backgroundColor: alpha(brandColors.primaryDark, 0.2),
+            backgroundColor: alpha(brandColors.primary, 0.16),
             color: brandColors.slateInk,
+            border: `1px solid ${alpha(brandColors.primaryDark, 0.35)}`,
           },
           '&.MuiChip-colorPrimary.MuiChip-outlined': {
             borderWidth: 1.5,
-            borderColor: brandColors.primaryDark,
+            borderColor: alpha(brandColors.primaryDark, 0.45),
             color: brandColors.slateInk,
-            backgroundColor: alpha(brandColors.primary, 0.12),
+            backgroundColor: alpha(brandColors.primary, 0.1),
           },
           '&.MuiChip-colorSecondary.MuiChip-filled': {
-            backgroundColor: alpha(brandColors.secondary, 0.2),
+            backgroundColor: alpha(brandColors.secondary, 0.14),
             color: brandColors.secondaryDark,
+            border: `1px solid ${alpha(brandColors.secondary, 0.35)}`,
           },
           '&.MuiChip-colorSecondary.MuiChip-outlined': {
             borderWidth: 1.5,
-            borderColor: brandColors.secondaryDark,
+            borderColor: alpha(brandColors.secondaryDark, 0.45),
             color: brandColors.secondaryDark,
-            backgroundColor: alpha(brandColors.secondary, 0.1),
+            backgroundColor: alpha(brandColors.secondary, 0.08),
           },
         },
       },
