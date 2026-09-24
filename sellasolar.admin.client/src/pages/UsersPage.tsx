@@ -26,7 +26,6 @@ import {
 import { DataGrid, type GridColDef } from '@mui/x-data-grid'
 import AddIcon from '@mui/icons-material/Add'
 import SearchIcon from '@mui/icons-material/Search'
-import RefreshIcon from '@mui/icons-material/Refresh'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import LockResetOutlinedIcon from '@mui/icons-material/LockResetOutlined'
 import LockOpenOutlinedIcon from '@mui/icons-material/LockOpenOutlined'
@@ -233,12 +232,9 @@ export default function UsersPage() {
       flex: 1.4,
       minWidth: 180,
       renderCell: (params) => (
-        <Box sx={{ lineHeight: 1.35, py: 0.5, overflow: 'hidden' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', height: '100%', overflow: 'hidden' }}>
           <Typography variant="body2" fontWeight={600} noWrap>
             {params.row.fullName}
-          </Typography>
-          <Typography variant="caption" color="text.secondary" noWrap display="block">
-            {params.row.phone || params.row.username}
           </Typography>
         </Box>
       ),
@@ -462,16 +458,6 @@ export default function UsersPage() {
             <ToggleButton value="blocked">Заблоковані</ToggleButton>
             <ToggleButton value="inactive">Деактивовані</ToggleButton>
           </ToggleButtonGroup>
-
-          <Button
-            variant="outlined"
-            size="small"
-            startIcon={<RefreshIcon />}
-            onClick={() => void load()}
-            sx={{ minWidth: 0, ml: { lg: 'auto' } }}
-          >
-            Оновити
-          </Button>
         </Stack>
       </Box>
 
@@ -488,9 +474,6 @@ export default function UsersPage() {
                   <Box sx={{ minWidth: 0, flex: 1 }}>
                     <Typography fontWeight={700} noWrap>
                       {row.fullName}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" noWrap>
-                      {row.phone || row.username}
                     </Typography>
                   </Box>
                   <RowActionsMenu items={rowActions(row)} />
@@ -525,7 +508,7 @@ export default function UsersPage() {
             disableRowSelectionOnClick
             disableColumnSelector
             autoHeight
-            rowHeight={64}
+            rowHeight={52}
             pageSizeOptions={[10, 25, 50]}
             initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
             sx={{
