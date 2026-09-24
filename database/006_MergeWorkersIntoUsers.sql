@@ -66,6 +66,28 @@ BEGIN
     SET XACT_ABORT ON;
     BEGIN TRANSACTION;
 
+    -- Pre-008 schemas: Email* / PhoneNumberConfirmed / TwoFactorEnabled may still exist.
+    -- Add defaults so INSERT below can omit them (008 drops the columns later).
+    IF COL_LENGTH(N'dbo.AspNetUsers', N'PhoneNumberConfirmed') IS NOT NULL
+       AND NOT EXISTS (
+           SELECT 1 FROM sys.default_constraints dc
+           INNER JOIN sys.columns c ON c.default_object_id = dc.object_id AND c.object_id = dc.parent_object_id
+           WHERE dc.parent_object_id = OBJECT_ID(N'dbo.AspNetUsers') AND c.name = N'PhoneNumberConfirmed')
+    BEGIN
+        ALTER TABLE dbo.AspNetUsers
+            ADD CONSTRAINT DF_AspNetUsers_PhoneNumberConfirmed DEFAULT (0) FOR PhoneNumberConfirmed;
+    END
+
+    IF COL_LENGTH(N'dbo.AspNetUsers', N'TwoFactorEnabled') IS NOT NULL
+       AND NOT EXISTS (
+           SELECT 1 FROM sys.default_constraints dc
+           INNER JOIN sys.columns c ON c.default_object_id = dc.object_id AND c.object_id = dc.parent_object_id
+           WHERE dc.parent_object_id = OBJECT_ID(N'dbo.AspNetUsers') AND c.name = N'TwoFactorEnabled')
+    BEGIN
+        ALTER TABLE dbo.AspNetUsers
+            ADD CONSTRAINT DF_AspNetUsers_TwoFactorEnabled DEFAULT (0) FOR TwoFactorEnabled;
+    END
+
     IF OBJECT_ID(N'tempdb..#WorkerUserMap') IS NOT NULL DROP TABLE #WorkerUserMap;
     CREATE TABLE #WorkerUserMap
     (
@@ -124,20 +146,16 @@ BEGIN
         INSERT INTO dbo.AspNetUsers
         (
             Id, UserName, NormalizedUserName,
-            Email, NormalizedEmail, EmailConfirmed,
             PasswordHash, SecurityStamp, ConcurrencyStamp,
-            PhoneNumber, PhoneNumberConfirmed,
-            TwoFactorEnabled, LockoutEnd, LockoutEnabled, AccessFailedCount,
+            PhoneNumber, LockoutEnd, LockoutEnabled, AccessFailedCount,
             FullName, IsActive, IsBlocked, BlockedAt, FailedLoginCount, CreatedAt,
             WorkerType
         )
         VALUES
         (
             @UserId, @CanonicalPhone, @CanonicalPhone,
-            NULL, NULL, 0,
             @TempPasswordHash, CONVERT(NVARCHAR(MAX), NEWID()), CONVERT(NVARCHAR(MAX), NEWID()),
-            @CanonicalPhone, 0,
-            0, NULL, 0, 0,
+            @CanonicalPhone, NULL, 0, 0,
             @FullName, @IsActive, 0, NULL, 0, SYSUTCDATETIME(),
             @Type
         );

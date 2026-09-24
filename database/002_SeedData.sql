@@ -1,5 +1,5 @@
 -- Seed sample data for SellaSolar Admin MVP
--- Run after 001, 004, and 006 (or after 001+004 on a fresh schema that already includes WorkerType / ProjectWorkers.UserId).
+-- Run after schema scripts through 008 (001, 004, 006, 007, 008 as applicable).
 -- Worker accounts use temp password: TempPass123! (reset via admin UI).
 USE SellaSolarAdmin;
 GO
@@ -61,18 +61,16 @@ DECLARE @TempPasswordHash NVARCHAR(MAX) =
 INSERT INTO dbo.AspNetUsers
 (
     Id, UserName, NormalizedUserName,
-    Email, NormalizedEmail, EmailConfirmed,
     PasswordHash, SecurityStamp, ConcurrencyStamp,
-    PhoneNumber, PhoneNumberConfirmed,
-    TwoFactorEnabled, LockoutEnd, LockoutEnabled, AccessFailedCount,
+    PhoneNumber, LockoutEnd, LockoutEnabled, AccessFailedCount,
     FullName, IsActive, IsBlocked, BlockedAt, FailedLoginCount, CreatedAt, WorkerType
 )
 VALUES
-    (N'11111111-1111-1111-1111-111111111101', N'0501112233', N'0501112233', NULL, NULL, 0, @TempPasswordHash, NEWID(), NEWID(), N'0501112233', 0, 0, NULL, 0, 0, N'Іван Петренко', 1, 0, NULL, 0, SYSUTCDATETIME(), N'Assembler'),
-    (N'11111111-1111-1111-1111-111111111102', N'0671234567', N'0671234567', NULL, NULL, 0, @TempPasswordHash, NEWID(), NEWID(), N'0671234567', 0, 0, NULL, 0, 0, N'Олена Коваленко', 1, 0, NULL, 0, SYSUTCDATETIME(), N'Assembler'),
-    (N'11111111-1111-1111-1111-111111111103', N'0931112233', N'0931112233', NULL, NULL, 0, @TempPasswordHash, NEWID(), NEWID(), N'0931112233', 0, 0, NULL, 0, 0, N'Микола Шевченко', 1, 0, NULL, 0, SYSUTCDATETIME(), N'Installer'),
-    (N'11111111-1111-1111-1111-111111111104', N'0501234567', N'0501234567', NULL, NULL, 0, @TempPasswordHash, NEWID(), NEWID(), N'0501234567', 0, 0, NULL, 0, 0, N'Андрій Бондар', 1, 0, NULL, 0, SYSUTCDATETIME(), N'Installer'),
-    (N'11111111-1111-1111-1111-111111111105', N'0661112233', N'0661112233', NULL, NULL, 0, @TempPasswordHash, NEWID(), NEWID(), N'0661112233', 0, 0, NULL, 0, 0, N'Сергій Мельник', 0, 0, NULL, 0, SYSUTCDATETIME(), N'Installer');
+    (N'11111111-1111-1111-1111-111111111101', N'0501112233', N'0501112233', @TempPasswordHash, NEWID(), NEWID(), N'0501112233', NULL, 0, 0, N'Іван Петренко', 1, 0, NULL, 0, SYSUTCDATETIME(), N'Assembler'),
+    (N'11111111-1111-1111-1111-111111111102', N'0671234567', N'0671234567', @TempPasswordHash, NEWID(), NEWID(), N'0671234567', NULL, 0, 0, N'Олена Коваленко', 1, 0, NULL, 0, SYSUTCDATETIME(), N'Assembler'),
+    (N'11111111-1111-1111-1111-111111111103', N'0931112233', N'0931112233', @TempPasswordHash, NEWID(), NEWID(), N'0931112233', NULL, 0, 0, N'Микола Шевченко', 1, 0, NULL, 0, SYSUTCDATETIME(), N'Installer'),
+    (N'11111111-1111-1111-1111-111111111104', N'0501234567', N'0501234567', @TempPasswordHash, NEWID(), NEWID(), N'0501234567', NULL, 0, 0, N'Андрій Бондар', 1, 0, NULL, 0, SYSUTCDATETIME(), N'Installer'),
+    (N'11111111-1111-1111-1111-111111111105', N'0661112233', N'0661112233', @TempPasswordHash, NEWID(), NEWID(), N'0661112233', NULL, 0, 0, N'Сергій Мельник', 0, 0, NULL, 0, SYSUTCDATETIME(), N'Installer');
 
 INSERT INTO dbo.AspNetUserRoles (UserId, RoleId)
 SELECT v.Id, @WorkerRoleId
