@@ -1,5 +1,31 @@
-export const statusLabel = (status: string) =>
-  status === 'Completed' ? 'Завершено' : 'У роботі'
+import type { ChipProps } from '@mui/material'
+import type { ProjectStatus } from '../api/types'
+
+export const statusLabel = (status: string) => {
+  switch (status) {
+    case 'Awaiting':
+      return 'Очікує'
+    case 'Completed':
+      return 'Завершено'
+    case 'InProgress':
+      return 'У роботі'
+    default:
+      return status
+  }
+}
+
+export const statusChipColor = (status: string): ChipProps['color'] => {
+  switch (status as ProjectStatus) {
+    case 'Awaiting':
+      return 'warning'
+    case 'Completed':
+      return 'success'
+    case 'InProgress':
+      return 'primary'
+    default:
+      return 'default'
+  }
+}
 
 export const appRoleLabel = (role: string) => {
   switch (role) {

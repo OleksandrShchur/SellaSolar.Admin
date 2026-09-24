@@ -1,4 +1,4 @@
-export type ProjectStatus = 'InProgress' | 'Completed'
+export type ProjectStatus = 'Awaiting' | 'InProgress' | 'Completed'
 export type WorkerType = 'Assembler' | 'Installer'
 export type AppRole = 'Admin' | 'Worker'
 

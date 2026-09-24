@@ -17,7 +17,7 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import { warehouseApi } from '../api'
 import type { WarehouseItemDetail } from '../api/types'
-import { formatNumber, statusLabel } from '../utils/labels'
+import { formatNumber, statusChipColor, statusLabel } from '../utils/labels'
 
 export default function WarehouseDetailPage() {
   const { id } = useParams()
@@ -94,96 +94,204 @@ export default function WarehouseDetailPage() {
     }
   }
 
-  if (!item && !error) return <Typography>Завантаження...</Typography>
+  if (!item && !error) {
+    return (
+      <Stack spacing={2.5}>
+        <Typography color="text.secondary">Завантаження…</Typography>
+      </Stack>
+    )
+  }
   if (!item) return <Alert severity="error">{error}</Alert>
 
   return (
-    <Box>
-      <Stack direction="row" spacing={1} alignItems="center" mb={2}>
-        <IconButton onClick={() => navigate('/warehouse')}>
-          <ArrowBackIcon />
-        </IconButton>
-        <Box flex={1}>
-          <Typography variant="h5">{item.name}</Typography>
-          <Typography color="text.secondary">
-            {item.category} · {formatNumber(item.quantityInStock)} {item.unit}
-          </Typography>
-        </Box>
-        {item.isLowStock && <Chip color="warning" label="Низький запас" />}
-        <Button variant="outlined" onClick={openEdit}>
-          Редагувати
-        </Button>
-        <Button color="error" variant="outlined" onClick={() => void remove()}>
-          Видалити
-        </Button>
+    <Stack spacing={2.5}>
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        spacing={1.5}
+        alignItems={{ sm: 'flex-start' }}
+        justifyContent="space-between"
+      >
+        <Stack direction="row" spacing={1} alignItems="flex-start" sx={{ minWidth: 0, flex: 1 }}>
+          <IconButton onClick={() => navigate('/warehouse')} sx={{ mt: -0.5 }}>
+            <ArrowBackIcon />
+          </IconButton>
+          <Box sx={{ minWidth: 0 }}>
+            <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+              <Typography variant="h6" fontWeight={700} noWrap>
+                {item.name}
+              </Typography>
+              {item.isLowStock && <Chip size="small" color="warning" label="Низький запас" />}
+            </Stack>
+            <Typography variant="body2" color="text.secondary" mt={0.5}>
+              {item.category} · {formatNumber(item.quantityInStock)} {item.unit}
+            </Typography>
+          </Box>
+        </Stack>
+        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ flexShrink: 0 }}>
+          <Button variant="outlined" onClick={openEdit}>
+            Редагувати
+          </Button>
+          <Button color="error" variant="outlined" onClick={() => void remove()}>
+            Видалити
+          </Button>
+        </Stack>
       </Stack>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
+        <Alert severity="error" onClose={() => setError(null)}>
           {error}
         </Alert>
       )}
 
-      <Box sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 2, mb: 3 }}>
-        <Typography>Ціна: {formatNumber(item.price)}</Typography>
-        <Typography>Постачальник: {item.supplier || '—'}</Typography>
-        <Typography>Поріг низького запасу: {formatNumber(item.lowStockThreshold)}</Typography>
-        <Typography mt={1}>Примітки: {item.notes || '—'}</Typography>
+      <Box
+        sx={{
+          p: { xs: 1.5, sm: 2 },
+          borderRadius: 2,
+          border: '1px solid',
+          borderColor: 'divider',
+          bgcolor: 'background.paper',
+        }}
+      >
+        <Stack spacing={1.25}>
+          <Typography>
+            <Typography component="span" color="text.secondary">
+              Ціна:{' '}
+            </Typography>
+            {formatNumber(item.price)}
+          </Typography>
+          <Typography>
+            <Typography component="span" color="text.secondary">
+              Постачальник:{' '}
+            </Typography>
+            {item.supplier || '—'}
+          </Typography>
+          <Typography>
+            <Typography component="span" color="text.secondary">
+              Поріг низького запасу:{' '}
+            </Typography>
+            {formatNumber(item.lowStockThreshold)}
+          </Typography>
+          <Typography>
+            <Typography component="span" color="text.secondary">
+              Примітки:{' '}
+            </Typography>
+            {item.notes || '—'}
+          </Typography>
+        </Stack>
       </Box>
 
-      <Typography variant="h6" mb={1}>
-        Використовується в проектах
-      </Typography>
-      <Stack spacing={1}>
-        {item.projects.map((p) => (
-          <Box
-            key={p.projectId}
-            component={RouterLink}
-            to={`/projects/${p.projectId}`}
-            sx={{
-              p: 2,
-              borderRadius: 2,
-              bgcolor: 'background.paper',
-              border: '1px solid',
-              borderColor: 'divider',
-              textDecoration: 'none',
-              color: 'inherit',
-            }}
-          >
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Typography fontWeight={700} flex={1}>
-                {p.projectName}
-              </Typography>
-              <Chip size="small" label={statusLabel(p.projectStatus)} />
-              <Typography variant="body2">Потрібно: {formatNumber(p.quantityNeeded)}</Typography>
-              {p.needsPurchase && <Chip size="small" color="warning" label="Потрібно закупіти" />}
-            </Stack>
-          </Box>
-        ))}
-        {item.projects.length === 0 && (
-          <Typography color="text.secondary">Ця позиція ще не використовується в проектах</Typography>
-        )}
-      </Stack>
+      <Box>
+        <Typography variant="subtitle1" fontWeight={700} mb={1.5}>
+          Використовується в проектах
+        </Typography>
+        <Stack spacing={1.5}>
+          {item.projects.map((p) => (
+            <Box
+              key={p.projectId}
+              component={RouterLink}
+              to={`/projects/${p.projectId}`}
+              sx={{
+                p: 2,
+                borderRadius: 2,
+                bgcolor: 'background.paper',
+                border: '1px solid',
+                borderColor: 'divider',
+                textDecoration: 'none',
+                color: 'inherit',
+                '&:hover': { boxShadow: 1 },
+              }}
+            >
+              <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+                <Typography fontWeight={700} flex={1} sx={{ minWidth: 0 }} noWrap>
+                  {p.projectName}
+                </Typography>
+                <Chip
+                  size="small"
+                  label={statusLabel(p.projectStatus)}
+                  color={statusChipColor(p.projectStatus)}
+                  variant={p.projectStatus === 'Completed' ? 'outlined' : 'filled'}
+                />
+                <Typography variant="body2">Потрібно: {formatNumber(p.quantityNeeded)}</Typography>
+                {p.needsPurchase && (
+                  <Chip size="small" color="warning" label="Потрібно закупіти" />
+                )}
+              </Stack>
+            </Box>
+          ))}
+          {item.projects.length === 0 && (
+            <Typography color="text.secondary">
+              Ця позиція ще не використовується в проектах
+            </Typography>
+          )}
+        </Stack>
+      </Box>
 
       <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>Редагувати позицію</DialogTitle>
         <DialogContent>
           <Stack spacing={2} mt={1}>
-            <TextField label="Назва" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-            <TextField label="Категорія" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
-            <TextField label="Одиниця" value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} />
-            <TextField label="Кількість" type="number" value={form.quantityInStock} onChange={(e) => setForm({ ...form, quantityInStock: e.target.value })} />
-            <TextField label="Ціна" type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
-            <TextField label="Постачальник" value={form.supplier} onChange={(e) => setForm({ ...form, supplier: e.target.value })} />
-            <TextField label="Поріг низького запасу" type="number" value={form.lowStockThreshold} onChange={(e) => setForm({ ...form, lowStockThreshold: e.target.value })} />
-            <TextField label="Примітки" multiline minRows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+            <TextField
+              label="Назва"
+              fullWidth
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+            />
+            <TextField
+              label="Категорія"
+              fullWidth
+              value={form.category}
+              onChange={(e) => setForm({ ...form, category: e.target.value })}
+            />
+            <TextField
+              label="Одиниця"
+              fullWidth
+              value={form.unit}
+              onChange={(e) => setForm({ ...form, unit: e.target.value })}
+            />
+            <TextField
+              label="Кількість"
+              type="number"
+              fullWidth
+              value={form.quantityInStock}
+              onChange={(e) => setForm({ ...form, quantityInStock: e.target.value })}
+            />
+            <TextField
+              label="Ціна"
+              type="number"
+              fullWidth
+              value={form.price}
+              onChange={(e) => setForm({ ...form, price: e.target.value })}
+            />
+            <TextField
+              label="Постачальник"
+              fullWidth
+              value={form.supplier}
+              onChange={(e) => setForm({ ...form, supplier: e.target.value })}
+            />
+            <TextField
+              label="Поріг низького запасу"
+              type="number"
+              fullWidth
+              value={form.lowStockThreshold}
+              onChange={(e) => setForm({ ...form, lowStockThreshold: e.target.value })}
+            />
+            <TextField
+              label="Примітки"
+              multiline
+              minRows={2}
+              fullWidth
+              value={form.notes}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+            />
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button variant="text" onClick={() => setOpen(false)}>Скасувати</Button>
+          <Button variant="text" onClick={() => setOpen(false)}>
+            Скасувати
+          </Button>
           <Button onClick={() => void save()}>Зберегти</Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </Stack>
   )
 }

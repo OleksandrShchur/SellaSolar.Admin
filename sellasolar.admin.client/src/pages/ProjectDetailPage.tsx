@@ -29,7 +29,7 @@ import type {
   WarehouseItemList,
   UserListItem,
 } from '../api/types'
-import { formatDate, formatDateTime, formatNumber, statusLabel, workerTypeLabel } from '../utils/labels'
+import { formatDate, formatDateTime, formatNumber, statusChipColor, statusLabel, workerTypeLabel } from '../utils/labels'
 import { useAuth } from '../auth/AuthContext'
 
 interface TabPanelProps {
@@ -40,7 +40,7 @@ interface TabPanelProps {
 
 function TabPanel({ value, index, children }: TabPanelProps) {
   if (value !== index) return null
-  return <Box pt={2}>{children}</Box>
+  return <Box>{children}</Box>
 }
 
 export default function ProjectDetailPage() {
@@ -231,285 +231,403 @@ export default function ProjectDetailPage() {
     }
   }
 
-  if (loading) return <Typography>Завантаження...</Typography>
+  if (loading) {
+    return (
+      <Stack spacing={2.5}>
+        <Typography color="text.secondary">Завантаження…</Typography>
+      </Stack>
+    )
+  }
   if (!project) return <Alert severity="error">{error ?? 'Проект не знайдено'}</Alert>
 
+  const statusAction =
+    project.status === 'Awaiting' ? (
+      <Button onClick={() => void changeStatus('InProgress')}>Почати роботу</Button>
+    ) : project.status === 'InProgress' ? (
+      <Button color="success" onClick={() => void changeStatus('Completed')}>
+        Завершити
+      </Button>
+    ) : (
+      <Button variant="outlined" onClick={() => void changeStatus('InProgress')}>
+        Повернути в роботу
+      </Button>
+    )
+
   return (
-    <Box>
-      <Stack direction="row" spacing={1} alignItems="center" mb={2}>
-        <IconButton onClick={() => navigate('/projects')}>
-          <ArrowBackIcon />
-        </IconButton>
-        <Box flex={1}>
-          <Typography variant="h5">{project.name}</Typography>
-          <Typography color="text.secondary">{project.address}</Typography>
-        </Box>
-        <Chip
-          label={statusLabel(project.status)}
-          color={project.status === 'Completed' ? 'success' : 'primary'}
-        />
-        <Button variant="outlined" onClick={openEdit}>
-          Редагувати
-        </Button>
-        {project.status === 'InProgress' ? (
-          <Button color="success" onClick={() => void changeStatus('Completed')}>
-            Завершити
+    <Stack spacing={2.5}>
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        spacing={1.5}
+        alignItems={{ sm: 'flex-start' }}
+        justifyContent="space-between"
+      >
+        <Stack direction="row" spacing={1} alignItems="flex-start" sx={{ minWidth: 0, flex: 1 }}>
+          <IconButton onClick={() => navigate('/projects')} sx={{ mt: -0.5 }}>
+            <ArrowBackIcon />
+          </IconButton>
+          <Box sx={{ minWidth: 0 }}>
+            <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+              <Typography variant="h6" fontWeight={700} noWrap>
+                {project.name}
+              </Typography>
+              <Chip
+                size="small"
+                label={statusLabel(project.status)}
+                color={statusChipColor(project.status)}
+                variant={project.status === 'Completed' ? 'outlined' : 'filled'}
+              />
+            </Stack>
+            <Typography variant="body2" color="text.secondary" mt={0.5}>
+              {project.address}
+            </Typography>
+          </Box>
+        </Stack>
+        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ flexShrink: 0 }}>
+          <Button variant="outlined" onClick={openEdit}>
+            Редагувати
           </Button>
-        ) : (
-          <Button variant="outlined" onClick={() => void changeStatus('InProgress')}>
-            Повернути в роботу
-          </Button>
-        )}
+          {statusAction}
+        </Stack>
       </Stack>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+        <Alert severity="error" onClose={() => setError(null)}>
           {error}
         </Alert>
       )}
 
-      <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable">
-        <Tab label="Загальна інформація" />
-        <Tab label="Матеріали" />
-        <Tab label="Працівники" />
-        <Tab label="Фото" />
-      </Tabs>
-
-      <TabPanel value={tab} index={0}>
-        <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
-          <Box flex={1}>
-            <Typography variant="subtitle2" color="text.secondary">
-              Опис
-            </Typography>
-            <Typography mb={2}>{project.description || '—'}</Typography>
-            <Typography variant="subtitle2" color="text.secondary">
-              Клієнт
-            </Typography>
-            <Typography>
-              {project.customerName} · {project.customerPhone}
-              {project.customerEmail ? ` · ${project.customerEmail}` : ''}
-            </Typography>
-          </Box>
-          <Box flex={1}>
-            <Typography variant="subtitle2" color="text.secondary">
-              Дати
-            </Typography>
-            <Typography>
-              Початок: {formatDate(project.startDate)} · Кінець: {formatDate(project.endDate)}
-            </Typography>
-            <Typography mt={1} color="text.secondary">
-              Створено: {formatDateTime(project.createdAt)} · Оновлено: {formatDateTime(project.updatedAt)}
-            </Typography>
-          </Box>
-        </Stack>
-        <Typography variant="subtitle1" fontWeight={700} mt={3} mb={1}>
-          Додаткові дані
-        </Typography>
-        {project.customData.length === 0 && <Typography color="text.secondary">Немає</Typography>}
-        <Stack direction="row" flexWrap="wrap" gap={1}>
-          {project.customData.map((item) => (
-            <Chip key={`${item.key}-${item.value}`} label={`${item.key}: ${item.value}`} />
-          ))}
-        </Stack>
-      </TabPanel>
-
-      <TabPanel value={tab} index={1}>
-        <Stack direction="row" justifyContent="space-between" mb={2}>
-          <Typography variant="subtitle1" fontWeight={700}>
-            Матеріали проекту
-          </Typography>
-          <Button onClick={() => void openAddItem()}>Додати матеріал</Button>
-        </Stack>
-        <Stack spacing={1.5}>
-          {project.items.map((item) => (
-            <Box
-              key={item.id}
-              sx={{
-                p: 2,
-                bgcolor: 'background.paper',
-                borderRadius: 2,
-                border: '1px solid',
-                borderColor: 'divider',
-              }}
-            >
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ sm: 'center' }}>
-                <Box flex={1}>
-                  <Typography fontWeight={700}>
-                    {item.warehouseItemName}{' '}
-                    <Typography component="span" color="text.secondary">
-                      ({item.category}, {item.unit})
-                    </Typography>
-                  </Typography>
-                  <Typography variant="body2">
-                    Потрібно: {formatNumber(item.quantityNeeded)} · Зі складу:{' '}
-                    {formatNumber(item.quantityFromStock)} · Закупити:{' '}
-                    {formatNumber(item.quantityToPurchase)} · Залишок на складі:{' '}
-                    {formatNumber(item.quantityInStock)}
-                  </Typography>
-                </Box>
-                {item.needsPurchase && <Chip color="warning" label="Потрібно закупіти" />}
-                <IconButton
-                  color="error"
-                  onClick={() =>
-                    void projectsApi.removeItem(projectId, item.id).then(load).catch((err) => {
-                      setError(err instanceof Error ? err.message : 'Помилка видалення')
-                    })
-                  }
-                >
-                  <DeleteIcon />
-                </IconButton>
-              </Stack>
-            </Box>
-          ))}
-          {project.items.length === 0 && <Typography color="text.secondary">Матеріали ще не додано</Typography>}
-        </Stack>
-      </TabPanel>
-
-      <TabPanel value={tab} index={2}>
-        <Stack direction="row" justifyContent="space-between" mb={2}>
-          <Typography variant="subtitle1" fontWeight={700}>
-            Призначені працівники
-          </Typography>
-          <Button onClick={() => void openAddWorker()}>Призначити</Button>
-        </Stack>
-        <Stack spacing={1.5}>
-          {project.workers.map((worker) => (
-            <Box
-              key={worker.id}
-              sx={{
-                p: 2,
-                bgcolor: 'background.paper',
-                borderRadius: 2,
-                border: '1px solid',
-                borderColor: 'divider',
-              }}
-            >
-              <Stack direction="row" alignItems="center" spacing={1}>
-                <Box flex={1}>
-                  <Typography fontWeight={700}>
-                    {worker.fullName}
-                    {worker.workerType ? ` · ${workerTypeLabel(worker.workerType)}` : ''}
-                  </Typography>
-                  <Typography variant="body2">
-                    {worker.phone || '—'}
-                    {worker.roleOnProject ? ` · Роль: ${worker.roleOnProject}` : ''} ·{' '}
-                    {formatDateTime(worker.assignedAt)}
-                  </Typography>
-                </Box>
-                <IconButton
-                  color="error"
-                  onClick={() =>
-                    void projectsApi.removeWorker(projectId, worker.id).then(load).catch((err) => {
-                      setError(err instanceof Error ? err.message : 'Помилка видалення')
-                    })
-                  }
-                >
-                  <DeleteIcon />
-                </IconButton>
-              </Stack>
-            </Box>
-          ))}
-          {project.workers.length === 0 && (
-            <Typography color="text.secondary">Працівників ще не призначено</Typography>
-          )}
-        </Stack>
-      </TabPanel>
-
-      <TabPanel value={tab} index={3}>
-        <Stack spacing={2} mb={2}>
-          <TextField
-            label="Підпис до фото"
-            value={photoCaption}
-            onChange={(e) => setPhotoCaption(e.target.value)}
-          />
-          <Button variant="outlined" component="label" disabled={uploading}>
-            {uploading ? 'Завантаження...' : 'Завантажити фото'}
-            <input
-              hidden
-              type="file"
-              accept="image/*"
-              onChange={(e) => void uploadPhoto(e.target.files?.[0])}
-            />
-          </Button>
-        </Stack>
-        <Box
+      <Box
+        sx={{
+          borderRadius: 2,
+          border: '1px solid',
+          borderColor: 'divider',
+          bgcolor: 'background.paper',
+          overflow: 'hidden',
+        }}
+      >
+        <Tabs
+          value={tab}
+          onChange={(_, v) => setTab(v)}
+          variant="scrollable"
           sx={{
-            display: 'grid',
-            gap: 2,
-            gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr' },
+            px: 1,
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+            bgcolor: 'action.hover',
+            '& .MuiTab-root': { textTransform: 'none', fontWeight: 600 },
           }}
         >
-          {project.photos.map((photo) => (
+          <Tab label="Загальна інформація" />
+          <Tab label="Матеріали" />
+          <Tab label="Працівники" />
+          <Tab label="Фото" />
+        </Tabs>
+
+        <Box sx={{ p: { xs: 1.5, sm: 2 } }}>
+          <TabPanel value={tab} index={0}>
+            <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
+              <Box flex={1}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Опис
+                </Typography>
+                <Typography mb={2}>{project.description || '—'}</Typography>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Клієнт
+                </Typography>
+                <Typography>
+                  {project.customerName} · {project.customerPhone}
+                  {project.customerEmail ? ` · ${project.customerEmail}` : ''}
+                </Typography>
+              </Box>
+              <Box flex={1}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Дати
+                </Typography>
+                <Typography>
+                  Початок: {formatDate(project.startDate)} · Кінець: {formatDate(project.endDate)}
+                </Typography>
+                <Typography mt={1} color="text.secondary">
+                  Створено: {formatDateTime(project.createdAt)} · Оновлено:{' '}
+                  {formatDateTime(project.updatedAt)}
+                </Typography>
+              </Box>
+            </Stack>
+            <Typography variant="subtitle1" fontWeight={700} mt={3} mb={1}>
+              Додаткові дані
+            </Typography>
+            {project.customData.length === 0 && (
+              <Typography color="text.secondary">Немає</Typography>
+            )}
+            <Stack direction="row" flexWrap="wrap" gap={1}>
+              {project.customData.map((item) => (
+                <Chip key={`${item.key}-${item.value}`} label={`${item.key}: ${item.value}`} />
+              ))}
+            </Stack>
+          </TabPanel>
+
+          <TabPanel value={tab} index={1}>
+            <Stack direction="row" justifyContent="space-between" mb={2} alignItems="center" gap={1}>
+              <Typography variant="subtitle1" fontWeight={700}>
+                Матеріали проекту
+              </Typography>
+              <Button onClick={() => void openAddItem()}>Додати матеріал</Button>
+            </Stack>
+            <Stack spacing={1.5}>
+              {project.items.map((item) => (
+                <Box
+                  key={item.id}
+                  sx={{
+                    p: 2,
+                    borderRadius: 2,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    bgcolor: 'background.default',
+                    '&:hover': { boxShadow: 1 },
+                  }}
+                >
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ sm: 'center' }}>
+                    <Box flex={1}>
+                      <Typography fontWeight={700}>
+                        {item.warehouseItemName}{' '}
+                        <Typography component="span" color="text.secondary">
+                          ({item.category}, {item.unit})
+                        </Typography>
+                      </Typography>
+                      <Typography variant="body2">
+                        Потрібно: {formatNumber(item.quantityNeeded)} · Зі складу:{' '}
+                        {formatNumber(item.quantityFromStock)} · Закупити:{' '}
+                        {formatNumber(item.quantityToPurchase)} · Залишок на складі:{' '}
+                        {formatNumber(item.quantityInStock)}
+                      </Typography>
+                    </Box>
+                    {item.needsPurchase && <Chip color="warning" label="Потрібно закупіти" />}
+                    <IconButton
+                      color="error"
+                      onClick={() =>
+                        void projectsApi.removeItem(projectId, item.id).then(load).catch((err) => {
+                          setError(err instanceof Error ? err.message : 'Помилка видалення')
+                        })
+                      }
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </Stack>
+                </Box>
+              ))}
+              {project.items.length === 0 && (
+                <Typography color="text.secondary">Матеріали ще не додано</Typography>
+              )}
+            </Stack>
+          </TabPanel>
+
+          <TabPanel value={tab} index={2}>
+            <Stack direction="row" justifyContent="space-between" mb={2} alignItems="center" gap={1}>
+              <Typography variant="subtitle1" fontWeight={700}>
+                Призначені працівники
+              </Typography>
+              <Button onClick={() => void openAddWorker()}>Призначити</Button>
+            </Stack>
+            <Stack spacing={1.5}>
+              {project.workers.map((worker) => (
+                <Box
+                  key={worker.id}
+                  sx={{
+                    p: 2,
+                    borderRadius: 2,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    bgcolor: 'background.default',
+                    '&:hover': { boxShadow: 1 },
+                  }}
+                >
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <Box flex={1}>
+                      <Typography fontWeight={700}>
+                        {worker.fullName}
+                        {worker.workerType ? ` · ${workerTypeLabel(worker.workerType)}` : ''}
+                      </Typography>
+                      <Typography variant="body2">
+                        {worker.phone || '—'}
+                        {worker.roleOnProject ? ` · Роль: ${worker.roleOnProject}` : ''} ·{' '}
+                        {formatDateTime(worker.assignedAt)}
+                      </Typography>
+                    </Box>
+                    <IconButton
+                      color="error"
+                      onClick={() =>
+                        void projectsApi
+                          .removeWorker(projectId, worker.id)
+                          .then(load)
+                          .catch((err) => {
+                            setError(err instanceof Error ? err.message : 'Помилка видалення')
+                          })
+                      }
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </Stack>
+                </Box>
+              ))}
+              {project.workers.length === 0 && (
+                <Typography color="text.secondary">Працівників ще не призначено</Typography>
+              )}
+            </Stack>
+          </TabPanel>
+
+          <TabPanel value={tab} index={3}>
+            <Stack spacing={2} mb={2}>
+              <TextField
+                label="Підпис до фото"
+                value={photoCaption}
+                onChange={(e) => setPhotoCaption(e.target.value)}
+                fullWidth
+              />
+              <Button variant="outlined" component="label" disabled={uploading}>
+                {uploading ? 'Завантаження...' : 'Завантажити фото'}
+                <input
+                  hidden
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => void uploadPhoto(e.target.files?.[0])}
+                />
+              </Button>
+            </Stack>
             <Box
-              key={photo.id}
               sx={{
-                borderRadius: 2,
-                overflow: 'hidden',
-                border: '1px solid',
-                borderColor: 'divider',
-                bgcolor: 'background.paper',
+                display: 'grid',
+                gap: 2,
+                gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr' },
               }}
             >
-              <Box
-                component="img"
-                src={photo.url}
-                alt={photo.caption ?? 'Фото проекту'}
-                sx={{ width: '100%', height: 180, objectFit: 'cover', display: 'block' }}
-              />
-              <Stack direction="row" alignItems="center" p={1.5} spacing={1}>
-                <Box flex={1}>
-                  <Typography variant="body2">{photo.caption || 'Без підпису'}</Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {formatDateTime(photo.uploadedAt)}
-                  </Typography>
-                </Box>
-                <IconButton
-                  color="error"
-                  onClick={() =>
-                    void projectsApi.removePhoto(projectId, photo.id).then(load).catch((err) => {
-                      setError(err instanceof Error ? err.message : 'Помилка видалення')
-                    })
-                  }
+              {project.photos.map((photo) => (
+                <Box
+                  key={photo.id}
+                  sx={{
+                    borderRadius: 2,
+                    overflow: 'hidden',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    bgcolor: 'background.default',
+                  }}
                 >
-                  <DeleteIcon />
-                </IconButton>
-              </Stack>
+                  <Box
+                    component="img"
+                    src={photo.url}
+                    alt={photo.caption ?? 'Фото проекту'}
+                    sx={{ width: '100%', height: 180, objectFit: 'cover', display: 'block' }}
+                  />
+                  <Stack direction="row" alignItems="center" p={1.5} spacing={1}>
+                    <Box flex={1}>
+                      <Typography variant="body2">{photo.caption || 'Без підпису'}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {formatDateTime(photo.uploadedAt)}
+                      </Typography>
+                    </Box>
+                    <IconButton
+                      color="error"
+                      onClick={() =>
+                        void projectsApi.removePhoto(projectId, photo.id).then(load).catch((err) => {
+                          setError(err instanceof Error ? err.message : 'Помилка видалення')
+                        })
+                      }
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </Stack>
+                </Box>
+              ))}
             </Box>
-          ))}
+            {project.photos.length === 0 && (
+              <Typography color="text.secondary">Фото ще немає</Typography>
+            )}
+          </TabPanel>
         </Box>
-        {project.photos.length === 0 && <Typography color="text.secondary">Фото ще немає</Typography>}
-      </TabPanel>
+      </Box>
 
       <Dialog open={editOpen} onClose={() => setEditOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>Редагувати проект</DialogTitle>
         <DialogContent>
           <Stack spacing={2} mt={1}>
-            <TextField label="Назва" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
-            <TextField label="Опис" multiline minRows={2} value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} />
-            <TextField label="Адреса" value={editForm.address} onChange={(e) => setEditForm({ ...editForm, address: e.target.value })} />
-            <FormControl>
+            <TextField
+              label="Назва"
+              fullWidth
+              value={editForm.name}
+              onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+            />
+            <TextField
+              label="Опис"
+              multiline
+              minRows={2}
+              fullWidth
+              value={editForm.description}
+              onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+            />
+            <TextField
+              label="Адреса"
+              fullWidth
+              value={editForm.address}
+              onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+            />
+            <FormControl fullWidth>
               <InputLabel>Статус</InputLabel>
-              <Select label="Статус" value={editForm.status} onChange={(e) => setEditForm({ ...editForm, status: e.target.value as ProjectStatus })}>
+              <Select
+                label="Статус"
+                value={editForm.status}
+                onChange={(e) => setEditForm({ ...editForm, status: e.target.value as ProjectStatus })}
+              >
+                <MenuItem value="Awaiting">Очікує</MenuItem>
                 <MenuItem value="InProgress">У роботі</MenuItem>
                 <MenuItem value="Completed">Завершено</MenuItem>
               </Select>
             </FormControl>
-            <TextField label="Ім'я клієнта" value={editForm.customerName} onChange={(e) => setEditForm({ ...editForm, customerName: e.target.value })} />
-            <TextField label="Телефон" value={editForm.customerPhone} onChange={(e) => setEditForm({ ...editForm, customerPhone: e.target.value })} />
-            <TextField label="Email" value={editForm.customerEmail} onChange={(e) => setEditForm({ ...editForm, customerEmail: e.target.value })} />
-            <TextField type="date" label="Дата початку" InputLabelProps={{ shrink: true }} value={editForm.startDate} onChange={(e) => setEditForm({ ...editForm, startDate: e.target.value })} />
-            <TextField type="date" label="Дата завершення" InputLabelProps={{ shrink: true }} value={editForm.endDate} onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })} />
+            <TextField
+              label="Ім'я клієнта"
+              fullWidth
+              value={editForm.customerName}
+              onChange={(e) => setEditForm({ ...editForm, customerName: e.target.value })}
+            />
+            <TextField
+              label="Телефон"
+              fullWidth
+              value={editForm.customerPhone}
+              onChange={(e) => setEditForm({ ...editForm, customerPhone: e.target.value })}
+            />
+            <TextField
+              label="Email"
+              fullWidth
+              value={editForm.customerEmail}
+              onChange={(e) => setEditForm({ ...editForm, customerEmail: e.target.value })}
+            />
+            <TextField
+              type="date"
+              label="Дата початку"
+              InputLabelProps={{ shrink: true }}
+              fullWidth
+              value={editForm.startDate}
+              onChange={(e) => setEditForm({ ...editForm, startDate: e.target.value })}
+            />
+            <TextField
+              type="date"
+              label="Дата завершення"
+              InputLabelProps={{ shrink: true }}
+              fullWidth
+              value={editForm.endDate}
+              onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })}
+            />
             <TextField
               label="Додаткові дані (ключ=значення, по рядку)"
               multiline
               minRows={3}
+              fullWidth
               value={editForm.customDataText}
               onChange={(e) => setEditForm({ ...editForm, customDataText: e.target.value })}
             />
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button variant="text" onClick={() => setEditOpen(false)}>Скасувати</Button>
+          <Button variant="text" onClick={() => setEditOpen(false)}>
+            Скасувати
+          </Button>
           <Button onClick={() => void saveEdit()}>Зберегти</Button>
         </DialogActions>
       </Dialog>
@@ -535,17 +653,23 @@ export default function ProjectDetailPage() {
             <TextField
               label="Потрібна кількість"
               type="number"
+              fullWidth
               value={quantityNeeded}
               onChange={(e) => setQuantityNeeded(e.target.value)}
             />
             <Typography variant="body2" color="text.secondary">
-              Якщо на складі недостатньо — система позначить «Потрібно закупіти» і одразу спише доступну кількість.
+              Якщо на складі недостатньо — система позначить «Потрібно закупіти» і одразу спише
+              доступну кількість.
             </Typography>
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button variant="text" onClick={() => setItemOpen(false)}>Скасувати</Button>
-          <Button onClick={() => void addItem()} disabled={!selectedItemId}>Додати</Button>
+          <Button variant="text" onClick={() => setItemOpen(false)}>
+            Скасувати
+          </Button>
+          <Button onClick={() => void addItem()} disabled={!selectedItemId}>
+            Додати
+          </Button>
         </DialogActions>
       </Dialog>
 
@@ -570,6 +694,7 @@ export default function ProjectDetailPage() {
             </FormControl>
             <TextField
               label="Роль на проекті"
+              fullWidth
               value={roleOnProject}
               onChange={(e) => setRoleOnProject(e.target.value)}
             />
@@ -582,10 +707,14 @@ export default function ProjectDetailPage() {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button variant="text" onClick={() => setWorkerOpen(false)}>Скасувати</Button>
-          <Button onClick={() => void addWorker()} disabled={!selectedWorkerId}>Призначити</Button>
+          <Button variant="text" onClick={() => setWorkerOpen(false)}>
+            Скасувати
+          </Button>
+          <Button onClick={() => void addWorker()} disabled={!selectedWorkerId}>
+            Призначити
+          </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </Stack>
   )
 }
