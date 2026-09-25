@@ -28,8 +28,10 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import { projectsApi, warehouseApi, usersApi } from '../api'
 import type {
   ProjectDetail,
+  ProjectItem,
   ProjectStatus,
   WarehouseItemList,
+  WarehouseStockLot,
   UserListItem,
 } from '../api/types'
 import { formatDate, formatDateTime, formatNumber, inventoryLabels, workerTypeLabel } from '../utils/labels'
@@ -87,6 +89,12 @@ export default function ProjectDetailPage() {
   const [editingItemId, setEditingItemId] = useState<number | null>(null)
   const [editQuantityNeeded, setEditQuantityNeeded] = useState('1')
   const [editItemSaving, setEditItemSaving] = useState(false)
+
+  const [allocOpen, setAllocOpen] = useState(false)
+  const [allocItem, setAllocItem] = useState<ProjectItem | null>(null)
+  const [allocLots, setAllocLots] = useState<WarehouseStockLot[]>([])
+  const [allocQtyByLot, setAllocQtyByLot] = useState<Record<number, string>>({})
+  const [allocSaving, setAllocSaving] = useState(false)
 
   const [workerOpen, setWorkerOpen] = useState(false)
   const [workers, setWorkers] = useState<UserListItem[]>([])
@@ -230,6 +238,57 @@ export default function ProjectDetailPage() {
     setEditingItemId(itemId)
     setEditQuantityNeeded(String(currentNeeded))
     setEditItemOpen(true)
+  }
+
+  const openAllocations = async (item: ProjectItem) => {
+    if (!item.warehouseItemId) return
+    setError(null)
+    try {
+      const lots = await warehouseApi.lots(item.warehouseItemId)
+      setAllocItem(item)
+      setAllocLots(lots)
+      const initial: Record<number, string> = {}
+      for (const lot of lots) {
+        const existing = item.allocations?.find((a) => a.lotId === lot.lotId)
+        initial[lot.lotId] = existing ? String(existing.quantity) : ''
+      }
+      setAllocQtyByLot(initial)
+      setAllocOpen(true)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не вдалося завантажити партії')
+    }
+  }
+
+  const saveAllocations = async () => {
+    if (!allocItem) return
+    const allocations = Object.entries(allocQtyByLot)
+      .map(([lotId, qty]) => ({
+        warehouseStockLotId: Number(lotId),
+        quantity: Number(qty),
+      }))
+      .filter((a) => Number.isFinite(a.quantity) && a.quantity > 0)
+
+    setAllocSaving(true)
+    setError(null)
+    try {
+      await projectsApi.setItemAllocations(projectId, allocItem.id, allocations)
+      setAllocOpen(false)
+      setAllocItem(null)
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не вдалося зберегти розподіл')
+    } finally {
+      setAllocSaving(false)
+    }
+  }
+
+  const formatCostBreakdown = (item: ProjectItem) => {
+    const allocs = item.allocations ?? []
+    if (allocs.length === 0) return null
+    const parts = allocs.map(
+      (a) => `${formatNumber(a.quantity)}×${formatNumber(a.unitCost)}`,
+    )
+    return parts.join(' + ')
   }
 
   const saveEditItem = async () => {
@@ -480,10 +539,16 @@ export default function ProjectDetailPage() {
                     p: 2,
                     borderRadius: 2,
                     border: '1.5px solid',
-                    borderColor: item.needsPurchase ? 'warning.main' : 'divider',
+                    borderColor: item.needsPurchase
+                      ? 'warning.main'
+                      : !item.isNonCatalog && item.quantityToPurchase > 0
+                        ? 'info.main'
+                        : 'divider',
                     bgcolor: item.needsPurchase
                       ? 'rgba(237, 108, 2, 0.06)'
-                      : 'rgba(243, 235, 220, 0.45)',
+                      : !item.isNonCatalog && item.quantityToPurchase > 0
+                        ? 'rgba(2, 136, 209, 0.06)'
+                        : 'rgba(243, 235, 220, 0.45)',
                     '&:hover': { boxShadow: 1, borderColor: 'primary.dark' },
                   }}
                 >
@@ -504,25 +569,52 @@ export default function ProjectDetailPage() {
                         {project.status === 'Completed' ? (
                           <>
                             {inventoryLabels.used}: {formatNumber(item.quantityNeeded)}
+                            {item.costFromStock != null && (
+                              <>
+                                {' '}
+                                · {inventoryLabels.costFromStock}: {formatNumber(item.costFromStock)}
+                                {formatCostBreakdown(item) && (
+                                  <Typography component="span" color="text.secondary">
+                                    {' '}
+                                    ({formatCostBreakdown(item)})
+                                  </Typography>
+                                )}
+                              </>
+                            )}
                           </>
                         ) : (
                           <>
                             {inventoryLabels.needed}: {formatNumber(item.quantityNeeded)} ·{' '}
-                            {inventoryLabels.availableStock}: {formatNumber(item.quantityAvailable)} ·{' '}
-                            <Box
-                              component="span"
-                              sx={{
-                                color: item.quantityToPurchase > 0 ? 'warning.dark' : 'inherit',
-                                fontWeight: item.quantityToPurchase > 0 ? 700 : 400,
-                              }}
-                            >
-                              {inventoryLabels.toOrder}: {formatNumber(item.quantityToPurchase)}
-                            </Box>
-                            {!item.isNonCatalog && (
+                            {inventoryLabels.fromStock}: {formatNumber(item.quantityFromStock)} ·{' '}
+                            {inventoryLabels.availableStock}: {formatNumber(item.quantityAvailable)}
+                            {item.quantityToPurchase > 0 && (
                               <>
                                 {' '}
-                                · {inventoryLabels.remainingStock}:{' '}
-                                {formatNumber(Math.max(0, item.quantityAvailable - item.quantityFromStock))}
+                                ·{' '}
+                                <Box
+                                  component="span"
+                                  sx={{
+                                    color: item.needsPurchase ? 'warning.dark' : 'info.dark',
+                                    fontWeight: 700,
+                                  }}
+                                >
+                                  {item.needsPurchase
+                                    ? inventoryLabels.toOrder
+                                    : inventoryLabels.unallocated}
+                                  : {formatNumber(item.quantityToPurchase)}
+                                </Box>
+                              </>
+                            )}
+                            {!item.isNonCatalog && item.costFromStock != null && (
+                              <>
+                                {' '}
+                                · {inventoryLabels.costFromStock}: {formatNumber(item.costFromStock)}
+                                {formatCostBreakdown(item) && (
+                                  <Typography component="span" color="text.secondary">
+                                    {' '}
+                                    ({formatCostBreakdown(item)})
+                                  </Typography>
+                                )}
                               </>
                             )}
                           </>
@@ -531,6 +623,21 @@ export default function ProjectDetailPage() {
                     </Box>
                     {project.status !== 'Completed' && item.needsPurchase && (
                       <Chip color="warning" label={inventoryLabels.needsPurchase} />
+                    )}
+                    {project.status !== 'Completed' &&
+                      !item.isNonCatalog &&
+                      !item.needsPurchase &&
+                      item.quantityToPurchase > 0 && (
+                        <Chip color="info" label={inventoryLabels.needsAllocation} />
+                      )}
+                    {project.status !== 'Completed' && !item.isNonCatalog && (
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => void openAllocations(item)}
+                      >
+                        {inventoryLabels.allocateLots}
+                      </Button>
                     )}
                     {project.status !== 'Completed' && (
                       <IconButton
@@ -850,7 +957,7 @@ export default function ProjectDetailPage() {
             />
             <Typography variant="body2" color="text.secondary">
               {itemMode === 'catalog'
-                ? 'Якщо на складі недостатньо вільного запасу — система позначить «Потрібно закупіти». Кількість спишеться зі складу лише після завершення проекту.'
+                ? 'Після додавання розподіліть партії вручну («Розподілити партії»). Без розподілу весь обсяг буде «Потрібно закупіти». Списання зі складу — лише після завершення проекту.'
                 : 'Матеріал поза каталогом буде повністю позначено як «Потрібно закупіти» і з’явиться на складі у фільтрі «Потрібно замовити».'}
             </Typography>
           </Stack>
@@ -892,8 +999,7 @@ export default function ProjectDetailPage() {
               inputProps={{ min: 0.01, step: 'any' }}
             />
             <Typography variant="body2" color="text.secondary">
-              Резерв перерахується з вільного запасу. Зменшення кількості звільняє резерв для інших
-              проектів. Нестача позначається як «Потрібно закупіти».
+              {inventoryLabels.editQtyBlockedHint} Нестача позначається як «Потрібно закупіти».
             </Typography>
           </Stack>
         </DialogContent>
@@ -908,6 +1014,112 @@ export default function ProjectDetailPage() {
             disabled={editItemSaving || !editQuantityNeeded || Number(editQuantityNeeded) <= 0}
           >
             Зберегти
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={allocOpen}
+        onClose={() => !allocSaving && setAllocOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>
+          {inventoryLabels.allocateLots}
+          {allocItem ? ` — ${allocItem.name}` : ''}
+        </DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} mt={1}>
+            <Typography variant="body2" color="text.secondary">
+              {inventoryLabels.allocationHint}
+            </Typography>
+            {allocItem && (
+              <Typography variant="body2" fontWeight={600}>
+                {inventoryLabels.needed}: {formatNumber(allocItem.quantityNeeded)} {allocItem.unit}
+              </Typography>
+            )}
+            {allocLots.length === 0 && (
+              <Alert severity="info">
+                {inventoryLabels.noLots}{' '}
+                {allocItem?.warehouseItemId && (
+                  <RouterLink to={`/warehouse/${allocItem.warehouseItemId}`}>
+                    Відкрити склад
+                  </RouterLink>
+                )}
+              </Alert>
+            )}
+            {allocLots.map((lot) => {
+              const current = Number(allocQtyByLot[lot.lotId] || 0) || 0
+              const maxForLot = lot.quantityFree + (allocItem?.allocations?.find((a) => a.lotId === lot.lotId)?.quantity ?? 0)
+              return (
+                <Box
+                  key={lot.lotId}
+                  sx={{
+                    p: 1.5,
+                    borderRadius: 2,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                  }}
+                >
+                  <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    spacing={1.5}
+                    alignItems={{ sm: 'center' }}
+                  >
+                    <Box flex={1}>
+                      <Typography fontWeight={600}>
+                        {formatDateTime(lot.receivedAt)} · {inventoryLabels.unitCost}:{' '}
+                        {formatNumber(lot.unitCost)}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {inventoryLabels.onHand}: {formatNumber(lot.quantityOnHand)} ·{' '}
+                        {inventoryLabels.freeOnLot}: {formatNumber(maxForLot)}
+                        {lot.supplier ? ` · ${lot.supplier}` : ''}
+                      </Typography>
+                    </Box>
+                    <TextField
+                      label="Кількість"
+                      type="number"
+                      size="small"
+                      sx={{ width: { xs: '100%', sm: 140 } }}
+                      value={allocQtyByLot[lot.lotId] ?? ''}
+                      onChange={(e) =>
+                        setAllocQtyByLot({ ...allocQtyByLot, [lot.lotId]: e.target.value })
+                      }
+                      inputProps={{ min: 0, max: maxForLot, step: 'any' }}
+                      helperText={
+                        current > maxForLot
+                          ? `Макс. ${formatNumber(maxForLot)}`
+                          : undefined
+                      }
+                      error={current > maxForLot}
+                    />
+                  </Stack>
+                </Box>
+              )
+            })}
+            {allocItem && (
+              <Typography variant="body2">
+                Розподілено:{' '}
+                {formatNumber(
+                  Object.values(allocQtyByLot).reduce((sum, v) => sum + (Number(v) || 0), 0),
+                )}{' '}
+                / {formatNumber(allocItem.quantityNeeded)}
+              </Typography>
+            )}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button variant="text" onClick={() => setAllocOpen(false)} disabled={allocSaving}>
+            Скасувати
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => void saveAllocations()}
+            disabled={allocSaving}
+          >
+            Зберегти розподіл
           </Button>
         </DialogActions>
       </Dialog>

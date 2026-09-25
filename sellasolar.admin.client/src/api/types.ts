@@ -42,6 +42,14 @@ export interface ProjectListItem {
   hasPurchaseNeeds: boolean
 }
 
+export interface ProjectItemLotAllocation {
+  lotId: number
+  unitCost: number
+  quantity: number
+  receivedAt: string
+  quantityFreeOnLot?: number | null
+}
+
 export interface ProjectItem {
   id: number
   warehouseItemId?: number | null
@@ -56,6 +64,9 @@ export interface ProjectItem {
   /** On-hand minus reserved by other open projects. */
   quantityAvailable: number
   isNonCatalog: boolean
+  allocations: ProjectItemLotAllocation[]
+  /** Sum of quantity × unitCost over allocations. */
+  costFromStock?: number | null
 }
 
 export interface ProjectWorker {
@@ -102,13 +113,23 @@ export interface WarehouseItemList {
   quantityInStock: number
   /** On-hand minus reserved by open projects. */
   quantityAvailable: number
-  price?: number | null
   supplier?: string | null
   notes?: string | null
   lowStockThreshold?: number | null
   isLowStock: boolean
   usedInProjectsCount: number
   quantityToOrder: number
+}
+
+export interface WarehouseStockLot {
+  lotId: number
+  unitCost: number
+  quantityOnHand: number
+  quantityReserved: number
+  quantityFree: number
+  receivedAt: string
+  supplier?: string | null
+  notes?: string | null
 }
 
 export interface WarehouseItemProjectUsage {
@@ -120,7 +141,18 @@ export interface WarehouseItemProjectUsage {
   needsPurchase: boolean
 }
 
-export interface WarehouseItemDetail extends Omit<WarehouseItemList, 'usedInProjectsCount' | 'quantityToOrder'> {
+export interface WarehouseItemDetail {
+  id: number
+  name: string
+  category: string
+  unit: string
+  quantityInStock: number
+  quantityAvailable: number
+  supplier?: string | null
+  notes?: string | null
+  lowStockThreshold?: number | null
+  isLowStock: boolean
+  lots: WarehouseStockLot[]
   projects: WarehouseItemProjectUsage[]
 }
 

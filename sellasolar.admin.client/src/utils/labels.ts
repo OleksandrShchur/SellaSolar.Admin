@@ -58,14 +58,30 @@ export const formatNumber = (value?: number | null) => {
 
 export const inventoryLabels = {
   needsPurchase: 'Потрібно закупіти',
+  needsAllocation: 'Потрібно розподілити',
   needsOrder: 'Потрібно замовити',
   notInWarehouse: 'Немає на складі',
   onHand: 'На складі',
   available: 'Вільно',
   availableStock: 'Вільно на складі',
   toOrder: 'Замовити',
+  unallocated: 'Не розподілено',
   needed: 'Потрібно',
   remainingStock: 'Залишок на складі',
   used: 'Використано',
   reserved: 'Зарезервовано',
+  lots: 'Партії',
+  receive: 'Додати на склад',
+  receiveStock: 'Додати на склад',
+  unitCost: 'Ціна за од.',
+  freeOnLot: 'Вільно в партії',
+  allocateLots: 'Розподілити партії',
+  costFromStock: 'Вартість зі складу',
+  fromStock: 'Зі складу',
+  allocationHint:
+    'Оберіть партії та кількість вручну. Вартість проекту рахується лише за розподіленими партіями.',
+  receiveHint: 'Оприбуткування створює нову партію з вказаною ціною за одиницю.',
+  noLots: 'Партій ще немає. Оприбуткуйте першу поставку.',
+  editQtyBlockedHint:
+    'Щоб зменшити потрібну кількість нижче розподілу — спочатку зменшіть розподіл партій.',
 } as const

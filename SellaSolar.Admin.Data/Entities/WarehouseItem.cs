@@ -37,4 +37,7 @@ public partial class WarehouseItem
 
     [InverseProperty("WarehouseItem")]
     public virtual ICollection<ProjectItem> ProjectItems { get; set; } = new List<ProjectItem>();
+
+    [InverseProperty("WarehouseItem")]
+    public virtual ICollection<WarehouseStockLot> WarehouseStockLots { get; set; } = new List<WarehouseStockLot>();
 }

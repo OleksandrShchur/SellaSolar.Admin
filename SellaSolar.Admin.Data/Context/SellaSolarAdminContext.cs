@@ -18,11 +18,15 @@ public partial class SellaSolarAdminContext : DbContext
 
     public virtual DbSet<ProjectItem> ProjectItems { get; set; }
 
+    public virtual DbSet<ProjectItemLotAllocation> ProjectItemLotAllocations { get; set; }
+
     public virtual DbSet<ProjectPhoto> ProjectPhotos { get; set; }
 
     public virtual DbSet<ProjectWorker> ProjectWorkers { get; set; }
 
     public virtual DbSet<WarehouseItem> WarehouseItems { get; set; }
+
+    public virtual DbSet<WarehouseStockLot> WarehouseStockLots { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -52,6 +56,15 @@ public partial class SellaSolarAdminContext : DbContext
             entity.HasOne(d => d.WarehouseItem).WithMany(p => p.ProjectItems).HasConstraintName("FK_ProjectItems_WarehouseItems");
         });
 
+        modelBuilder.Entity<ProjectItemLotAllocation>(entity =>
+        {
+            entity.HasOne(d => d.ProjectItem).WithMany(p => p.ProjectItemLotAllocations).HasConstraintName("FK_ProjectItemLotAllocations_ProjectItems");
+
+            entity.HasOne(d => d.WarehouseStockLot).WithMany(p => p.ProjectItemLotAllocations)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ProjectItemLotAllocations_WarehouseStockLots");
+        });
+
         modelBuilder.Entity<ProjectPhoto>(entity =>
         {
             entity.Property(e => e.UploadedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_ProjectPhotos_UploadedAt");
@@ -64,6 +77,15 @@ public partial class SellaSolarAdminContext : DbContext
             entity.Property(e => e.AssignedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_ProjectWorkers_AssignedAt");
 
             entity.HasOne(d => d.Project).WithMany(p => p.ProjectWorkers).HasConstraintName("FK_ProjectWorkers_Projects");
+        });
+
+        modelBuilder.Entity<WarehouseStockLot>(entity =>
+        {
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_WarehouseStockLots_CreatedAt");
+
+            entity.HasOne(d => d.WarehouseItem).WithMany(p => p.WarehouseStockLots)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_WarehouseStockLots_WarehouseItems");
         });
 
         OnModelCreatingPartial(modelBuilder);
