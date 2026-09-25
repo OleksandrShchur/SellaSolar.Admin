@@ -37,7 +37,7 @@ import PersonOffOutlinedIcon from '@mui/icons-material/PersonOffOutlined'
 import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined'
 import { usersApi } from '../api'
 import type { AppRole, UserListItem, WorkerType } from '../api/types'
-import { appRoleLabel } from '../utils/labels'
+import { appRoleLabel, formatPhone } from '../utils/labels'
 import RowActionsMenu, { type RowActionItem } from '../components/RowActionsMenu'
 import { RoleChip, UserStatusChip, workerTypeDisplay } from '../components/StatusChips'
 import { surfaceSx, panelPad, dataGridSx } from '../components/DetailPanel'
@@ -254,8 +254,8 @@ export default function UsersPage() {
     {
       field: 'phone',
       headerName: 'Телефон (логін)',
-      width: 150,
-      valueFormatter: (v) => v || '—',
+      width: 160,
+      valueFormatter: (v) => formatPhone(v as string | null | undefined),
     },
     {
       field: 'isActive',

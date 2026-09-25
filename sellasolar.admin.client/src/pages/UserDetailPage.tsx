@@ -11,6 +11,7 @@ import {
   FormControl,
   IconButton,
   InputLabel,
+  Link,
   MenuItem,
   Select,
   Stack,
@@ -20,11 +21,21 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import { usersApi } from '../api'
 import type { AppRole, UserListItem, WorkerType } from '../api/types'
-import { appRoleLabel } from '../utils/labels'
+import { appRoleLabel, formatPhone, toTelHref } from '../utils/labels'
 import { DetailField, DetailFieldGrid, DetailPanel } from '../components/DetailPanel'
 import { UserStatusChip, workerTypeDisplay } from '../components/StatusChips'
 
 const roles: AppRole[] = ['Admin', 'Worker']
+
+function PhoneLink({ phone }: { phone?: string | null }) {
+  const href = toTelHref(phone)
+  if (!href) return <>{'—'}</>
+  return (
+    <Link href={href} underline="hover" color="inherit">
+      {formatPhone(phone)}
+    </Link>
+  )
+}
 
 export default function UserDetailPage() {
   const { id } = useParams()
@@ -210,7 +221,9 @@ export default function UserDetailPage() {
         <DetailFieldGrid>
           <DetailField label="Роль" value={appRoleLabel(user.role)} />
           <DetailField label="Тип" value={workerTypeDisplay(user)} />
-          <DetailField label="Телефон (логін)" value={user.phone || '—'} />
+          <DetailField label="Телефон (логін)">
+            <PhoneLink phone={user.phone} />
+          </DetailField>
           <DetailField label="Статус">
             <Box sx={{ mt: 0.25 }}>
               <UserStatusChip user={user} />

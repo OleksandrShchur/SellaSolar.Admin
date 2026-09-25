@@ -198,7 +198,7 @@ public class WarehouseService
                 QuantityReceived = request.QuantityInStock,
                 ReceivedAt = DateTime.UtcNow,
                 Supplier = supplier,
-                Notes = "Початкове оприбуткування",
+                Notes = "Початкове додавання на склад",
                 CreatedAt = DateTime.UtcNow
             });
         }
@@ -235,7 +235,7 @@ public class WarehouseService
         CancellationToken ct = default)
     {
         if (request.Quantity <= 0)
-            throw new ValidationException("Кількість оприбуткування повинна бути більшою за нуль.");
+            throw new ValidationException("Кількість додавання на склад повинна бути більшою за нуль.");
         if (request.UnitCost < 0)
             throw new ValidationException("Ціна за одиницю не може бути від’ємною.");
 

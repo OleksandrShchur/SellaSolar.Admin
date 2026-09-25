@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   Card,
@@ -147,7 +148,6 @@ export default function WarehousePage() {
       valueGetter: (_value, row) =>
         row.quantityToOrder > 0 ? `${formatNumber(row.quantityToOrder)} ${row.unit}` : '—',
     },
-    { field: 'supplier', headerName: 'Постачальник', flex: 1, minWidth: 140 },
     {
       field: 'isLowStock',
       headerName: 'Запас',
@@ -391,9 +391,6 @@ export default function WarehousePage() {
                     ) : (
                       <Chip size="small" color="success" variant="outlined" label="OK" />
                     )}
-                    {row.supplier && (
-                      <Chip size="small" variant="outlined" label={row.supplier} />
-                    )}
                   </Stack>
                 </CardContent>
               </CardActionArea>
@@ -455,12 +452,20 @@ export default function WarehousePage() {
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
             />
-            <TextField
-              label="Категорія"
-              required
-              fullWidth
-              value={form.category}
-              onChange={(e) => setForm({ ...form, category: e.target.value })}
+            <Autocomplete
+              freeSolo
+              options={categories}
+              inputValue={form.category}
+              onInputChange={(_, value) => setForm({ ...form, category: value })}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Категорія"
+                  required
+                  fullWidth
+                  helperText="Оберіть існуючу або введіть нову"
+                />
+              )}
             />
             <TextField
               label="Одиниця"

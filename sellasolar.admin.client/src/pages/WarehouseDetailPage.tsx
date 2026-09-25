@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom'
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   Chip,
@@ -31,6 +32,7 @@ export default function WarehouseDetailPage() {
   const itemId = Number(id)
   const navigate = useNavigate()
   const [item, setItem] = useState<WarehouseItemDetail | null>(null)
+  const [categories, setCategories] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
   const [receiveOpen, setReceiveOpen] = useState(false)
@@ -63,7 +65,7 @@ export default function WarehouseDetailPage() {
     if (Number.isFinite(itemId)) void load()
   }, [itemId])
 
-  const openEdit = () => {
+  const openEdit = async () => {
     if (!item) return
     setForm({
       name: item.name,
@@ -74,6 +76,11 @@ export default function WarehouseDetailPage() {
       lowStockThreshold: item.lowStockThreshold?.toString() ?? '',
     })
     setOpen(true)
+    try {
+      setCategories(await warehouseApi.categories())
+    } catch {
+      setCategories([])
+    }
   }
 
   const openReceive = () => {
@@ -175,9 +182,7 @@ export default function WarehouseDetailPage() {
               {item.isLowStock && <Chip size="small" color="warning" label="Низький" />}
             </Stack>
             <Typography variant="body2" color="text.secondary" mt={0.5} fontWeight={600}>
-              {item.category} · {inventoryLabels.onHand}: {formatNumber(item.quantityInStock)}{' '}
-              {item.unit} · {inventoryLabels.available}: {formatNumber(item.quantityAvailable)}{' '}
-              {item.unit}
+              {item.category}
             </Typography>
           </Box>
         </Stack>
@@ -232,7 +237,7 @@ export default function WarehouseDetailPage() {
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell>Дата оприбуткування</TableCell>
+                  <TableCell>Дата додавання на склад</TableCell>
                   <TableCell align="right">{inventoryLabels.unitCost}</TableCell>
                   <TableCell align="right">{inventoryLabels.onHand}</TableCell>
                   <TableCell align="right">{inventoryLabels.reserved}</TableCell>
@@ -314,11 +319,20 @@ export default function WarehouseDetailPage() {
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
             />
-            <TextField
-              label="Категорія"
-              fullWidth
-              value={form.category}
-              onChange={(e) => setForm({ ...form, category: e.target.value })}
+            <Autocomplete
+              freeSolo
+              options={categories}
+              inputValue={form.category}
+              onInputChange={(_, value) => setForm({ ...form, category: value })}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Категорія"
+                  required
+                  fullWidth
+                  helperText="Оберіть існуючу або введіть нову"
+                />
+              )}
             />
             <TextField
               label="Одиниця"

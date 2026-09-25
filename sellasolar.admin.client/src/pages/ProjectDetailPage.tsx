@@ -12,6 +12,7 @@ import {
   FormControl,
   IconButton,
   InputLabel,
+  Link,
   MenuItem,
   Select,
   Stack,
@@ -35,7 +36,7 @@ import type {
   WarehouseStockLot,
   UserListItem,
 } from '../api/types'
-import { formatDate, formatDateTime, formatMoney, formatNumber, inventoryLabels, workerTypeLabel } from '../utils/labels'
+import { formatDate, formatDateTime, formatMoney, formatNumber, formatPhone, inventoryLabels, toTelHref, workerTypeLabel } from '../utils/labels'
 import { useAuth } from '../auth/AuthContext'
 import { DetailField, DetailFieldGrid, DetailPanel, DetailSection, panelPad } from '../components/DetailPanel'
 import { ProjectStatusChip } from '../components/StatusChips'
@@ -96,6 +97,7 @@ export default function ProjectDetailPage() {
   const [allocLots, setAllocLots] = useState<WarehouseStockLot[]>([])
   const [allocQtyByLot, setAllocQtyByLot] = useState<Record<number, string>>({})
   const [allocSaving, setAllocSaving] = useState(false)
+  const [allocError, setAllocError] = useState<string | null>(null)
 
   const [workerOpen, setWorkerOpen] = useState(false)
   const [workers, setWorkers] = useState<UserListItem[]>([])
@@ -271,6 +273,7 @@ export default function ProjectDetailPage() {
   const openAllocations = async (item: ProjectItem) => {
     if (!item.warehouseItemId) return
     setError(null)
+    setAllocError(null)
     try {
       const lots = await warehouseApi.lots(item.warehouseItemId)
       setAllocItem(item)
@@ -296,15 +299,23 @@ export default function ProjectDetailPage() {
       }))
       .filter((a) => Number.isFinite(a.quantity) && a.quantity > 0)
 
+    const total = allocations.reduce((sum, a) => sum + a.quantity, 0)
+    if (total > allocItem.quantityNeeded) {
+      setAllocError(
+        `Сума розподілу (${formatNumber(total)}) перевищує потрібну кількість (${formatNumber(allocItem.quantityNeeded)}).`,
+      )
+      return
+    }
+
     setAllocSaving(true)
-    setError(null)
+    setAllocError(null)
     try {
       await projectsApi.setItemAllocations(projectId, allocItem.id, allocations)
       setAllocOpen(false)
       setAllocItem(null)
       await load()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Не вдалося зберегти розподіл')
+      setAllocError(err instanceof Error ? err.message : 'Не вдалося зберегти розподіл')
     } finally {
       setAllocSaving(false)
     }
@@ -563,13 +574,21 @@ export default function ProjectDetailPage() {
               <DetailFieldGrid columns={{ xs: 1, sm: 2 }}>
                 <DetailField fullWidth label="Опис" value={project.description || '—'} />
                 <DetailField label="Клієнт" value={project.customerName || '—'} />
-                <DetailField
-                  label="Контакти"
-                  value={
-                    [project.customerPhone, project.customerEmail].filter(Boolean).join(' · ') ||
+                <DetailField label="Контакти">
+                  {project.customerPhone || project.customerEmail ? (
+                    <Box component="span">
+                      {project.customerPhone && toTelHref(project.customerPhone) ? (
+                        <Link href={toTelHref(project.customerPhone)!} underline="hover" color="inherit">
+                          {formatPhone(project.customerPhone)}
+                        </Link>
+                      ) : null}
+                      {project.customerPhone && project.customerEmail ? ' · ' : null}
+                      {project.customerEmail || null}
+                    </Box>
+                  ) : (
                     '—'
-                  }
-                />
+                  )}
+                </DetailField>
                 <DetailField label="Початок" value={formatDate(project.startDate)} />
                 <DetailField label="Кінець" value={formatDate(project.endDate)} />
                 <DetailField label="Створено" value={formatDateTime(project.createdAt)} />
@@ -675,8 +694,7 @@ export default function ProjectDetailPage() {
                         ) : (
                           <>
                             {inventoryLabels.needed}: {formatNumber(item.quantityNeeded)} ·{' '}
-                            {inventoryLabels.fromStock}: {formatNumber(item.quantityFromStock)} ·{' '}
-                            {inventoryLabels.availableStock}: {formatNumber(item.quantityAvailable)}
+                            {inventoryLabels.fromStock}: {formatNumber(item.quantityFromStock)}
                             {item.quantityToPurchase > 0 && (
                               <>
                                 {' '}
@@ -899,7 +917,13 @@ export default function ProjectDetailPage() {
                         {worker.workerType ? ` · ${workerTypeLabel(worker.workerType)}` : ''}
                       </Typography>
                       <Typography variant="body2">
-                        {worker.phone || '—'}
+                        {worker.phone && toTelHref(worker.phone) ? (
+                          <Link href={toTelHref(worker.phone)!} underline="hover" color="inherit">
+                            {formatPhone(worker.phone)}
+                          </Link>
+                        ) : (
+                          '—'
+                        )}
                         {worker.roleOnProject ? ` · Роль: ${worker.roleOnProject}` : ''} ·{' '}
                         {formatDateTime(worker.assignedAt)}
                       </Typography>
@@ -1221,7 +1245,11 @@ export default function ProjectDetailPage() {
 
       <Dialog
         open={allocOpen}
-        onClose={() => !allocSaving && setAllocOpen(false)}
+        onClose={() => {
+          if (allocSaving) return
+          setAllocOpen(false)
+          setAllocError(null)
+        }}
         fullWidth
         maxWidth="sm"
       >
@@ -1231,6 +1259,11 @@ export default function ProjectDetailPage() {
         </DialogTitle>
         <DialogContent>
           <Stack spacing={2} mt={1}>
+            {allocError && (
+              <Alert severity="error" onClose={() => setAllocError(null)}>
+                {allocError}
+              </Alert>
+            )}
             <Typography variant="body2" color="text.secondary">
               {inventoryLabels.allocationHint}
             </Typography>
@@ -1284,9 +1317,10 @@ export default function ProjectDetailPage() {
                       size="small"
                       sx={{ width: { xs: '100%', sm: 140 } }}
                       value={allocQtyByLot[lot.lotId] ?? ''}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        setAllocError(null)
                         setAllocQtyByLot({ ...allocQtyByLot, [lot.lotId]: e.target.value })
-                      }
+                      }}
                       inputProps={{ min: 0, max: maxForLot, step: 'any' }}
                       helperText={
                         current > maxForLot
@@ -1299,19 +1333,34 @@ export default function ProjectDetailPage() {
                 </Box>
               )
             })}
-            {allocItem && (
-              <Typography variant="body2">
-                Розподілено:{' '}
-                {formatNumber(
-                  Object.values(allocQtyByLot).reduce((sum, v) => sum + (Number(v) || 0), 0),
-                )}{' '}
-                / {formatNumber(allocItem.quantityNeeded)}
-              </Typography>
-            )}
+            {allocItem && (() => {
+              const allocatedTotal = Object.values(allocQtyByLot).reduce(
+                (sum, v) => sum + (Number(v) || 0),
+                0,
+              )
+              const over = allocatedTotal > allocItem.quantityNeeded
+              return (
+                <Typography
+                  variant="body2"
+                  color={over ? 'error' : undefined}
+                  fontWeight={over ? 700 : undefined}
+                >
+                  Розподілено: {formatNumber(allocatedTotal)} /{' '}
+                  {formatNumber(allocItem.quantityNeeded)}
+                </Typography>
+              )
+            })()}
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button variant="text" onClick={() => setAllocOpen(false)} disabled={allocSaving}>
+          <Button
+            variant="text"
+            onClick={() => {
+              setAllocOpen(false)
+              setAllocError(null)
+            }}
+            disabled={allocSaving}
+          >
             Скасувати
           </Button>
           <Button
