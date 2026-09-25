@@ -80,6 +80,7 @@ export default function WarehousePage() {
     setError(null)
     try {
       const needsOrder = stockFilter === 'order'
+      const loadPurchaseRequests = stockFilter === 'all' || needsOrder
       const [items, cats, requests] = await Promise.all([
         warehouseApi.list({
           category: category || undefined,
@@ -88,7 +89,7 @@ export default function WarehousePage() {
           needsPurchaseOnly: needsOrder || undefined,
         }),
         warehouseApi.categories(),
-        needsOrder ? warehouseApi.purchaseRequests() : Promise.resolve([]),
+        loadPurchaseRequests ? warehouseApi.purchaseRequests() : Promise.resolve([]),
       ])
       setRows(items)
       setCategories(cats)
@@ -205,6 +206,7 @@ export default function WarehousePage() {
   }
 
   const showOrderMode = stockFilter === 'order'
+  const showPurchaseRequests = stockFilter !== 'low' && purchaseRequests.length > 0
 
   return (
     <Stack spacing={2.5}>
@@ -309,7 +311,7 @@ export default function WarehousePage() {
         </Stack>
       </Box>
 
-      {showOrderMode && purchaseRequests.length > 0 && (
+      {showPurchaseRequests && (
         <Box sx={{ p: panelPad, ...surfaceSx }}>
           <Typography variant="subtitle1" fontWeight={800} mb={1.5}>
             Запити поза каталогом
