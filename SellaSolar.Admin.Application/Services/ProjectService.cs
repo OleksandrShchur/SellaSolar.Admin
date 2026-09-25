@@ -98,6 +98,8 @@ public class ProjectService
             .AsNoTracking()
             .Include(p => p.ProjectCustomData)
             .Include(p => p.ProjectItems).ThenInclude(i => i.WarehouseItem)
+            .Include(p => p.ProjectItems).ThenInclude(i => i.ProjectItemLotAllocations)
+                .ThenInclude(a => a.WarehouseStockLot)
             .Include(p => p.ProjectWorkers)
             .Include(p => p.ProjectPhotos)
             .FirstOrDefaultAsync(p => p.Id == id, ct);
@@ -140,6 +142,8 @@ public class ProjectService
         var project = await _db.Projects
             .Include(p => p.ProjectCustomData)
             .Include(p => p.ProjectItems).ThenInclude(i => i.WarehouseItem)
+            .Include(p => p.ProjectItems).ThenInclude(i => i.ProjectItemLotAllocations)
+                .ThenInclude(a => a.WarehouseStockLot)
             .FirstOrDefaultAsync(p => p.Id == id, ct)
             ?? throw new NotFoundException($"Project {id} was not found.");
 
@@ -172,6 +176,8 @@ public class ProjectService
 
         var project = await _db.Projects
             .Include(p => p.ProjectItems).ThenInclude(i => i.WarehouseItem)
+            .Include(p => p.ProjectItems).ThenInclude(i => i.ProjectItemLotAllocations)
+                .ThenInclude(a => a.WarehouseStockLot)
             .FirstOrDefaultAsync(p => p.Id == id, ct)
             ?? throw new NotFoundException($"Project {id} was not found.");
 
@@ -193,6 +199,8 @@ public class ProjectService
     {
         var project = await _db.Projects
             .Include(p => p.ProjectItems).ThenInclude(i => i.WarehouseItem)
+            .Include(p => p.ProjectItems).ThenInclude(i => i.ProjectItemLotAllocations)
+                .ThenInclude(a => a.WarehouseStockLot)
             .Include(p => p.ProjectPhotos)
             .FirstOrDefaultAsync(p => p.Id == id, ct)
             ?? throw new NotFoundException($"Project {id} was not found.");
@@ -212,6 +220,13 @@ public class ProjectService
         UpdateProjectItemRequest request,
         CancellationToken ct = default) =>
         _materials.UpdateItemAsync(projectId, projectItemId, request, ct);
+
+    public Task<ProjectItemDto> SetItemAllocationsAsync(
+        int projectId,
+        int projectItemId,
+        SetProjectItemAllocationsRequest request,
+        CancellationToken ct = default) =>
+        _materials.SetAllocationsAsync(projectId, projectItemId, request, ct);
 
     public Task RemoveItemAsync(int projectId, int projectItemId, CancellationToken ct = default) =>
         _materials.RemoveItemAsync(projectId, projectItemId, ct);
@@ -366,6 +381,23 @@ public class ProjectService
             excludeProjectId: project.Id,
             ct);
 
+        var lotIds = project.ProjectItems
+            .SelectMany(i => i.ProjectItemLotAllocations)
+            .Select(a => a.WarehouseStockLotId)
+            .Distinct()
+            .ToList();
+
+        var allOpenLotReserved = await _db.ProjectItemLotAllocations
+            .AsNoTracking()
+            .Where(a =>
+                lotIds.Contains(a.WarehouseStockLotId) &&
+                (a.ProjectItem.Project.Status == ProjectStatuses.Awaiting ||
+                 a.ProjectItem.Project.Status == ProjectStatuses.InProgress) &&
+                a.ProjectItem.ProjectId != project.Id)
+            .GroupBy(a => a.WarehouseStockLotId)
+            .Select(g => new { LotId = g.Key, Reserved = g.Sum(x => x.Quantity) })
+            .ToDictionaryAsync(x => x.LotId, x => x.Reserved, ct);
+
         return new ProjectDetailDto(
             project.Id,
             project.Name,
@@ -395,7 +427,11 @@ public class ProjectService
                     var available = Math.Max(
                         0,
                         i.WarehouseItem.QuantityInStock - reservedByOthers.GetValueOrDefault(i.WarehouseItemId.Value));
-                    return ProjectMaterialsService.MapCatalog(i, i.WarehouseItem, available);
+                    return ProjectMaterialsService.MapCatalog(
+                        i,
+                        i.WarehouseItem,
+                        available,
+                        allOpenLotReserved);
                 })
                 .ToList(),
             project.ProjectWorkers

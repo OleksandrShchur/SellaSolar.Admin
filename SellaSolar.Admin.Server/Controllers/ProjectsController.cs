@@ -158,6 +158,31 @@ public class ProjectsController : ControllerBase
         }
     }
 
+    [HttpPut("{id:int}/items/{itemId:int}/allocations")]
+    public async Task<ActionResult<ProjectItemDto>> SetItemAllocations(
+        int id,
+        int itemId,
+        [FromBody] SetProjectItemAllocationsRequest request,
+        CancellationToken ct)
+    {
+        try
+        {
+            return Ok(await _projects.SetItemAllocationsAsync(id, itemId, request, ct));
+        }
+        catch (NotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (ValidationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (ConflictException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+    }
+
     [HttpDelete("{id:int}/items/{itemId:int}")]
     public async Task<IActionResult> RemoveItem(int id, int itemId, CancellationToken ct)
     {

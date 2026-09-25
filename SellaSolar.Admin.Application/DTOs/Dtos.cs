@@ -15,6 +15,14 @@ public record ProjectListItemDto(
     int AssignedWorkerCount,
     bool HasPurchaseNeeds);
 
+public record ProjectItemLotAllocationDto(
+    int LotId,
+    decimal UnitCost,
+    decimal Quantity,
+    DateTime ReceivedAt,
+    /// <summary>Free qty on lot for new/changed allocations (includes this item's current allocation on the lot).</summary>
+    decimal? QuantityFreeOnLot);
+
 public record ProjectItemDto(
     int Id,
     int? WarehouseItemId,
@@ -28,7 +36,10 @@ public record ProjectItemDto(
     decimal QuantityInStock,
     /// <summary>On-hand stock minus amounts reserved by other open projects.</summary>
     decimal QuantityAvailable,
-    bool IsNonCatalog);
+    bool IsNonCatalog,
+    IReadOnlyList<ProjectItemLotAllocationDto> Allocations,
+    /// <summary>Sum of quantity × unitCost over allocations. Null when no allocations.</summary>
+    decimal? CostFromStock);
 
 public record ProjectWorkerDto(
     int Id,
@@ -98,6 +109,10 @@ public record AssignProjectItemRequest(
 
 public record UpdateProjectItemRequest(decimal QuantityNeeded);
 
+public record ProjectItemLotAllocationInput(int WarehouseStockLotId, decimal Quantity);
+
+public record SetProjectItemAllocationsRequest(IReadOnlyList<ProjectItemLotAllocationInput> Allocations);
+
 public record AssignProjectWorkerRequest(string UserId, string? RoleOnProject);
 
 public record WarehouseItemListDto(
@@ -108,13 +123,22 @@ public record WarehouseItemListDto(
     decimal QuantityInStock,
     /// <summary>On-hand minus amounts reserved by open projects.</summary>
     decimal QuantityAvailable,
-    decimal? Price,
     string? Supplier,
     string? Notes,
     decimal? LowStockThreshold,
     bool IsLowStock,
     int UsedInProjectsCount,
     decimal QuantityToOrder);
+
+public record WarehouseStockLotDto(
+    int LotId,
+    decimal UnitCost,
+    decimal QuantityOnHand,
+    decimal QuantityReserved,
+    decimal QuantityFree,
+    DateTime ReceivedAt,
+    string? Supplier,
+    string? Notes);
 
 public record WarehouseItemDetailDto(
     int Id,
@@ -124,11 +148,11 @@ public record WarehouseItemDetailDto(
     decimal QuantityInStock,
     /// <summary>On-hand minus amounts reserved by open projects.</summary>
     decimal QuantityAvailable,
-    decimal? Price,
     string? Supplier,
     string? Notes,
     decimal? LowStockThreshold,
     bool IsLowStock,
+    IReadOnlyList<WarehouseStockLotDto> Lots,
     IReadOnlyList<WarehouseItemProjectUsageDto> Projects);
 
 public record WarehouseItemProjectUsageDto(
@@ -144,6 +168,7 @@ public record CreateWarehouseItemRequest(
     string Category,
     string Unit,
     decimal QuantityInStock,
+    /// <summary>Optional initial lot unit cost when QuantityInStock &gt; 0. Also stored as last purchase price.</summary>
     decimal? Price,
     string? Supplier,
     string? Notes,
@@ -153,11 +178,18 @@ public record UpdateWarehouseItemRequest(
     string Name,
     string Category,
     string Unit,
-    decimal QuantityInStock,
-    decimal? Price,
     string? Supplier,
     string? Notes,
     decimal? LowStockThreshold);
+
+public record ReceiveWarehouseStockRequest(
+    decimal Quantity,
+    decimal UnitCost,
+    string? Supplier,
+    string? Notes,
+    DateTime? ReceivedAt,
+    int? AllocateToProjectItemId,
+    decimal? AllocateQuantity);
 
 public record NonCatalogPurchaseRequestDto(
     int ProjectItemId,
@@ -168,4 +200,3 @@ public record NonCatalogPurchaseRequestDto(
     string Category,
     string Unit,
     decimal QuantityToPurchase);
-

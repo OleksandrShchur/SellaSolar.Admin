@@ -51,7 +51,7 @@ const emptyForm = {
   category: '',
   unit: 'шт',
   quantityInStock: '0',
-  price: '',
+  unitCost: '',
   supplier: '',
   notes: '',
   lowStockThreshold: '',
@@ -147,12 +147,6 @@ export default function WarehousePage() {
       valueGetter: (_value, row) =>
         row.quantityToOrder > 0 ? `${formatNumber(row.quantityToOrder)} ${row.unit}` : '—',
     },
-    {
-      field: 'price',
-      headerName: 'Ціна',
-      width: 110,
-      valueFormatter: (value) => formatNumber(value as number | null),
-    },
     { field: 'supplier', headerName: 'Постачальник', flex: 1, minWidth: 140 },
     {
       field: 'isLowStock',
@@ -189,7 +183,7 @@ export default function WarehousePage() {
       category: form.category,
       unit: form.unit,
       quantityInStock: Number(form.quantityInStock),
-      price: form.price === '' ? null : Number(form.price),
+      price: form.unitCost === '' ? null : Number(form.unitCost),
       supplier: form.supplier || null,
       notes: form.notes || null,
       lowStockThreshold: form.lowStockThreshold === '' ? null : Number(form.lowStockThreshold),
@@ -482,13 +476,15 @@ export default function WarehousePage() {
               fullWidth
               value={form.quantityInStock}
               onChange={(e) => setForm({ ...form, quantityInStock: e.target.value })}
+              helperText="Якщо > 0 — створюється початкова партія"
             />
             <TextField
-              label="Ціна"
+              label={inventoryLabels.unitCost}
               type="number"
               fullWidth
-              value={form.price}
-              onChange={(e) => setForm({ ...form, price: e.target.value })}
+              value={form.unitCost}
+              onChange={(e) => setForm({ ...form, unitCost: e.target.value })}
+              helperText="Для початкової партії (необов’язково)"
             />
             <TextField
               label="Постачальник"

@@ -11,6 +11,7 @@ import type {
   ProjectWorker,
   WarehouseItemDetail,
   WarehouseItemList,
+  WarehouseStockLot,
   UserListItem,
   WorkerType,
 } from './types'
@@ -95,6 +96,12 @@ export const projectsApi = {
   ) => apiSend<ProjectItem>(`/api/projects/${id}/items`, 'POST', body),
   updateItem: (id: number, itemId: number, quantityNeeded: number) =>
     apiSend<ProjectItem>(`/api/projects/${id}/items/${itemId}`, 'PUT', { quantityNeeded }),
+  setItemAllocations: (
+    id: number,
+    itemId: number,
+    allocations: { warehouseStockLotId: number; quantity: number }[],
+  ) =>
+    apiSend<ProjectItem>(`/api/projects/${id}/items/${itemId}/allocations`, 'PUT', { allocations }),
   removeItem: (id: number, itemId: number) =>
     apiSend<void>(`/api/projects/${id}/items/${itemId}`, 'DELETE'),
   assignWorker: (id: number, userId: string, roleOnProject?: string) =>
@@ -129,6 +136,19 @@ export const warehouseApi = {
   purchaseRequests: () => apiGet<NonCatalogPurchaseRequest[]>('/api/warehouse-items/purchase-requests'),
   categories: () => apiGet<string[]>('/api/warehouse-items/categories'),
   get: (id: number) => apiGet<WarehouseItemDetail>(`/api/warehouse-items/${id}`),
+  lots: (id: number) => apiGet<WarehouseStockLot[]>(`/api/warehouse-items/${id}/lots`),
+  receive: (
+    id: number,
+    body: {
+      quantity: number
+      unitCost: number
+      supplier?: string | null
+      notes?: string | null
+      receivedAt?: string | null
+      allocateToProjectItemId?: number | null
+      allocateQuantity?: number | null
+    },
+  ) => apiSend<WarehouseItemDetail>(`/api/warehouse-items/${id}/receive`, 'POST', body),
   create: (body: unknown) => apiSend<WarehouseItemDetail>('/api/warehouse-items', 'POST', body),
   update: (id: number, body: unknown) =>
     apiSend<WarehouseItemDetail>(`/api/warehouse-items/${id}`, 'PUT', body),

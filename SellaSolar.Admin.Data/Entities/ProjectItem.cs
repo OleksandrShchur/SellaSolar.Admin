@@ -39,6 +39,9 @@ public partial class ProjectItem
     [InverseProperty("ProjectItems")]
     public virtual Project Project { get; set; } = null!;
 
+    [InverseProperty("ProjectItem")]
+    public virtual ICollection<ProjectItemLotAllocation> ProjectItemLotAllocations { get; set; } = new List<ProjectItemLotAllocation>();
+
     [ForeignKey("WarehouseItemId")]
     [InverseProperty("ProjectItems")]
     public virtual WarehouseItem? WarehouseItem { get; set; }

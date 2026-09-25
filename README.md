@@ -35,16 +35,16 @@ sellasolar.admin.client/        # React admin UI
 
 ## Stock deduction assumption (important)
 
-When materials are assigned to a project (`POST /api/projects/{id}/items`):
+Soft-reserve with **manual lot allocation**:
 
-1. The API compares `QuantityNeeded` with `WarehouseItem.QuantityInStock`.
-2. `QuantityFromStock = min(needed, available)`.
-3. Shortfall is stored as `QuantityToPurchase` and `NeedsPurchase = true`.
-4. **`QuantityFromStock` is deducted from warehouse stock immediately.**
+1. Assigning a catalog item sets `QuantityNeeded` only — no auto-reserve from free stock.
+2. Admin allocates lots via `PUT .../items/{itemId}/allocations`.
+3. `QuantityFromStock = sum(allocations)`; shortfall → `QuantityToPurchase`.
+4. Project `costFromStock` = Σ qty × lot unit cost (only allocated lots).
+5. Completing the project consumes allocated lot on-hand (and catalog `QuantityInStock`).
+6. Warehouse list does **not** show prices; lot prices live on warehouse detail / receive.
 
-Removing a project item (or deleting a project) restores the previously deducted amount.
-
-This is an MVP choice and is easy to change later (e.g. reserve-only until project start).
+See `ai-context/PROJECT_CONTEXT.md` § Stock for the full rules.
 
 ## Prerequisites
 
@@ -106,7 +106,9 @@ dotnet ef dbcontext scaffold `
   --table ProjectItems `
   --table ProjectPhotos `
   --table ProjectWorkers `
-  --table WarehouseItems
+  --table WarehouseItems `
+  --table WarehouseStockLots `
+  --table ProjectItemLotAllocations
 ```
 
 Do **not** scaffold `AspNet*` / `AuthSecurityLogs` into the Data project (Identity owns those).

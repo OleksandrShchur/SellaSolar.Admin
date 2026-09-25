@@ -13,10 +13,12 @@ namespace SellaSolar.Admin.Server.Controllers;
 public class WarehouseItemsController : ControllerBase
 {
     private readonly WarehouseService _warehouse;
+    private readonly ProjectMaterialsService _materials;
 
-    public WarehouseItemsController(WarehouseService warehouse)
+    public WarehouseItemsController(WarehouseService warehouse, ProjectMaterialsService materials)
     {
         _warehouse = warehouse;
+        _materials = materials;
     }
 
     [HttpGet]
@@ -44,6 +46,56 @@ public class WarehouseItemsController : ControllerBase
     {
         var item = await _warehouse.GetByIdAsync(id, ct);
         return item is null ? NotFound() : Ok(item);
+    }
+
+    [HttpGet("{id:int}/lots")]
+    public async Task<ActionResult<IReadOnlyList<WarehouseStockLotDto>>> GetLots(int id, CancellationToken ct)
+    {
+        try
+        {
+            return Ok(await _warehouse.GetLotsAsync(id, ct));
+        }
+        catch (NotFoundException)
+        {
+            return NotFound();
+        }
+    }
+
+    [HttpPost("{id:int}/receive")]
+    public async Task<ActionResult<WarehouseItemDetailDto>> Receive(
+        int id,
+        [FromBody] ReceiveWarehouseStockRequest request,
+        CancellationToken ct)
+    {
+        try
+        {
+            var (detail, newLotId) = await _warehouse.ReceiveAsync(id, request, ct);
+
+            if (request.AllocateToProjectItemId is > 0 && request.AllocateQuantity is > 0)
+            {
+                await _materials.AllocateFromNewLotAsync(
+                    request.AllocateToProjectItemId.Value,
+                    newLotId,
+                    request.AllocateQuantity.Value,
+                    expectedWarehouseItemId: id,
+                    ct);
+                detail = (await _warehouse.GetByIdAsync(id, ct))!;
+            }
+
+            return Ok(detail);
+        }
+        catch (NotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (ValidationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (ConflictException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
     }
 
     [HttpPost]
