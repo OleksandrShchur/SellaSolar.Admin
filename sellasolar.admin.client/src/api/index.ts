@@ -4,6 +4,7 @@ import type {
   CurrentUser,
   NonCatalogPurchaseRequest,
   ProjectDetail,
+  ProjectExpense,
   ProjectItem,
   ProjectListItem,
   ProjectPhoto,
@@ -116,6 +117,27 @@ export const projectsApi = {
   },
   removePhoto: (id: number, photoId: number) =>
     apiSend<void>(`/api/projects/${id}/photos/${photoId}`, 'DELETE'),
+  addExpense: (
+    id: number,
+    body: {
+      category: string
+      amount: number
+      expenseDate?: string | null
+      notes?: string | null
+    },
+  ) => apiSend<ProjectExpense>(`/api/projects/${id}/expenses`, 'POST', body),
+  updateExpense: (
+    id: number,
+    expenseId: number,
+    body: {
+      category: string
+      amount: number
+      expenseDate?: string | null
+      notes?: string | null
+    },
+  ) => apiSend<ProjectExpense>(`/api/projects/${id}/expenses/${expenseId}`, 'PUT', body),
+  removeExpense: (id: number, expenseId: number) =>
+    apiSend<void>(`/api/projects/${id}/expenses/${expenseId}`, 'DELETE'),
 }
 
 export const warehouseApi = {

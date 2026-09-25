@@ -298,4 +298,63 @@ public class ProjectsController : ControllerBase
             return NotFound();
         }
     }
+
+    [HttpPost("{id:int}/expenses")]
+    public async Task<ActionResult<ProjectExpenseDto>> AddExpense(
+        int id,
+        [FromBody] CreateProjectExpenseRequest request,
+        CancellationToken ct)
+    {
+        try
+        {
+            return Ok(await _projects.AddExpenseAsync(id, request, ct));
+        }
+        catch (NotFoundException)
+        {
+            return NotFound();
+        }
+        catch (ValidationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpPut("{id:int}/expenses/{expenseId:int}")]
+    public async Task<ActionResult<ProjectExpenseDto>> UpdateExpense(
+        int id,
+        int expenseId,
+        [FromBody] UpdateProjectExpenseRequest request,
+        CancellationToken ct)
+    {
+        try
+        {
+            return Ok(await _projects.UpdateExpenseAsync(id, expenseId, request, ct));
+        }
+        catch (NotFoundException)
+        {
+            return NotFound();
+        }
+        catch (ValidationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpDelete("{id:int}/expenses/{expenseId:int}")]
+    public async Task<IActionResult> DeleteExpense(int id, int expenseId, CancellationToken ct)
+    {
+        try
+        {
+            await _projects.RemoveExpenseAsync(id, expenseId, ct);
+            return NoContent();
+        }
+        catch (NotFoundException)
+        {
+            return NotFound();
+        }
+        catch (ValidationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
 }

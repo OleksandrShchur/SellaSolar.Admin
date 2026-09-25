@@ -122,6 +122,7 @@ public class ProjectService
                 .ThenInclude(a => a.WarehouseStockLot)
             .Include(p => p.ProjectWorkers)
             .Include(p => p.ProjectPhotos)
+            .Include(p => p.ProjectExpenses)
             .FirstOrDefaultAsync(p => p.Id == id, ct);
 
         return project is null ? null : await MapDetailAsync(project, ct);
@@ -346,6 +347,102 @@ public class ProjectService
         return path;
     }
 
+    public async Task<ProjectExpenseDto> AddExpenseAsync(
+        int projectId,
+        CreateProjectExpenseRequest request,
+        CancellationToken ct = default)
+    {
+        var project = await _db.Projects.FirstOrDefaultAsync(p => p.Id == projectId, ct)
+            ?? throw new NotFoundException($"Project {projectId} was not found.");
+
+        EnsureProjectOpenForExpenseEdits(project.Status);
+        ValidateExpenseWrite(request.Category, request.Amount);
+
+        var now = DateTime.UtcNow;
+        var entity = new ProjectExpense
+        {
+            ProjectId = project.Id,
+            Category = request.Category.Trim(),
+            Amount = request.Amount,
+            ExpenseDate = request.ExpenseDate,
+            Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim(),
+            CreatedAt = now,
+            UpdatedAt = now
+        };
+
+        _db.ProjectExpenses.Add(entity);
+        project.UpdatedAt = now;
+        await _db.SaveChangesAsync(ct);
+
+        return MapExpense(entity);
+    }
+
+    public async Task<ProjectExpenseDto> UpdateExpenseAsync(
+        int projectId,
+        int expenseId,
+        UpdateProjectExpenseRequest request,
+        CancellationToken ct = default)
+    {
+        var entity = await _db.ProjectExpenses
+            .Include(e => e.Project)
+            .FirstOrDefaultAsync(e => e.Id == expenseId && e.ProjectId == projectId, ct)
+            ?? throw new NotFoundException($"Expense {expenseId} was not found.");
+
+        EnsureProjectOpenForExpenseEdits(entity.Project.Status);
+        ValidateExpenseWrite(request.Category, request.Amount);
+
+        var now = DateTime.UtcNow;
+        entity.Category = request.Category.Trim();
+        entity.Amount = request.Amount;
+        entity.ExpenseDate = request.ExpenseDate;
+        entity.Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim();
+        entity.UpdatedAt = now;
+        entity.Project.UpdatedAt = now;
+
+        await _db.SaveChangesAsync(ct);
+        return MapExpense(entity);
+    }
+
+    public async Task RemoveExpenseAsync(int projectId, int expenseId, CancellationToken ct = default)
+    {
+        var entity = await _db.ProjectExpenses
+            .Include(e => e.Project)
+            .FirstOrDefaultAsync(e => e.Id == expenseId && e.ProjectId == projectId, ct)
+            ?? throw new NotFoundException($"Expense {expenseId} was not found.");
+
+        EnsureProjectOpenForExpenseEdits(entity.Project.Status);
+
+        entity.Project.UpdatedAt = DateTime.UtcNow;
+        _db.ProjectExpenses.Remove(entity);
+        await _db.SaveChangesAsync(ct);
+    }
+
+    private static void EnsureProjectOpenForExpenseEdits(string status)
+    {
+        if (!ProjectStatuses.IsOpen(status))
+            throw new ValidationException("Витрати можна змінювати лише для активних проектів.");
+    }
+
+    private static void ValidateExpenseWrite(string category, decimal amount)
+    {
+        if (string.IsNullOrWhiteSpace(category))
+            throw new ValidationException("Категорія обов'язкова.");
+        if (category.Trim().Length > 200)
+            throw new ValidationException("Категорія не може перевищувати 200 символів.");
+        if (amount <= 0)
+            throw new ValidationException("Сума повинна бути більшою за нуль.");
+    }
+
+    private static ProjectExpenseDto MapExpense(ProjectExpense entity) =>
+        new(
+            entity.Id,
+            entity.Category,
+            entity.Amount,
+            entity.ExpenseDate,
+            entity.Notes,
+            entity.CreatedAt,
+            entity.UpdatedAt);
+
     private static void ValidateProjectWrite(
         string name,
         string address,
@@ -472,6 +569,11 @@ public class ProjectService
             project.ProjectPhotos
                 .OrderByDescending(p => p.UploadedAt)
                 .Select(p => new ProjectPhotoDto(p.Id, p.FilePathOrUrl, p.Caption, p.UploadedAt))
+                .ToList(),
+            project.ProjectExpenses
+                .OrderByDescending(e => e.ExpenseDate ?? e.CreatedAt)
+                .ThenByDescending(e => e.Id)
+                .Select(MapExpense)
                 .ToList());
     }
 }

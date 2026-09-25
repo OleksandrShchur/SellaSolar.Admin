@@ -45,6 +45,9 @@ public partial class Project
     public virtual ICollection<ProjectCustomDatum> ProjectCustomData { get; set; } = new List<ProjectCustomDatum>();
 
     [InverseProperty("Project")]
+    public virtual ICollection<ProjectExpense> ProjectExpenses { get; set; } = new List<ProjectExpense>();
+
+    [InverseProperty("Project")]
     public virtual ICollection<ProjectItem> ProjectItems { get; set; } = new List<ProjectItem>();
 
     [InverseProperty("Project")]
