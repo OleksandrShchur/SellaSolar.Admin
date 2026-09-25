@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   Card,
@@ -451,12 +452,20 @@ export default function WarehousePage() {
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
             />
-            <TextField
-              label="Категорія"
-              required
-              fullWidth
-              value={form.category}
-              onChange={(e) => setForm({ ...form, category: e.target.value })}
+            <Autocomplete
+              freeSolo
+              options={categories}
+              inputValue={form.category}
+              onInputChange={(_, value) => setForm({ ...form, category: value })}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Категорія"
+                  required
+                  fullWidth
+                  helperText="Оберіть існуючу або введіть нову"
+                />
+              )}
             />
             <TextField
               label="Одиниця"
