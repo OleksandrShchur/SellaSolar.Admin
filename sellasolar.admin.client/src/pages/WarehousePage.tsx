@@ -33,6 +33,7 @@ import SearchIcon from '@mui/icons-material/Search'
 import { warehouseApi } from '../api'
 import type { WarehouseItemList } from '../api/types'
 import { formatNumber } from '../utils/labels'
+import { surfaceSx, panelPad, dataGridSx } from '../components/DetailPanel'
 
 type StockFilter = 'all' | 'low'
 
@@ -140,7 +141,7 @@ export default function WarehousePage() {
       width: 140,
       renderCell: (params) =>
         params.value ? (
-          <Chip size="small" color="warning" label="Низький запас" />
+          <Chip size="small" color="warning" label="Низький" />
         ) : (
           <Chip size="small" color="success" variant="outlined" label="OK" />
         ),
@@ -194,7 +195,13 @@ export default function WarehousePage() {
         <Typography variant="body2" color="text.secondary">
           Матеріали, залишки та постачальники
         </Typography>
-        <Button startIcon={<AddIcon />} onClick={openCreate} sx={{ flexShrink: 0 }}>
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<AddIcon />}
+          onClick={openCreate}
+          sx={{ flexShrink: 0 }}
+        >
           Додати позицію
         </Button>
       </Stack>
@@ -207,11 +214,8 @@ export default function WarehousePage() {
 
       <Box
         sx={{
-          p: { xs: 1.5, sm: 2 },
-          borderRadius: 2,
-          border: '1px solid',
-          borderColor: 'divider',
-          bgcolor: 'background.paper',
+          p: panelPad,
+          ...surfaceSx,
         }}
       >
         <Stack
@@ -277,7 +281,7 @@ export default function WarehousePage() {
             sx={toggleButtonSx}
           >
             <ToggleButton value="all">Усі</ToggleButton>
-            <ToggleButton value="low">Низький запас</ToggleButton>
+            <ToggleButton value="low">Низький</ToggleButton>
           </ToggleButtonGroup>
         </Stack>
       </Box>
@@ -300,7 +304,7 @@ export default function WarehousePage() {
                   </Typography>
                   <Stack direction="row" spacing={1} mt={1.25} flexWrap="wrap" useFlexGap>
                     {row.isLowStock ? (
-                      <Chip size="small" color="warning" label="Низький запас" />
+                      <Chip size="small" color="warning" label="Низький" />
                     ) : (
                       <Chip size="small" color="success" variant="outlined" label="OK" />
                     )}
@@ -317,10 +321,7 @@ export default function WarehousePage() {
         <Box
           sx={{
             width: '100%',
-            borderRadius: 2,
-            border: '1px solid',
-            borderColor: 'divider',
-            bgcolor: 'background.paper',
+            ...surfaceSx,
             overflow: 'hidden',
           }}
         >
@@ -336,35 +337,7 @@ export default function WarehousePage() {
             pageSizeOptions={[10, 25, 50]}
             initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
             onRowClick={(params) => navigate(`/warehouse/${params.id}`)}
-            sx={{
-              border: 'none',
-              cursor: 'pointer',
-              '& .MuiDataGrid-columnHeaders': {
-                bgcolor: 'action.hover',
-                borderBottom: '1px solid',
-                borderColor: 'divider',
-              },
-              '& .MuiDataGrid-columnHeaderTitle': {
-                fontWeight: 700,
-                fontSize: '0.8rem',
-              },
-              '& .MuiDataGrid-cell': {
-                display: 'flex',
-                alignItems: 'center',
-                borderColor: 'divider',
-                py: 0.5,
-              },
-              '& .MuiDataGrid-row:hover': {
-                bgcolor: 'action.hover',
-              },
-              '& .MuiDataGrid-footerContainer': {
-                borderTop: '1px solid',
-                borderColor: 'divider',
-              },
-              '& .MuiDataGrid-cell:focus, & .MuiDataGrid-cell:focus-within': {
-                outline: 'none',
-              },
-            }}
+            sx={{ ...dataGridSx, cursor: 'pointer' }}
             localeText={{
               noRowsLabel: 'Позицій не знайдено',
               MuiTablePagination: {
@@ -442,7 +415,7 @@ export default function WarehousePage() {
           <Button variant="text" onClick={() => setOpen(false)}>
             Скасувати
           </Button>
-          <Button onClick={() => void save()} disabled={saving}>
+          <Button variant="contained" color="primary" onClick={() => void save()} disabled={saving}>
             Зберегти
           </Button>
         </DialogActions>

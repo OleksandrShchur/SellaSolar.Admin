@@ -45,6 +45,20 @@ public class UsersController : ControllerBase
         return Ok(await _users.GetWorkersForAssignmentAsync(ct));
     }
 
+    [HttpGet("{id}")]
+    [Authorize(Policy = AppPolicies.CanManageUsers)]
+    public async Task<ActionResult<UserListItemDto>> GetById(string id, CancellationToken ct)
+    {
+        try
+        {
+            return Ok(await _users.GetByIdAsync(id, ct));
+        }
+        catch (NotFoundException)
+        {
+            return NotFound();
+        }
+    }
+
     [HttpPost]
     [Authorize(Policy = AppPolicies.CanManageUsers)]
     public async Task<ActionResult<UserListItemDto>> Create([FromBody] CreateUserRequest request, CancellationToken ct)
@@ -52,7 +66,7 @@ public class UsersController : ControllerBase
         try
         {
             var created = await _users.CreateAsync(request, ct);
-            return CreatedAtAction(nameof(GetAll), new { id = created.Id }, created);
+            return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
         }
         catch (ValidationException ex)
         {

@@ -89,6 +89,19 @@ public class UserManagementService
             .ToList();
     }
 
+    public async Task<UserListItemDto> GetByIdAsync(string id, CancellationToken ct)
+    {
+        var user = await _userManager.FindByIdAsync(id)
+            ?? throw new NotFoundException("Користувача не знайдено.");
+
+        var roles = await _userManager.GetRolesAsync(user);
+        var userRole = roles.Contains(AppRoles.Admin)
+            ? AppRoles.Admin
+            : roles.FirstOrDefault() ?? AppRoles.Worker;
+
+        return Map(user, userRole);
+    }
+
     public async Task<UserListItemDto> CreateAsync(CreateUserRequest request, CancellationToken ct)
     {
         ValidatePassword(request.Password);

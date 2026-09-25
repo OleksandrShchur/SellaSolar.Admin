@@ -32,7 +32,9 @@ import ClearIcon from '@mui/icons-material/Clear'
 import SearchIcon from '@mui/icons-material/Search'
 import { projectsApi } from '../api'
 import type { ProjectListItem, ProjectStatus } from '../api/types'
-import { formatDate, statusChipColor, statusLabel } from '../utils/labels'
+import { formatDate } from '../utils/labels'
+import { ProjectStatusChip } from '../components/StatusChips'
+import { surfaceSx, panelPad, dataGridSx } from '../components/DetailPanel'
 
 type StatusFilter = '' | ProjectStatus
 
@@ -56,14 +58,7 @@ const emptyForm = {
 }
 
 function statusChip(status: ProjectStatus) {
-  return (
-    <Chip
-      size="small"
-      label={statusLabel(status)}
-      color={statusChipColor(status)}
-      variant={status === 'Completed' ? 'outlined' : 'filled'}
-    />
-  )
+  return <ProjectStatusChip status={status} />
 }
 
 export default function ProjectsPage() {
@@ -183,7 +178,13 @@ export default function ProjectsPage() {
         <Typography variant="body2" color="text.secondary">
           Монтажні обʼєкти: статуси, клієнти та закупівлі
         </Typography>
-        <Button startIcon={<AddIcon />} onClick={() => setOpen(true)} sx={{ flexShrink: 0 }}>
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<AddIcon />}
+          onClick={() => setOpen(true)}
+          sx={{ flexShrink: 0 }}
+        >
           Новий проект
         </Button>
       </Stack>
@@ -196,11 +197,8 @@ export default function ProjectsPage() {
 
       <Box
         sx={{
-          p: { xs: 1.5, sm: 2 },
-          borderRadius: 2,
-          border: '1px solid',
-          borderColor: 'divider',
-          bgcolor: 'background.paper',
+          p: panelPad,
+          ...surfaceSx,
         }}
       >
         <Stack
@@ -293,10 +291,7 @@ export default function ProjectsPage() {
         <Box
           sx={{
             width: '100%',
-            borderRadius: 2,
-            border: '1px solid',
-            borderColor: 'divider',
-            bgcolor: 'background.paper',
+            ...surfaceSx,
             overflow: 'hidden',
           }}
         >
@@ -312,35 +307,7 @@ export default function ProjectsPage() {
             pageSizeOptions={[10, 25, 50]}
             initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
             onRowClick={(params) => navigate(`/projects/${params.id}`)}
-            sx={{
-              border: 'none',
-              cursor: 'pointer',
-              '& .MuiDataGrid-columnHeaders': {
-                bgcolor: 'action.hover',
-                borderBottom: '1px solid',
-                borderColor: 'divider',
-              },
-              '& .MuiDataGrid-columnHeaderTitle': {
-                fontWeight: 700,
-                fontSize: '0.8rem',
-              },
-              '& .MuiDataGrid-cell': {
-                display: 'flex',
-                alignItems: 'center',
-                borderColor: 'divider',
-                py: 0.5,
-              },
-              '& .MuiDataGrid-row:hover': {
-                bgcolor: 'action.hover',
-              },
-              '& .MuiDataGrid-footerContainer': {
-                borderTop: '1px solid',
-                borderColor: 'divider',
-              },
-              '& .MuiDataGrid-cell:focus, & .MuiDataGrid-cell:focus-within': {
-                outline: 'none',
-              },
-            }}
+            sx={{ ...dataGridSx, cursor: 'pointer' }}
             localeText={{
               noRowsLabel: 'Проектів не знайдено',
               MuiTablePagination: {
@@ -415,7 +382,12 @@ export default function ProjectsPage() {
           <Button variant="text" onClick={() => setOpen(false)}>
             Скасувати
           </Button>
-          <Button onClick={() => void handleCreate()} disabled={saving}>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => void handleCreate()}
+            disabled={saving}
+          >
             Створити
           </Button>
         </DialogActions>

@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import {
   Alert,
   Box,
-  Chip,
   CircularProgress,
   List,
   ListItemButton,
@@ -13,7 +12,9 @@ import {
 import { Link as RouterLink } from 'react-router-dom'
 import { projectsApi } from '../api'
 import type { ProjectListItem } from '../api/types'
-import { formatDate, statusChipColor, statusLabel } from '../utils/labels'
+import { formatDate } from '../utils/labels'
+import { ProjectStatusChip } from '../components/StatusChips'
+import { surfaceSx, panelPad } from '../components/DetailPanel'
 import { useAuth } from '../auth/AuthContext'
 
 export default function MyJobsPage() {
@@ -56,11 +57,8 @@ export default function MyJobsPage() {
       ) : rows.length === 0 ? (
         <Box
           sx={{
-            p: 3,
-            borderRadius: 2,
-            border: '1px solid',
-            borderColor: 'divider',
-            bgcolor: 'background.paper',
+            p: panelPad,
+            ...surfaceSx,
           }}
         >
           <Typography color="text.secondary">На вас ще не призначено жодного проекту.</Typography>
@@ -68,10 +66,7 @@ export default function MyJobsPage() {
       ) : (
         <Box
           sx={{
-            borderRadius: 2,
-            border: '1px solid',
-            borderColor: 'divider',
-            bgcolor: 'background.paper',
+            ...surfaceSx,
             overflow: 'hidden',
           }}
         >
@@ -91,12 +86,7 @@ export default function MyJobsPage() {
                   }
                   secondary={`${row.address} · ${row.customerName} · з ${formatDate(row.startDate)}`}
                 />
-                <Chip
-                  size="small"
-                  color={statusChipColor(row.status)}
-                  variant={row.status === 'Completed' ? 'outlined' : 'filled'}
-                  label={statusLabel(row.status)}
-                />
+                <ProjectStatusChip status={row.status} />
               </ListItemButton>
             ))}
           </List>

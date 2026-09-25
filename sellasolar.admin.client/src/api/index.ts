@@ -36,6 +36,7 @@ export const usersApi = {
       })}`,
     ),
   workersForAssignment: () => apiGet<UserListItem[]>('/api/users/workers'),
+  get: (id: string) => apiGet<UserListItem>(`/api/users/${id}`),
   create: (body: {
     password: string
     fullName: string

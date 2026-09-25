@@ -131,7 +131,7 @@ export default function LoginPage() {
                 }}
               />
 
-              <Button type="submit" size="large" disabled={loading}>
+              <Button type="submit" variant="contained" color="primary" size="large" disabled={loading}>
                 {loading ? 'Вхід…' : 'Увійти'}
               </Button>
             </Stack>

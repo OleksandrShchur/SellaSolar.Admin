@@ -17,7 +17,9 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import { warehouseApi } from '../api'
 import type { WarehouseItemDetail } from '../api/types'
-import { formatNumber, statusChipColor, statusLabel } from '../utils/labels'
+import { formatNumber } from '../utils/labels'
+import { DetailField, DetailFieldGrid, DetailPanel } from '../components/DetailPanel'
+import { ProjectStatusChip } from '../components/StatusChips'
 
 export default function WarehouseDetailPage() {
   const { id } = useParams()
@@ -120,15 +122,15 @@ export default function WarehouseDetailPage() {
               <Typography variant="h6" fontWeight={700} noWrap>
                 {item.name}
               </Typography>
-              {item.isLowStock && <Chip size="small" color="warning" label="Низький запас" />}
+              {item.isLowStock && <Chip size="small" color="warning" label="Низький" />}
             </Stack>
-            <Typography variant="body2" color="text.secondary" mt={0.5}>
+            <Typography variant="body2" color="text.secondary" mt={0.5} fontWeight={600}>
               {item.category} · {formatNumber(item.quantityInStock)} {item.unit}
             </Typography>
           </Box>
         </Stack>
         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ flexShrink: 0 }}>
-          <Button variant="outlined" onClick={openEdit}>
+          <Button variant="outlined" color="primary" onClick={openEdit}>
             Редагувати
           </Button>
           <Button color="error" variant="outlined" onClick={() => void remove()}>
@@ -143,45 +145,17 @@ export default function WarehouseDetailPage() {
         </Alert>
       )}
 
-      <Box
-        sx={{
-          p: { xs: 1.5, sm: 2 },
-          borderRadius: 2,
-          border: '1px solid',
-          borderColor: 'divider',
-          bgcolor: 'background.paper',
-        }}
-      >
-        <Stack spacing={1.25}>
-          <Typography>
-            <Typography component="span" color="text.secondary">
-              Ціна:{' '}
-            </Typography>
-            {formatNumber(item.price)}
-          </Typography>
-          <Typography>
-            <Typography component="span" color="text.secondary">
-              Постачальник:{' '}
-            </Typography>
-            {item.supplier || '—'}
-          </Typography>
-          <Typography>
-            <Typography component="span" color="text.secondary">
-              Поріг низького запасу:{' '}
-            </Typography>
-            {formatNumber(item.lowStockThreshold)}
-          </Typography>
-          <Typography>
-            <Typography component="span" color="text.secondary">
-              Примітки:{' '}
-            </Typography>
-            {item.notes || '—'}
-          </Typography>
-        </Stack>
-      </Box>
+      <DetailPanel>
+        <DetailFieldGrid>
+          <DetailField label="Ціна" value={formatNumber(item.price)} />
+          <DetailField label="Постачальник" value={item.supplier || '—'} />
+          <DetailField label="Поріг низького запасу" value={formatNumber(item.lowStockThreshold)} />
+          <DetailField fullWidth label="Примітки" value={item.notes || '—'} />
+        </DetailFieldGrid>
+      </DetailPanel>
 
-      <Box>
-        <Typography variant="subtitle1" fontWeight={700} mb={1.5}>
+      <DetailPanel>
+        <Typography variant="subtitle1" fontWeight={800} mb={1.75} sx={{ letterSpacing: '-0.01em' }}>
           Використовується в проектах
         </Typography>
         <Stack spacing={1.5}>
@@ -193,25 +167,25 @@ export default function WarehouseDetailPage() {
               sx={{
                 p: 2,
                 borderRadius: 2,
-                bgcolor: 'background.paper',
-                border: '1px solid',
+                bgcolor: 'rgba(243, 235, 220, 0.55)',
+                border: '1.5px solid',
                 borderColor: 'divider',
                 textDecoration: 'none',
                 color: 'inherit',
-                '&:hover': { boxShadow: 1 },
+                '&:hover': {
+                  boxShadow: 1,
+                  borderColor: 'primary.dark',
+                },
               }}
             >
               <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
                 <Typography fontWeight={700} flex={1} sx={{ minWidth: 0 }} noWrap>
                   {p.projectName}
                 </Typography>
-                <Chip
-                  size="small"
-                  label={statusLabel(p.projectStatus)}
-                  color={statusChipColor(p.projectStatus)}
-                  variant={p.projectStatus === 'Completed' ? 'outlined' : 'filled'}
-                />
-                <Typography variant="body2">Потрібно: {formatNumber(p.quantityNeeded)}</Typography>
+                <ProjectStatusChip status={p.projectStatus} />
+                <Typography variant="body2" fontWeight={600}>
+                  Потрібно: {formatNumber(p.quantityNeeded)}
+                </Typography>
                 {p.needsPurchase && (
                   <Chip size="small" color="warning" label="Потрібно закупіти" />
                 )}
@@ -224,7 +198,7 @@ export default function WarehouseDetailPage() {
             </Typography>
           )}
         </Stack>
-      </Box>
+      </DetailPanel>
 
       <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>Редагувати позицію</DialogTitle>
@@ -289,7 +263,9 @@ export default function WarehouseDetailPage() {
           <Button variant="text" onClick={() => setOpen(false)}>
             Скасувати
           </Button>
-          <Button onClick={() => void save()}>Зберегти</Button>
+          <Button variant="contained" color="primary" onClick={() => void save()}>
+            Зберегти
+          </Button>
         </DialogActions>
       </Dialog>
     </Stack>

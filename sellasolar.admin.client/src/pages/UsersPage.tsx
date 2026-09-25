@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Alert,
   Box,
   Button,
   Card,
+  CardActionArea,
   CardContent,
   Chip,
   Dialog,
@@ -35,8 +37,10 @@ import PersonOffOutlinedIcon from '@mui/icons-material/PersonOffOutlined'
 import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined'
 import { usersApi } from '../api'
 import type { AppRole, UserListItem, WorkerType } from '../api/types'
-import { appRoleLabel, workerTypeLabel } from '../utils/labels'
+import { appRoleLabel } from '../utils/labels'
 import RowActionsMenu, { type RowActionItem } from '../components/RowActionsMenu'
+import { RoleChip, UserStatusChip, workerTypeDisplay } from '../components/StatusChips'
+import { surfaceSx, panelPad, dataGridSx } from '../components/DetailPanel'
 
 type RoleFilter = '' | 'Admin' | 'Worker'
 type StatusFilter = 'active' | 'blocked' | 'inactive'
@@ -60,29 +64,10 @@ const emptyCreate = {
   workerType: 'Installer' as WorkerType,
 }
 
-function statusChip(row: UserListItem) {
-  if (row.isBlocked) {
-    return <Chip size="small" color="error" label="Заблоковано" />
-  }
-  if (row.isActive) {
-    return <Chip size="small" color="success" label="Активний" />
-  }
-  return <Chip size="small" variant="outlined" label="Деактивовано" />
-}
-
-function roleChip(role: AppRole) {
-  const color = role === 'Admin' ? 'secondary' : 'primary'
-  return <Chip size="small" color={color} label={appRoleLabel(role)} />
-}
-
-function typeLabel(row: UserListItem) {
-  if (row.role === 'Admin') return appRoleLabel('Admin')
-  return row.workerType ? workerTypeLabel(row.workerType) : '—'
-}
-
 export default function UsersPage() {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+  const navigate = useNavigate()
 
   const [rows, setRows] = useState<UserListItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -256,7 +241,7 @@ export default function UsersPage() {
       width: 150,
       renderCell: (params) => (
         <Box sx={{ display: 'flex', alignItems: 'center', height: '100%' }}>
-          {roleChip(params.value as AppRole)}
+          <RoleChip role={params.value as AppRole} />
         </Box>
       ),
     },
@@ -264,7 +249,7 @@ export default function UsersPage() {
       field: 'workerType',
       headerName: 'Тип',
       width: 130,
-      valueGetter: (_value, row) => typeLabel(row),
+      valueGetter: (_value, row) => workerTypeDisplay(row),
     },
     {
       field: 'phone',
@@ -278,7 +263,7 @@ export default function UsersPage() {
       width: 140,
       renderCell: (params) => (
         <Box sx={{ display: 'flex', alignItems: 'center', height: '100%' }}>
-          {statusChip(params.row)}
+          <UserStatusChip user={params.row} />
         </Box>
       ),
     },
@@ -399,7 +384,13 @@ export default function UsersPage() {
         <Typography variant="body2" color="text.secondary">
           Облікові записи адміністраторів і виконавців
         </Typography>
-        <Button startIcon={<AddIcon />} onClick={() => setCreateOpen(true)} sx={{ flexShrink: 0 }}>
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<AddIcon />}
+          onClick={() => setCreateOpen(true)}
+          sx={{ flexShrink: 0 }}
+        >
           Новий співробітник
         </Button>
       </Stack>
@@ -412,11 +403,8 @@ export default function UsersPage() {
 
       <Box
         sx={{
-          p: { xs: 1.5, sm: 2 },
-          borderRadius: 2,
-          border: '1px solid',
-          borderColor: 'divider',
-          bgcolor: 'background.paper',
+          p: panelPad,
+          ...surfaceSx,
         }}
       >
         <Stack
@@ -493,24 +481,24 @@ export default function UsersPage() {
             <Typography color="text.secondary">Співробітників не знайдено</Typography>
           )}
           {rows.map((row) => (
-            <Card key={row.id} variant="outlined" sx={{ '&:hover': { boxShadow: 1 } }}>
-              <CardContent sx={{ '&:last-child': { pb: 2 } }}>
-                <Stack direction="row" justifyContent="space-between" alignItems="flex-start" gap={1}>
-                  <Box sx={{ minWidth: 0, flex: 1 }}>
-                    <Typography fontWeight={700} noWrap>
-                      {row.fullName}
-                    </Typography>
-                  </Box>
-                  <RowActionsMenu items={rowActions(row)} />
-                </Stack>
-                <Stack direction="row" spacing={1} mt={1.25} flexWrap="wrap" useFlexGap>
-                  {roleChip(row.role)}
-                  {typeLabel(row) !== '—' && (
-                    <Chip size="small" variant="outlined" label={typeLabel(row)} />
-                  )}
-                  {statusChip(row)}
-                </Stack>
-              </CardContent>
+            <Card key={row.id} variant="outlined" sx={{ '&:hover': { boxShadow: 1 }, position: 'relative' }}>
+              <Box sx={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}>
+                <RowActionsMenu items={rowActions(row)} />
+              </Box>
+              <CardActionArea onClick={() => navigate(`/users/${row.id}`)}>
+                <CardContent sx={{ '&:last-child': { pb: 2 }, pr: 6 }}>
+                  <Typography fontWeight={700} noWrap>
+                    {row.fullName}
+                  </Typography>
+                  <Stack direction="row" spacing={1} mt={1.25} flexWrap="wrap" useFlexGap>
+                    <RoleChip role={row.role} />
+                    {workerTypeDisplay(row) !== '—' && row.role !== 'Admin' && (
+                      <Chip size="small" variant="outlined" label={workerTypeDisplay(row)} />
+                    )}
+                    <UserStatusChip user={row} />
+                  </Stack>
+                </CardContent>
+              </CardActionArea>
             </Card>
           ))}
         </Stack>
@@ -518,10 +506,7 @@ export default function UsersPage() {
         <Box
           sx={{
             width: '100%',
-            borderRadius: 2,
-            border: '1px solid',
-            borderColor: 'divider',
-            bgcolor: 'background.paper',
+            ...surfaceSx,
             overflow: 'hidden',
           }}
         >
@@ -537,32 +522,11 @@ export default function UsersPage() {
             rowHeight={52}
             pageSizeOptions={[10, 25, 50]}
             initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
+            onRowClick={(params) => navigate(`/users/${params.id}`)}
             sx={{
-              border: 'none',
-              '& .MuiDataGrid-columnHeaders': {
-                bgcolor: 'action.hover',
-                borderBottom: '1px solid',
-                borderColor: 'divider',
-              },
-              '& .MuiDataGrid-columnHeaderTitle': {
-                fontWeight: 700,
-                fontSize: '0.8rem',
-              },
-              '& .MuiDataGrid-cell': {
-                display: 'flex',
-                alignItems: 'center',
-                borderColor: 'divider',
-                py: 0.5,
-              },
-              '& .MuiDataGrid-row:hover': {
-                bgcolor: 'action.hover',
-              },
-              '& .MuiDataGrid-footerContainer': {
-                borderTop: '1px solid',
-                borderColor: 'divider',
-              },
-              '& .MuiDataGrid-cell:focus, & .MuiDataGrid-cell:focus-within': {
-                outline: 'none',
+              ...dataGridSx,
+              '& .MuiDataGrid-row': {
+                cursor: 'pointer',
               },
             }}
             localeText={{
@@ -622,7 +586,12 @@ export default function UsersPage() {
           <Button variant="text" onClick={() => setCreateOpen(false)}>
             Скасувати
           </Button>
-          <Button onClick={() => void createUser()} disabled={saving}>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => void createUser()}
+            disabled={saving}
+          >
             Створити
           </Button>
         </DialogActions>
@@ -665,7 +634,7 @@ export default function UsersPage() {
           <Button variant="text" onClick={() => setEditOpen(false)}>
             Скасувати
           </Button>
-          <Button onClick={() => void saveEdit()} disabled={saving}>
+          <Button variant="contained" color="primary" onClick={() => void saveEdit()} disabled={saving}>
             Зберегти
           </Button>
         </DialogActions>
@@ -688,7 +657,12 @@ export default function UsersPage() {
           <Button variant="text" onClick={() => setResetOpen(false)}>
             Скасувати
           </Button>
-          <Button onClick={() => void resetPassword()} disabled={saving}>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => void resetPassword()}
+            disabled={saving}
+          >
             Зберегти
           </Button>
         </DialogActions>
