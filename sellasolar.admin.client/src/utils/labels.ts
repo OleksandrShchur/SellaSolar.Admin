@@ -55,3 +55,17 @@ export const formatNumber = (value?: number | null) => {
   if (value === null || value === undefined) return '—'
   return new Intl.NumberFormat('uk-UA', { maximumFractionDigits: 2 }).format(value)
 }
+
+export const inventoryLabels = {
+  needsPurchase: 'Потрібно закупіти',
+  needsOrder: 'Потрібно замовити',
+  notInWarehouse: 'Немає на складі',
+  onHand: 'На складі',
+  available: 'Вільно',
+  availableStock: 'Вільно на складі',
+  toOrder: 'Замовити',
+  needed: 'Потрібно',
+  remainingStock: 'Залишок на складі',
+  used: 'Використано',
+  reserved: 'Зарезервовано',
+} as const

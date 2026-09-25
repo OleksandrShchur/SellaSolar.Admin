@@ -31,11 +31,11 @@ import AddIcon from '@mui/icons-material/Add'
 import ClearIcon from '@mui/icons-material/Clear'
 import SearchIcon from '@mui/icons-material/Search'
 import { warehouseApi } from '../api'
-import type { WarehouseItemList } from '../api/types'
-import { formatNumber } from '../utils/labels'
+import type { NonCatalogPurchaseRequest, WarehouseItemList } from '../api/types'
+import { formatNumber, inventoryLabels, statusLabel } from '../utils/labels'
 import { surfaceSx, panelPad, dataGridSx } from '../components/DetailPanel'
 
-type StockFilter = 'all' | 'low'
+type StockFilter = 'all' | 'low' | 'order'
 
 const toggleButtonSx = {
   flexShrink: 0,
@@ -63,6 +63,7 @@ export default function WarehousePage() {
   const navigate = useNavigate()
 
   const [rows, setRows] = useState<WarehouseItemList[]>([])
+  const [purchaseRequests, setPurchaseRequests] = useState<NonCatalogPurchaseRequest[]>([])
   const [categories, setCategories] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -78,16 +79,20 @@ export default function WarehousePage() {
     setLoading(true)
     setError(null)
     try {
-      const [items, cats] = await Promise.all([
+      const needsOrder = stockFilter === 'order'
+      const [items, cats, requests] = await Promise.all([
         warehouseApi.list({
           category: category || undefined,
           search: search || undefined,
           lowStockOnly: stockFilter === 'low' || undefined,
+          needsPurchaseOnly: needsOrder || undefined,
         }),
         warehouseApi.categories(),
+        needsOrder ? warehouseApi.purchaseRequests() : Promise.resolve([]),
       ])
       setRows(items)
       setCategories(cats)
+      setPurchaseRequests(requests)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Не вдалося завантажити склад')
     } finally {
@@ -124,9 +129,22 @@ export default function WarehousePage() {
     { field: 'category', headerName: 'Категорія', width: 140 },
     {
       field: 'quantityInStock',
-      headerName: 'Кількість',
+      headerName: inventoryLabels.onHand,
       width: 130,
       valueGetter: (_value, row) => `${formatNumber(row.quantityInStock)} ${row.unit}`,
+    },
+    {
+      field: 'quantityAvailable',
+      headerName: inventoryLabels.available,
+      width: 130,
+      valueGetter: (_value, row) => `${formatNumber(row.quantityAvailable)} ${row.unit}`,
+    },
+    {
+      field: 'quantityToOrder',
+      headerName: inventoryLabels.toOrder,
+      width: 120,
+      valueGetter: (_value, row) =>
+        row.quantityToOrder > 0 ? `${formatNumber(row.quantityToOrder)} ${row.unit}` : '—',
     },
     {
       field: 'price',
@@ -140,7 +158,9 @@ export default function WarehousePage() {
       headerName: 'Запас',
       width: 140,
       renderCell: (params) =>
-        params.value ? (
+        params.row.quantityToOrder > 0 ? (
+          <Chip size="small" color="error" label={inventoryLabels.needsOrder} />
+        ) : params.value ? (
           <Chip size="small" color="warning" label="Низький" />
         ) : (
           <Chip size="small" color="success" variant="outlined" label="OK" />
@@ -183,6 +203,8 @@ export default function WarehousePage() {
       setSaving(false)
     }
   }
+
+  const showOrderMode = stockFilter === 'order'
 
   return (
     <Stack spacing={2.5}>
@@ -282,28 +304,93 @@ export default function WarehousePage() {
           >
             <ToggleButton value="all">Усі</ToggleButton>
             <ToggleButton value="low">Низький</ToggleButton>
+            <ToggleButton value="order">{inventoryLabels.needsOrder}</ToggleButton>
           </ToggleButtonGroup>
         </Stack>
       </Box>
 
+      {showOrderMode && purchaseRequests.length > 0 && (
+        <Box sx={{ p: panelPad, ...surfaceSx }}>
+          <Typography variant="subtitle1" fontWeight={800} mb={1.5}>
+            Запити поза каталогом
+          </Typography>
+          <Stack spacing={1.25}>
+            {purchaseRequests.map((req) => (
+              <Box
+                key={req.projectItemId}
+                sx={{
+                  p: 1.75,
+                  borderRadius: 2,
+                  border: '1.5px solid',
+                  borderColor: 'error.light',
+                  bgcolor: 'rgba(211, 47, 47, 0.04)',
+                }}
+              >
+                <Stack
+                  direction={{ xs: 'column', sm: 'row' }}
+                  spacing={1}
+                  alignItems={{ sm: 'center' }}
+                  justifyContent="space-between"
+                >
+                  <Box>
+                    <Typography fontWeight={700}>
+                      {req.name}{' '}
+                      <Typography component="span" color="text.secondary">
+                        ({req.category}, {req.unit})
+                      </Typography>
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Проект: {req.projectName} · {statusLabel(req.projectStatus)} ·{' '}
+                      {inventoryLabels.toOrder}: {formatNumber(req.quantityToPurchase)} {req.unit}
+                    </Typography>
+                  </Box>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Chip size="small" color="error" label={inventoryLabels.notInWarehouse} />
+                    <Button size="small" onClick={() => navigate(`/projects/${req.projectId}`)}>
+                      Відкрити проект
+                    </Button>
+                  </Stack>
+                </Stack>
+              </Box>
+            ))}
+          </Stack>
+        </Box>
+      )}
+
       {isMobile ? (
         <Stack spacing={1.5}>
           {loading && <Typography color="text.secondary">Завантаження…</Typography>}
-          {!loading && rows.length === 0 && (
+          {!loading && rows.length === 0 && !purchaseRequests.length && (
             <Typography color="text.secondary">Позицій не знайдено</Typography>
           )}
           {rows.map((row) => (
-            <Card key={row.id} variant="outlined" sx={{ '&:hover': { boxShadow: 1 } }}>
+            <Card
+              key={row.id}
+              variant="outlined"
+              sx={{
+                '&:hover': { boxShadow: 1 },
+                ...(row.quantityToOrder > 0
+                  ? { borderColor: 'error.light', bgcolor: 'rgba(211, 47, 47, 0.03)' }
+                  : {}),
+              }}
+            >
               <CardActionArea onClick={() => navigate(`/warehouse/${row.id}`)}>
                 <CardContent sx={{ '&:last-child': { pb: 2 } }}>
                   <Typography fontWeight={700} noWrap>
                     {row.name}
                   </Typography>
                   <Typography variant="body2" color="text.secondary" mt={0.5}>
-                    {row.category} · {formatNumber(row.quantityInStock)} {row.unit}
+                    {row.category} · {inventoryLabels.onHand}: {formatNumber(row.quantityInStock)}{' '}
+                    {row.unit} · {inventoryLabels.available}: {formatNumber(row.quantityAvailable)}{' '}
+                    {row.unit}
+                    {row.quantityToOrder > 0
+                      ? ` · ${inventoryLabels.toOrder}: ${formatNumber(row.quantityToOrder)}`
+                      : ''}
                   </Typography>
                   <Stack direction="row" spacing={1} mt={1.25} flexWrap="wrap" useFlexGap>
-                    {row.isLowStock ? (
+                    {row.quantityToOrder > 0 ? (
+                      <Chip size="small" color="error" label={inventoryLabels.needsOrder} />
+                    ) : row.isLowStock ? (
                       <Chip size="small" color="warning" label="Низький" />
                     ) : (
                       <Chip size="small" color="success" variant="outlined" label="OK" />
@@ -337,9 +424,22 @@ export default function WarehousePage() {
             pageSizeOptions={[10, 25, 50]}
             initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
             onRowClick={(params) => navigate(`/warehouse/${params.id}`)}
-            sx={{ ...dataGridSx, cursor: 'pointer' }}
+            getRowClassName={(params) =>
+              params.row.quantityToOrder > 0 ? 'warehouse-row-order' : ''
+            }
+            sx={{
+              ...dataGridSx,
+              cursor: 'pointer',
+              '& .warehouse-row-order': {
+                bgcolor: 'rgba(211, 47, 47, 0.04)',
+              },
+            }}
             localeText={{
-              noRowsLabel: 'Позицій не знайдено',
+              noRowsLabel: showOrderMode
+                ? purchaseRequests.length > 0
+                  ? 'Немає позицій каталогу до замовлення'
+                  : 'Немає матеріалів до замовлення'
+                : 'Позицій не знайдено',
               MuiTablePagination: {
                 labelRowsPerPage: 'Рядків на сторінці:',
               },

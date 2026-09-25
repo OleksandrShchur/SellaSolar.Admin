@@ -14,13 +14,12 @@ public partial class ProjectWorker
 
     public int ProjectId { get; set; }
 
-    [StringLength(450)]
-    public string UserId { get; set; } = null!;
-
     [StringLength(100)]
     public string? RoleOnProject { get; set; }
 
     public DateTime AssignedAt { get; set; }
+
+    public string UserId { get; set; } = null!;
 
     [ForeignKey("ProjectId")]
     [InverseProperty("ProjectWorkers")]

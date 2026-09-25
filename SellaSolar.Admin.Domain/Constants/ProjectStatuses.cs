@@ -15,4 +15,8 @@ public static class ProjectStatuses
 
     public static bool IsValid(string? status) =>
         !string.IsNullOrWhiteSpace(status) && All.Contains(status);
+
+    /// <summary>Projects that still drive warehouse demand (stock reserved / to-order).</summary>
+    public static bool IsOpen(string? status) =>
+        status == Awaiting || status == InProgress;
 }

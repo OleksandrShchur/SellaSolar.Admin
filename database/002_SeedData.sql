@@ -138,5 +138,20 @@ VALUES
     (2, 2, 3, 3, 0, 0);
 GO
 
+-- Mirror complete-time stock deduction: only Completed projects consume stock.
+-- Open projects (Awaiting/InProgress) keep QuantityFromStock as a reservation; qty stays on warehouse.
+UPDATE wi
+SET wi.QuantityInStock = wi.QuantityInStock - x.Taken
+FROM dbo.WarehouseItems wi
+INNER JOIN (
+    SELECT pi.WarehouseItemId, SUM(pi.QuantityFromStock) AS Taken
+    FROM dbo.ProjectItems pi
+    INNER JOIN dbo.Projects p ON p.Id = pi.ProjectId
+    WHERE pi.WarehouseItemId IS NOT NULL
+      AND p.Status = N'Completed'
+    GROUP BY pi.WarehouseItemId
+) x ON x.WarehouseItemId = wi.Id;
+GO
+
 PRINT N'Seed completed.';
 GO

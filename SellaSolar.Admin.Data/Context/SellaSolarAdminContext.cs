@@ -39,11 +39,17 @@ public partial class SellaSolarAdminContext : DbContext
 
         modelBuilder.Entity<ProjectItem>(entity =>
         {
+            entity.HasIndex(e => new { e.ProjectId, e.RequestedName }, "UQ_ProjectItems_Project_RequestedName")
+                .IsUnique()
+                .HasFilter("([WarehouseItemId] IS NULL)");
+
+            entity.HasIndex(e => new { e.ProjectId, e.WarehouseItemId }, "UQ_ProjectItems_Project_WarehouseItem")
+                .IsUnique()
+                .HasFilter("([WarehouseItemId] IS NOT NULL)");
+
             entity.HasOne(d => d.Project).WithMany(p => p.ProjectItems).HasConstraintName("FK_ProjectItems_Projects");
 
-            entity.HasOne(d => d.WarehouseItem).WithMany(p => p.ProjectItems)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_ProjectItems_WarehouseItems");
+            entity.HasOne(d => d.WarehouseItem).WithMany(p => p.ProjectItems).HasConstraintName("FK_ProjectItems_WarehouseItems");
         });
 
         modelBuilder.Entity<ProjectPhoto>(entity =>
@@ -58,9 +64,6 @@ public partial class SellaSolarAdminContext : DbContext
             entity.Property(e => e.AssignedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_ProjectWorkers_AssignedAt");
 
             entity.HasOne(d => d.Project).WithMany(p => p.ProjectWorkers).HasConstraintName("FK_ProjectWorkers_Projects");
-
-            // UserId references AspNetUsers (Identity context); no navigation in this DbContext.
-            entity.Property(e => e.UserId).HasMaxLength(450);
         });
 
         OnModelCreatingPartial(modelBuilder);
