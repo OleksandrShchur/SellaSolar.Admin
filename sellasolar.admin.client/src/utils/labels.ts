@@ -93,7 +93,7 @@ function toLocalUaPhone(digits: string) {
 
 export const formatMoney = (value?: number | null) => {
   if (value === null || value === undefined) return '—'
-  return `${formatNumber(value)} ₴`
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value)
 }
 
 export const inventoryLabels = {
