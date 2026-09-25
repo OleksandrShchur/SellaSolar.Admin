@@ -130,7 +130,7 @@ export default function WarehouseDetailPage() {
       setItem(updated ?? null)
       setReceiveOpen(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Не вдалося оприбуткувати')
+      setError(err instanceof Error ? err.message : 'Не вдалося додати на склад')
     } finally {
       setSaving(false)
     }
