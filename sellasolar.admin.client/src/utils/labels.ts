@@ -58,12 +58,14 @@ export const formatNumber = (value?: number | null) => {
 
 export const inventoryLabels = {
   needsPurchase: 'Потрібно закупіти',
+  needsAllocation: 'Потрібно розподілити',
   needsOrder: 'Потрібно замовити',
   notInWarehouse: 'Немає на складі',
   onHand: 'На складі',
   available: 'Вільно',
   availableStock: 'Вільно на складі',
   toOrder: 'Замовити',
+  unallocated: 'Не розподілено',
   needed: 'Потрібно',
   remainingStock: 'Залишок на складі',
   used: 'Використано',

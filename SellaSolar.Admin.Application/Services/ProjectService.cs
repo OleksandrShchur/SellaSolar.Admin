@@ -64,7 +64,17 @@ public class ProjectService
                 p.CreatedAt,
                 p.ProjectWorkers.Count,
                 (p.Status == ProjectStatuses.Awaiting || p.Status == ProjectStatuses.InProgress)
-                    && p.ProjectItems.Any(i => i.NeedsPurchase)))
+                    && p.ProjectItems.Any(i =>
+                        i.WarehouseItemId == null
+                            ? i.NeedsPurchase
+                            : i.QuantityNeeded >
+                              i.WarehouseItem!.QuantityInStock
+                              - (i.WarehouseItem.ProjectItems
+                                  .Where(o =>
+                                      o.ProjectId != p.Id
+                                      && (o.Project.Status == ProjectStatuses.Awaiting
+                                          || o.Project.Status == ProjectStatuses.InProgress))
+                                  .Sum(o => (decimal?)o.QuantityFromStock) ?? 0m))))
             .ToListAsync(ct);
     }
 
@@ -88,7 +98,17 @@ public class ProjectService
                 p.CreatedAt,
                 p.ProjectWorkers.Count,
                 (p.Status == ProjectStatuses.Awaiting || p.Status == ProjectStatuses.InProgress)
-                    && p.ProjectItems.Any(i => i.NeedsPurchase)))
+                    && p.ProjectItems.Any(i =>
+                        i.WarehouseItemId == null
+                            ? i.NeedsPurchase
+                            : i.QuantityNeeded >
+                              i.WarehouseItem!.QuantityInStock
+                              - (i.WarehouseItem.ProjectItems
+                                  .Where(o =>
+                                      o.ProjectId != p.Id
+                                      && (o.Project.Status == ProjectStatuses.Awaiting
+                                          || o.Project.Status == ProjectStatuses.InProgress))
+                                  .Sum(o => (decimal?)o.QuantityFromStock) ?? 0m))))
             .ToListAsync(ct);
     }
 

@@ -47,15 +47,43 @@ public class WarehouseService
                 UsedCount = w.ProjectItems.Count(pi => openStatuses.Contains(pi.Project.Status)),
                 Reserved = w.ProjectItems
                     .Where(pi => openStatuses.Contains(pi.Project.Status))
-                    .Sum(pi => (decimal?)pi.QuantityFromStock) ?? 0m,
-                QuantityToOrder = w.ProjectItems
-                    .Where(pi => openStatuses.Contains(pi.Project.Status) && pi.NeedsPurchase)
-                    .Sum(pi => (decimal?)pi.QuantityToPurchase) ?? 0m
+                    .Sum(pi => (decimal?)pi.QuantityFromStock) ?? 0m
             })
             .ToListAsync(ct);
 
+        var warehouseIds = items.Select(x => x.Item.Id).ToList();
+        var openLines = await _db.ProjectItems
+            .AsNoTracking()
+            .Where(pi =>
+                pi.WarehouseItemId != null &&
+                warehouseIds.Contains(pi.WarehouseItemId.Value) &&
+                openStatuses.Contains(pi.Project.Status))
+            .Select(pi => new
+            {
+                WarehouseItemId = pi.WarehouseItemId!.Value,
+                pi.QuantityNeeded,
+                pi.QuantityFromStock
+            })
+            .ToListAsync(ct);
+
+        var reservedByWarehouse = openLines
+            .GroupBy(x => x.WarehouseItemId)
+            .ToDictionary(g => g.Key, g => g.Sum(x => x.QuantityFromStock));
+
         var mapped = items
-            .Select(x => MapList(x.Item, Available(x.Item.QuantityInStock, x.Reserved), x.UsedCount, x.QuantityToOrder))
+            .Select(x =>
+            {
+                var available = Available(x.Item.QuantityInStock, x.Reserved);
+                var totalReserved = reservedByWarehouse.GetValueOrDefault(x.Item.Id);
+                var quantityToOrder = openLines
+                    .Where(l => l.WarehouseItemId == x.Item.Id)
+                    .Sum(l =>
+                    {
+                        var maxFromStock = x.Item.QuantityInStock - totalReserved + l.QuantityFromStock;
+                        return Math.Max(0, l.QuantityNeeded - maxFromStock);
+                    });
+                return MapList(x.Item, available, x.UsedCount, quantityToOrder);
+            })
             .ToList();
 
         if (lowStockOnly == true)
@@ -117,7 +145,7 @@ public class WarehouseService
         var lotIds = item.WarehouseStockLots.Select(l => l.Id).ToList();
         var reservedByLot = await GetLotReservedOpenAsync(lotIds, excludeProjectItemId: null, ct);
 
-        return MapDetail(item, Available(item.QuantityInStock, reserved), reservedByLot);
+        return MapDetail(item, Available(item.QuantityInStock, reserved), reserved, reservedByLot);
     }
 
     public async Task<IReadOnlyList<WarehouseStockLotDto>> GetLotsAsync(int warehouseItemId, CancellationToken ct = default)
@@ -340,6 +368,7 @@ public class WarehouseService
     private static WarehouseItemDetailDto MapDetail(
         WarehouseItem item,
         decimal quantityAvailable,
+        decimal reserved,
         IReadOnlyDictionary<int, decimal> reservedByLot) =>
         new(
             item.Id,
@@ -360,12 +389,18 @@ public class WarehouseService
             item.ProjectItems
                 .Where(pi => ProjectStatuses.IsOpen(pi.Project.Status))
                 .OrderBy(pi => pi.Project.Name)
-                .Select(pi => new WarehouseItemProjectUsageDto(
-                    pi.ProjectId,
-                    pi.Project.Name,
-                    pi.Project.Status,
-                    pi.QuantityNeeded,
-                    pi.QuantityFromStock,
-                    pi.NeedsPurchase))
+                .Select(pi =>
+                {
+                    var maxFromStock = Available(
+                        item.QuantityInStock,
+                        reserved - pi.QuantityFromStock);
+                    return new WarehouseItemProjectUsageDto(
+                        pi.ProjectId,
+                        pi.Project.Name,
+                        pi.Project.Status,
+                        pi.QuantityNeeded,
+                        pi.QuantityFromStock,
+                        NeedsPurchase: pi.QuantityNeeded > maxFromStock);
+                })
                 .ToList());
 }

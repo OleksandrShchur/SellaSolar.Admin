@@ -539,10 +539,16 @@ export default function ProjectDetailPage() {
                     p: 2,
                     borderRadius: 2,
                     border: '1.5px solid',
-                    borderColor: item.needsPurchase ? 'warning.main' : 'divider',
+                    borderColor: item.needsPurchase
+                      ? 'warning.main'
+                      : !item.isNonCatalog && item.quantityToPurchase > 0
+                        ? 'info.main'
+                        : 'divider',
                     bgcolor: item.needsPurchase
                       ? 'rgba(237, 108, 2, 0.06)'
-                      : 'rgba(243, 235, 220, 0.45)',
+                      : !item.isNonCatalog && item.quantityToPurchase > 0
+                        ? 'rgba(2, 136, 209, 0.06)'
+                        : 'rgba(243, 235, 220, 0.45)',
                     '&:hover': { boxShadow: 1, borderColor: 'primary.dark' },
                   }}
                 >
@@ -580,16 +586,25 @@ export default function ProjectDetailPage() {
                           <>
                             {inventoryLabels.needed}: {formatNumber(item.quantityNeeded)} ·{' '}
                             {inventoryLabels.fromStock}: {formatNumber(item.quantityFromStock)} ·{' '}
-                            {inventoryLabels.availableStock}: {formatNumber(item.quantityAvailable)} ·{' '}
-                            <Box
-                              component="span"
-                              sx={{
-                                color: item.quantityToPurchase > 0 ? 'warning.dark' : 'inherit',
-                                fontWeight: item.quantityToPurchase > 0 ? 700 : 400,
-                              }}
-                            >
-                              {inventoryLabels.toOrder}: {formatNumber(item.quantityToPurchase)}
-                            </Box>
+                            {inventoryLabels.availableStock}: {formatNumber(item.quantityAvailable)}
+                            {item.quantityToPurchase > 0 && (
+                              <>
+                                {' '}
+                                ·{' '}
+                                <Box
+                                  component="span"
+                                  sx={{
+                                    color: item.needsPurchase ? 'warning.dark' : 'info.dark',
+                                    fontWeight: 700,
+                                  }}
+                                >
+                                  {item.needsPurchase
+                                    ? inventoryLabels.toOrder
+                                    : inventoryLabels.unallocated}
+                                  : {formatNumber(item.quantityToPurchase)}
+                                </Box>
+                              </>
+                            )}
                             {!item.isNonCatalog && item.costFromStock != null && (
                               <>
                                 {' '}
@@ -609,6 +624,12 @@ export default function ProjectDetailPage() {
                     {project.status !== 'Completed' && item.needsPurchase && (
                       <Chip color="warning" label={inventoryLabels.needsPurchase} />
                     )}
+                    {project.status !== 'Completed' &&
+                      !item.isNonCatalog &&
+                      !item.needsPurchase &&
+                      item.quantityToPurchase > 0 && (
+                        <Chip color="info" label={inventoryLabels.needsAllocation} />
+                      )}
                     {project.status !== 'Completed' && !item.isNonCatalog && (
                       <Button
                         size="small"

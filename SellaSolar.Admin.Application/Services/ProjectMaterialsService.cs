@@ -108,8 +108,9 @@ public class ProjectMaterialsService
             throw new ValidationException(
                 $"Потрібна кількість ({request.QuantityNeeded}) менша за вже розподілені партії ({allocated}). Спочатку зменшіть розподіл партій.");
 
+        var maxFromStock = await GetUnreservedStockAsync(item.WarehouseItemId.Value, excludeProjectId: projectId, ct);
         item.QuantityNeeded = request.QuantityNeeded;
-        ApplyDerivedStockFields(item, allocated);
+        ApplyDerivedStockFields(item, allocated, maxFromStock);
         item.Project.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
 
@@ -192,7 +193,11 @@ public class ProjectMaterialsService
             });
         }
 
-        ApplyDerivedStockFields(item, total);
+        var maxFromStock = await GetUnreservedStockAsync(
+            item.WarehouseItemId.Value,
+            excludeProjectId: projectId,
+            ct);
+        ApplyDerivedStockFields(item, total, maxFromStock);
         item.Project.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
 
@@ -278,7 +283,10 @@ public class ProjectMaterialsService
             existing.Quantity += quantity;
         }
 
-        ApplyDerivedStockFields(item, newTotal);
+        ApplyDerivedStockFields(item, newTotal, maxFromStock: await GetUnreservedStockAsync(
+            item.WarehouseItemId.Value,
+            excludeProjectId: item.ProjectId,
+            ct));
         item.Project.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
     }
@@ -341,6 +349,7 @@ public class ProjectMaterialsService
                 "Ця позиція складу вже додана до проекту. Видаліть її або оберіть іншу.");
 
         // Manual allocation: no auto-reserve from free stock.
+        var maxFromStock = await GetUnreservedStockAsync(warehouseItemId, excludeProjectId: project.Id, ct);
         var entity = new ProjectItem
         {
             ProjectId = project.Id,
@@ -348,7 +357,7 @@ public class ProjectMaterialsService
             QuantityNeeded = quantityNeeded,
             QuantityFromStock = 0,
             QuantityToPurchase = quantityNeeded,
-            NeedsPurchase = true
+            NeedsPurchase = quantityNeeded > maxFromStock
         };
 
         _db.ProjectItems.Add(entity);
@@ -395,11 +404,15 @@ public class ProjectMaterialsService
         return MapNonCatalog(entity);
     }
 
-    private static void ApplyDerivedStockFields(ProjectItem item, decimal fromStock)
+    /// <summary>
+    /// QuantityToPurchase = not yet allocated. NeedsPurchase = needed exceeds free stock capacity
+    /// (must buy; not merely awaiting manual lot allocation).
+    /// </summary>
+    private static void ApplyDerivedStockFields(ProjectItem item, decimal fromStock, decimal maxFromStock)
     {
         item.QuantityFromStock = fromStock;
         item.QuantityToPurchase = Math.Max(0, item.QuantityNeeded - fromStock);
-        item.NeedsPurchase = item.QuantityToPurchase > 0;
+        item.NeedsPurchase = item.QuantityNeeded > maxFromStock;
     }
 
     private static void ConsumeAllocations(ProjectItem item)
@@ -551,6 +564,9 @@ public class ProjectMaterialsService
             ? null
             : allocationDtos.Sum(a => a.Quantity * a.UnitCost);
 
+        // NeedsPurchase = must buy (needed exceeds free stock), not merely unallocated.
+        var needsPurchase = entity.QuantityNeeded > available;
+
         return new ProjectItemDto(
             entity.Id,
             warehouseItem.Id,
@@ -560,7 +576,7 @@ public class ProjectMaterialsService
             entity.QuantityNeeded,
             entity.QuantityFromStock,
             entity.QuantityToPurchase,
-            entity.NeedsPurchase,
+            needsPurchase,
             warehouseItem.QuantityInStock,
             available,
             IsNonCatalog: false,
@@ -606,6 +622,8 @@ public class ProjectMaterialsService
             ? null
             : allocationDtos.Sum(a => a.Quantity * a.UnitCost);
 
+        var needsPurchase = entity.QuantityNeeded > quantityAvailable;
+
         return new ProjectItemDto(
             entity.Id,
             warehouseItem.Id,
@@ -615,7 +633,7 @@ public class ProjectMaterialsService
             entity.QuantityNeeded,
             entity.QuantityFromStock,
             entity.QuantityToPurchase,
-            entity.NeedsPurchase,
+            needsPurchase,
             warehouseItem.QuantityInStock,
             quantityAvailable,
             IsNonCatalog: false,
