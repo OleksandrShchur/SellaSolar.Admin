@@ -44,8 +44,8 @@ export interface ProjectListItem {
 
 export interface ProjectItem {
   id: number
-  warehouseItemId: number
-  warehouseItemName: string
+  warehouseItemId?: number | null
+  name: string
   category: string
   unit: string
   quantityNeeded: number
@@ -53,6 +53,9 @@ export interface ProjectItem {
   quantityToPurchase: number
   needsPurchase: boolean
   quantityInStock: number
+  /** On-hand minus reserved by other open projects. */
+  quantityAvailable: number
+  isNonCatalog: boolean
 }
 
 export interface ProjectWorker {
@@ -97,12 +100,15 @@ export interface WarehouseItemList {
   category: string
   unit: string
   quantityInStock: number
+  /** On-hand minus reserved by open projects. */
+  quantityAvailable: number
   price?: number | null
   supplier?: string | null
   notes?: string | null
   lowStockThreshold?: number | null
   isLowStock: boolean
   usedInProjectsCount: number
+  quantityToOrder: number
 }
 
 export interface WarehouseItemProjectUsage {
@@ -110,9 +116,21 @@ export interface WarehouseItemProjectUsage {
   projectName: string
   projectStatus: ProjectStatus
   quantityNeeded: number
+  quantityFromStock: number
   needsPurchase: boolean
 }
 
-export interface WarehouseItemDetail extends Omit<WarehouseItemList, 'usedInProjectsCount'> {
+export interface WarehouseItemDetail extends Omit<WarehouseItemList, 'usedInProjectsCount' | 'quantityToOrder'> {
   projects: WarehouseItemProjectUsage[]
+}
+
+export interface NonCatalogPurchaseRequest {
+  projectItemId: number
+  projectId: number
+  projectName: string
+  projectStatus: ProjectStatus
+  name: string
+  category: string
+  unit: string
+  quantityToPurchase: number
 }

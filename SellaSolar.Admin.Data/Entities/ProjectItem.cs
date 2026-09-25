@@ -6,7 +6,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace SellaSolar.Admin.Data.Entities;
 
-[Index("ProjectId", "WarehouseItemId", Name = "UQ_ProjectItems_Project_WarehouseItem", IsUnique = true)]
 public partial class ProjectItem
 {
     [Key]
@@ -14,7 +13,7 @@ public partial class ProjectItem
 
     public int ProjectId { get; set; }
 
-    public int WarehouseItemId { get; set; }
+    public int? WarehouseItemId { get; set; }
 
     [Column(TypeName = "decimal(18, 2)")]
     public decimal QuantityNeeded { get; set; }
@@ -27,11 +26,20 @@ public partial class ProjectItem
 
     public bool NeedsPurchase { get; set; }
 
+    [StringLength(200)]
+    public string? RequestedName { get; set; }
+
+    [StringLength(100)]
+    public string? RequestedCategory { get; set; }
+
+    [StringLength(50)]
+    public string? RequestedUnit { get; set; }
+
     [ForeignKey("ProjectId")]
     [InverseProperty("ProjectItems")]
     public virtual Project Project { get; set; } = null!;
 
     [ForeignKey("WarehouseItemId")]
     [InverseProperty("ProjectItems")]
-    public virtual WarehouseItem WarehouseItem { get; set; } = null!;
+    public virtual WarehouseItem? WarehouseItem { get; set; }
 }

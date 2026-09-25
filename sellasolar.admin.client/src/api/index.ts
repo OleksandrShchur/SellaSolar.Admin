@@ -2,6 +2,7 @@ import { apiGet, apiSend, apiUpload } from './client'
 import type {
   AppRole,
   CurrentUser,
+  NonCatalogPurchaseRequest,
   ProjectDetail,
   ProjectItem,
   ProjectListItem,
@@ -81,8 +82,19 @@ export const projectsApi = {
   updateStatus: (id: number, status: ProjectStatus) =>
     apiSend<ProjectDetail>(`/api/projects/${id}/status`, 'PATCH', { status }),
   remove: (id: number) => apiSend<void>(`/api/projects/${id}`, 'DELETE'),
-  addItem: (id: number, warehouseItemId: number, quantityNeeded: number) =>
-    apiSend<ProjectItem>(`/api/projects/${id}/items`, 'POST', { warehouseItemId, quantityNeeded }),
+  addItem: (
+    id: number,
+    body:
+      | { warehouseItemId: number; quantityNeeded: number }
+      | {
+          quantityNeeded: number
+          requestedName: string
+          requestedCategory: string
+          requestedUnit: string
+        },
+  ) => apiSend<ProjectItem>(`/api/projects/${id}/items`, 'POST', body),
+  updateItem: (id: number, itemId: number, quantityNeeded: number) =>
+    apiSend<ProjectItem>(`/api/projects/${id}/items/${itemId}`, 'PUT', { quantityNeeded }),
   removeItem: (id: number, itemId: number) =>
     apiSend<void>(`/api/projects/${id}/items/${itemId}`, 'DELETE'),
   assignWorker: (id: number, userId: string, roleOnProject?: string) =>
@@ -100,14 +112,21 @@ export const projectsApi = {
 }
 
 export const warehouseApi = {
-  list: (params?: { category?: string; search?: string; lowStockOnly?: boolean }) =>
+  list: (params?: {
+    category?: string
+    search?: string
+    lowStockOnly?: boolean
+    needsPurchaseOnly?: boolean
+  }) =>
     apiGet<WarehouseItemList[]>(
       `/api/warehouse-items${qs({
         category: params?.category,
         search: params?.search,
         lowStockOnly: params?.lowStockOnly,
+        needsPurchaseOnly: params?.needsPurchaseOnly,
       })}`,
     ),
+  purchaseRequests: () => apiGet<NonCatalogPurchaseRequest[]>('/api/warehouse-items/purchase-requests'),
   categories: () => apiGet<string[]>('/api/warehouse-items/categories'),
   get: (id: number) => apiGet<WarehouseItemDetail>(`/api/warehouse-items/${id}`),
   create: (body: unknown) => apiSend<WarehouseItemDetail>('/api/warehouse-items', 'POST', body),

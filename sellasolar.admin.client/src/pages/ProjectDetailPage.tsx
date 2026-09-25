@@ -18,9 +18,12 @@ import {
   Tab,
   Tabs,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Typography,
 } from '@mui/material'
 import DeleteIcon from '@mui/icons-material/Delete'
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import { projectsApi, warehouseApi, usersApi } from '../api'
 import type {
@@ -29,7 +32,7 @@ import type {
   WarehouseItemList,
   UserListItem,
 } from '../api/types'
-import { formatDate, formatDateTime, formatNumber, workerTypeLabel } from '../utils/labels'
+import { formatDate, formatDateTime, formatNumber, inventoryLabels, workerTypeLabel } from '../utils/labels'
 import { useAuth } from '../auth/AuthContext'
 import { DetailField, DetailFieldGrid, DetailPanel, DetailSection, panelPad } from '../components/DetailPanel'
 import { ProjectStatusChip } from '../components/StatusChips'
@@ -72,9 +75,18 @@ export default function ProjectDetailPage() {
   })
 
   const [itemOpen, setItemOpen] = useState(false)
+  const [itemMode, setItemMode] = useState<'catalog' | 'custom'>('catalog')
   const [warehouseItems, setWarehouseItems] = useState<WarehouseItemList[]>([])
   const [selectedItemId, setSelectedItemId] = useState<number | ''>('')
   const [quantityNeeded, setQuantityNeeded] = useState('1')
+  const [customName, setCustomName] = useState('')
+  const [customCategory, setCustomCategory] = useState('')
+  const [customUnit, setCustomUnit] = useState('шт')
+
+  const [editItemOpen, setEditItemOpen] = useState(false)
+  const [editingItemId, setEditingItemId] = useState<number | null>(null)
+  const [editQuantityNeeded, setEditQuantityNeeded] = useState('1')
+  const [editItemSaving, setEditItemSaving] = useState(false)
 
   const [workerOpen, setWorkerOpen] = useState(false)
   const [workers, setWorkers] = useState<UserListItem[]>([])
@@ -110,7 +122,9 @@ export default function ProjectDetailPage() {
 
   const availableWarehouseItems = useMemo(() => {
     if (!project) return []
-    const assigned = new Set(project.items.map((i) => i.warehouseItemId))
+    const assigned = new Set(
+      project.items.filter((i) => i.warehouseItemId != null).map((i) => i.warehouseItemId as number),
+    )
     return warehouseItems.filter((w) => !assigned.has(w.id))
   }, [warehouseItems, project])
 
@@ -176,8 +190,12 @@ export default function ProjectDetailPage() {
     setError(null)
     try {
       setWarehouseItems(await warehouseApi.list())
+      setItemMode('catalog')
       setSelectedItemId('')
       setQuantityNeeded('1')
+      setCustomName('')
+      setCustomCategory('')
+      setCustomUnit('шт')
       setItemOpen(true)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Не вдалося завантажити склад')
@@ -185,13 +203,53 @@ export default function ProjectDetailPage() {
   }
 
   const addItem = async () => {
-    if (!selectedItemId) return
     try {
-      await projectsApi.addItem(projectId, Number(selectedItemId), Number(quantityNeeded))
+      if (itemMode === 'catalog') {
+        if (!selectedItemId) return
+        await projectsApi.addItem(projectId, {
+          warehouseItemId: Number(selectedItemId),
+          quantityNeeded: Number(quantityNeeded),
+        })
+      } else {
+        if (!customName.trim() || !customCategory.trim() || !customUnit.trim()) return
+        await projectsApi.addItem(projectId, {
+          quantityNeeded: Number(quantityNeeded),
+          requestedName: customName.trim(),
+          requestedCategory: customCategory.trim(),
+          requestedUnit: customUnit.trim(),
+        })
+      }
       setItemOpen(false)
       await load()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Не вдалося додати матеріал')
+    }
+  }
+
+  const openEditItem = (itemId: number, currentNeeded: number) => {
+    setEditingItemId(itemId)
+    setEditQuantityNeeded(String(currentNeeded))
+    setEditItemOpen(true)
+  }
+
+  const saveEditItem = async () => {
+    if (editingItemId == null) return
+    const qty = Number(editQuantityNeeded)
+    if (!Number.isFinite(qty) || qty <= 0) {
+      setError('Кількість повинна бути більшою за нуль')
+      return
+    }
+    setEditItemSaving(true)
+    setError(null)
+    try {
+      await projectsApi.updateItem(projectId, editingItemId, qty)
+      setEditItemOpen(false)
+      setEditingItemId(null)
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не вдалося оновити кількість')
+    } finally {
+      setEditItemSaving(false)
     }
   }
 
@@ -399,9 +457,11 @@ export default function ProjectDetailPage() {
               <Typography variant="subtitle1" fontWeight={800} sx={{ letterSpacing: '-0.01em' }}>
                 Матеріали проекту
               </Typography>
-              <Button variant="contained" color="primary" onClick={() => void openAddItem()}>
-                Додати матеріал
-              </Button>
+              {project.status !== 'Completed' && (
+                <Button variant="contained" color="primary" onClick={() => void openAddItem()}>
+                  Додати матеріал
+                </Button>
+              )}
             </Stack>
             <Stack spacing={1.5}>
               {project.items.map((item) => (
@@ -411,37 +471,79 @@ export default function ProjectDetailPage() {
                     p: 2,
                     borderRadius: 2,
                     border: '1.5px solid',
-                    borderColor: 'divider',
-                    bgcolor: 'rgba(243, 235, 220, 0.45)',
+                    borderColor: item.needsPurchase ? 'warning.main' : 'divider',
+                    bgcolor: item.needsPurchase
+                      ? 'rgba(237, 108, 2, 0.06)'
+                      : 'rgba(243, 235, 220, 0.45)',
                     '&:hover': { boxShadow: 1, borderColor: 'primary.dark' },
                   }}
                 >
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ sm: 'center' }}>
                     <Box flex={1}>
-                      <Typography fontWeight={700}>
-                        {item.warehouseItemName}{' '}
-                        <Typography component="span" color="text.secondary">
-                          ({item.category}, {item.unit})
+                      <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+                        <Typography fontWeight={700}>
+                          {item.name}{' '}
+                          <Typography component="span" color="text.secondary">
+                            ({item.category}, {item.unit})
+                          </Typography>
                         </Typography>
-                      </Typography>
-                      <Typography variant="body2">
-                        Потрібно: {formatNumber(item.quantityNeeded)} · Зі складу:{' '}
-                        {formatNumber(item.quantityFromStock)} · Закупити:{' '}
-                        {formatNumber(item.quantityToPurchase)} · Залишок на складі:{' '}
-                        {formatNumber(item.quantityInStock)}
+                        {item.isNonCatalog && (
+                          <Chip size="small" color="error" variant="outlined" label={inventoryLabels.notInWarehouse} />
+                        )}
+                      </Stack>
+                      <Typography variant="body2" mt={0.5}>
+                        {project.status === 'Completed' ? (
+                          <>
+                            {inventoryLabels.used}: {formatNumber(item.quantityNeeded)}
+                          </>
+                        ) : (
+                          <>
+                            {inventoryLabels.needed}: {formatNumber(item.quantityNeeded)} ·{' '}
+                            {inventoryLabels.availableStock}: {formatNumber(item.quantityAvailable)} ·{' '}
+                            <Box
+                              component="span"
+                              sx={{
+                                color: item.quantityToPurchase > 0 ? 'warning.dark' : 'inherit',
+                                fontWeight: item.quantityToPurchase > 0 ? 700 : 400,
+                              }}
+                            >
+                              {inventoryLabels.toOrder}: {formatNumber(item.quantityToPurchase)}
+                            </Box>
+                            {!item.isNonCatalog && (
+                              <>
+                                {' '}
+                                · {inventoryLabels.remainingStock}:{' '}
+                                {formatNumber(Math.max(0, item.quantityAvailable - item.quantityFromStock))}
+                              </>
+                            )}
+                          </>
+                        )}
                       </Typography>
                     </Box>
-                    {item.needsPurchase && <Chip color="warning" label="Потрібно закупіти" />}
-                    <IconButton
-                      color="error"
-                      onClick={() =>
-                        void projectsApi.removeItem(projectId, item.id).then(load).catch((err) => {
-                          setError(err instanceof Error ? err.message : 'Помилка видалення')
-                        })
-                      }
-                    >
-                      <DeleteIcon />
-                    </IconButton>
+                    {project.status !== 'Completed' && item.needsPurchase && (
+                      <Chip color="warning" label={inventoryLabels.needsPurchase} />
+                    )}
+                    {project.status !== 'Completed' && (
+                      <IconButton
+                        color="primary"
+                        onClick={() => openEditItem(item.id, item.quantityNeeded)}
+                        aria-label="Редагувати кількість"
+                      >
+                        <EditOutlinedIcon />
+                      </IconButton>
+                    )}
+                    {project.status !== 'Completed' && (
+                      <IconButton
+                        color="error"
+                        onClick={() =>
+                          void projectsApi.removeItem(projectId, item.id).then(load).catch((err) => {
+                            setError(err instanceof Error ? err.message : 'Помилка видалення')
+                          })
+                        }
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    )}
                   </Stack>
                 </Box>
               ))}
@@ -671,20 +773,65 @@ export default function ProjectDetailPage() {
         <DialogTitle>Додати матеріал</DialogTitle>
         <DialogContent>
           <Stack spacing={2} mt={1}>
-            <FormControl fullWidth>
-              <InputLabel>Позиція складу</InputLabel>
-              <Select
-                label="Позиція складу"
-                value={selectedItemId}
-                onChange={(e) => setSelectedItemId(e.target.value as number)}
-              >
-                {availableWarehouseItems.map((item) => (
-                  <MenuItem key={item.id} value={item.id}>
-                    {item.name} (в наявності: {formatNumber(item.quantityInStock)} {item.unit})
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <ToggleButtonGroup
+              exclusive
+              fullWidth
+              size="small"
+              value={itemMode}
+              onChange={(_, v) => {
+                if (v !== null) setItemMode(v as 'catalog' | 'custom')
+              }}
+            >
+              <ToggleButton value="catalog" sx={{ textTransform: 'none', fontWeight: 600 }}>
+                Зі складу
+              </ToggleButton>
+              <ToggleButton value="custom" sx={{ textTransform: 'none', fontWeight: 600 }}>
+                Новий матеріал
+              </ToggleButton>
+            </ToggleButtonGroup>
+
+            {itemMode === 'catalog' ? (
+              <FormControl fullWidth>
+                <InputLabel>Позиція складу</InputLabel>
+                <Select
+                  label="Позиція складу"
+                  value={selectedItemId}
+                  onChange={(e) => setSelectedItemId(e.target.value as number)}
+                >
+                  {availableWarehouseItems.map((item) => (
+                    <MenuItem key={item.id} value={item.id}>
+                      {item.name} ({inventoryLabels.available}:{' '}
+                      {formatNumber(item.quantityAvailable)} {item.unit})
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            ) : (
+              <>
+                <TextField
+                  label="Назва"
+                  required
+                  fullWidth
+                  value={customName}
+                  onChange={(e) => setCustomName(e.target.value)}
+                />
+                <TextField
+                  label="Категорія"
+                  required
+                  fullWidth
+                  value={customCategory}
+                  onChange={(e) => setCustomCategory(e.target.value)}
+                />
+                <TextField
+                  label="Одиниця"
+                  required
+                  fullWidth
+                  value={customUnit}
+                  onChange={(e) => setCustomUnit(e.target.value)}
+                />
+              </>
+            )}
+
             <TextField
               label="Потрібна кількість"
               type="number"
@@ -693,8 +840,9 @@ export default function ProjectDetailPage() {
               onChange={(e) => setQuantityNeeded(e.target.value)}
             />
             <Typography variant="body2" color="text.secondary">
-              Якщо на складі недостатньо — система позначить «Потрібно закупіти» і одразу спише
-              доступну кількість.
+              {itemMode === 'catalog'
+                ? 'Якщо на складі недостатньо вільного запасу — система позначить «Потрібно закупіти». Кількість спишеться зі складу лише після завершення проекту.'
+                : 'Матеріал поза каталогом буде повністю позначено як «Потрібно закупіти» і з’явиться на складі у фільтрі «Потрібно замовити».'}
             </Typography>
           </Stack>
         </DialogContent>
@@ -706,9 +854,51 @@ export default function ProjectDetailPage() {
             variant="contained"
             color="primary"
             onClick={() => void addItem()}
-            disabled={!selectedItemId}
+            disabled={
+              itemMode === 'catalog'
+                ? !selectedItemId
+                : !customName.trim() || !customCategory.trim() || !customUnit.trim()
+            }
           >
             Додати
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={editItemOpen}
+        onClose={() => !editItemSaving && setEditItemOpen(false)}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>Змінити кількість</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} mt={1}>
+            <TextField
+              label="Потрібна кількість"
+              type="number"
+              fullWidth
+              value={editQuantityNeeded}
+              onChange={(e) => setEditQuantityNeeded(e.target.value)}
+              inputProps={{ min: 0.01, step: 'any' }}
+            />
+            <Typography variant="body2" color="text.secondary">
+              Резерв перерахується з вільного запасу. Зменшення кількості звільняє резерв для інших
+              проектів. Нестача позначається як «Потрібно закупіти».
+            </Typography>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button variant="text" onClick={() => setEditItemOpen(false)} disabled={editItemSaving}>
+            Скасувати
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => void saveEditItem()}
+            disabled={editItemSaving || !editQuantityNeeded || Number(editQuantityNeeded) <= 0}
+          >
+            Зберегти
           </Button>
         </DialogActions>
       </Dialog>

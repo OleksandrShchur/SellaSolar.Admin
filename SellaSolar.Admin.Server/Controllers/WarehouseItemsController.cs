@@ -24,10 +24,16 @@ public class WarehouseItemsController : ControllerBase
         [FromQuery] string? category,
         [FromQuery] string? search,
         [FromQuery] bool? lowStockOnly,
+        [FromQuery] bool? needsPurchaseOnly,
         CancellationToken ct)
     {
-        return Ok(await _warehouse.GetAllAsync(category, search, lowStockOnly, ct));
+        return Ok(await _warehouse.GetAllAsync(category, search, lowStockOnly, needsPurchaseOnly, ct));
     }
+
+    [HttpGet("purchase-requests")]
+    public async Task<ActionResult<IReadOnlyList<NonCatalogPurchaseRequestDto>>> GetPurchaseRequests(
+        CancellationToken ct) =>
+        Ok(await _warehouse.GetNonCatalogPurchaseRequestsAsync(ct));
 
     [HttpGet("categories")]
     public async Task<ActionResult<IReadOnlyList<string>>> GetCategories(CancellationToken ct) =>

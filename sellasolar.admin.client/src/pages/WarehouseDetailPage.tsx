@@ -17,7 +17,7 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import { warehouseApi } from '../api'
 import type { WarehouseItemDetail } from '../api/types'
-import { formatNumber } from '../utils/labels'
+import { formatNumber, inventoryLabels } from '../utils/labels'
 import { DetailField, DetailFieldGrid, DetailPanel } from '../components/DetailPanel'
 import { ProjectStatusChip } from '../components/StatusChips'
 
@@ -125,7 +125,9 @@ export default function WarehouseDetailPage() {
               {item.isLowStock && <Chip size="small" color="warning" label="Низький" />}
             </Stack>
             <Typography variant="body2" color="text.secondary" mt={0.5} fontWeight={600}>
-              {item.category} · {formatNumber(item.quantityInStock)} {item.unit}
+              {item.category} · {inventoryLabels.onHand}: {formatNumber(item.quantityInStock)}{' '}
+              {item.unit} · {inventoryLabels.available}: {formatNumber(item.quantityAvailable)}{' '}
+              {item.unit}
             </Typography>
           </Box>
         </Stack>
@@ -147,6 +149,14 @@ export default function WarehouseDetailPage() {
 
       <DetailPanel>
         <DetailFieldGrid>
+          <DetailField
+            label={inventoryLabels.onHand}
+            value={`${formatNumber(item.quantityInStock)} ${item.unit}`}
+          />
+          <DetailField
+            label={inventoryLabels.available}
+            value={`${formatNumber(item.quantityAvailable)} ${item.unit}`}
+          />
           <DetailField label="Ціна" value={formatNumber(item.price)} />
           <DetailField label="Постачальник" value={item.supplier || '—'} />
           <DetailField label="Поріг низького запасу" value={formatNumber(item.lowStockThreshold)} />
@@ -184,17 +194,18 @@ export default function WarehouseDetailPage() {
                 </Typography>
                 <ProjectStatusChip status={p.projectStatus} />
                 <Typography variant="body2" fontWeight={600}>
-                  Потрібно: {formatNumber(p.quantityNeeded)}
+                  Потрібно: {formatNumber(p.quantityNeeded)} · {inventoryLabels.reserved}:{' '}
+                  {formatNumber(p.quantityFromStock)}
                 </Typography>
                 {p.needsPurchase && (
-                  <Chip size="small" color="warning" label="Потрібно закупіти" />
+                  <Chip size="small" color="warning" label={inventoryLabels.needsPurchase} />
                 )}
               </Stack>
             </Box>
           ))}
           {item.projects.length === 0 && (
             <Typography color="text.secondary">
-              Ця позиція ще не використовується в проектах
+              Не використовується в активних проектах (очікує / у роботі)
             </Typography>
           )}
         </Stack>

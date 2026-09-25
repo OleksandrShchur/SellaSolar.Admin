@@ -63,7 +63,8 @@ public class ProjectService
                 p.EndDate,
                 p.CreatedAt,
                 p.ProjectWorkers.Count,
-                p.ProjectItems.Any(i => i.NeedsPurchase)))
+                (p.Status == ProjectStatuses.Awaiting || p.Status == ProjectStatuses.InProgress)
+                    && p.ProjectItems.Any(i => i.NeedsPurchase)))
             .ToListAsync(ct);
     }
 
@@ -86,7 +87,8 @@ public class ProjectService
                 p.EndDate,
                 p.CreatedAt,
                 p.ProjectWorkers.Count,
-                p.ProjectItems.Any(i => i.NeedsPurchase)))
+                (p.Status == ProjectStatuses.Awaiting || p.Status == ProjectStatuses.InProgress)
+                    && p.ProjectItems.Any(i => i.NeedsPurchase)))
             .ToListAsync(ct);
     }
 
@@ -137,8 +139,11 @@ public class ProjectService
 
         var project = await _db.Projects
             .Include(p => p.ProjectCustomData)
+            .Include(p => p.ProjectItems).ThenInclude(i => i.WarehouseItem)
             .FirstOrDefaultAsync(p => p.Id == id, ct)
             ?? throw new NotFoundException($"Project {id} was not found.");
+
+        var previousStatus = project.Status;
 
         project.Name = request.Name.Trim();
         project.Description = request.Description;
@@ -154,6 +159,7 @@ public class ProjectService
         _db.ProjectCustomData.RemoveRange(project.ProjectCustomData);
         project.ProjectCustomData.Clear();
         ApplyCustomData(project, request.CustomData);
+        _materials.ApplyStatusStockTransition(project, previousStatus, request.Status);
 
         await _db.SaveChangesAsync(ct);
         return (await GetByIdAsync(project.Id, ct))!;
@@ -164,15 +170,20 @@ public class ProjectService
         if (!ProjectStatuses.IsValid(status))
             throw new ValidationException("Status must be Awaiting, InProgress, or Completed.");
 
-        var project = await _db.Projects.FirstOrDefaultAsync(p => p.Id == id, ct)
+        var project = await _db.Projects
+            .Include(p => p.ProjectItems).ThenInclude(i => i.WarehouseItem)
+            .FirstOrDefaultAsync(p => p.Id == id, ct)
             ?? throw new NotFoundException($"Project {id} was not found.");
 
+        var previousStatus = project.Status;
         project.Status = status;
         if (status == ProjectStatuses.Completed && project.EndDate is null)
             project.EndDate = DateTime.UtcNow;
         if (status == ProjectStatuses.InProgress && project.StartDate is null)
             project.StartDate = DateTime.UtcNow;
         project.UpdatedAt = DateTime.UtcNow;
+
+        _materials.ApplyStatusStockTransition(project, previousStatus, status);
 
         await _db.SaveChangesAsync(ct);
         return (await GetByIdAsync(id, ct))!;
@@ -186,9 +197,7 @@ public class ProjectService
             .FirstOrDefaultAsync(p => p.Id == id, ct)
             ?? throw new NotFoundException($"Project {id} was not found.");
 
-        // Restore stock for all materials before cascade delete.
-        foreach (var item in project.ProjectItems)
-            item.WarehouseItem.QuantityInStock += item.QuantityFromStock;
+        ProjectMaterialsService.RestoreStockIfConsumed(project);
 
         _db.Projects.Remove(project);
         await _db.SaveChangesAsync(ct);
@@ -196,6 +205,13 @@ public class ProjectService
 
     public Task<ProjectItemDto> AddItemAsync(int projectId, AssignProjectItemRequest request, CancellationToken ct = default) =>
         _materials.AddItemAsync(projectId, request, ct);
+
+    public Task<ProjectItemDto> UpdateItemAsync(
+        int projectId,
+        int projectItemId,
+        UpdateProjectItemRequest request,
+        CancellationToken ct = default) =>
+        _materials.UpdateItemAsync(projectId, projectItemId, request, ct);
 
     public Task RemoveItemAsync(int projectId, int projectItemId, CancellationToken ct = default) =>
         _materials.RemoveItemAsync(projectId, projectItemId, ct);
@@ -339,6 +355,17 @@ public class ProjectService
             .Where(u => userIds.Contains(u.Id))
             .ToDictionaryAsync(u => u.Id, ct);
 
+        var warehouseItemIds = project.ProjectItems
+            .Where(i => i.WarehouseItemId is not null)
+            .Select(i => i.WarehouseItemId!.Value)
+            .Distinct()
+            .ToList();
+
+        var reservedByOthers = await _materials.GetReservedByOthersAsync(
+            warehouseItemIds,
+            excludeProjectId: project.Id,
+            ct);
+
         return new ProjectDetailDto(
             project.Id,
             project.Name,
@@ -357,18 +384,19 @@ public class ProjectService
                 .Select(c => new CustomDataDto(c.Key, c.Value))
                 .ToList(),
             project.ProjectItems
-                .OrderBy(i => i.WarehouseItem.Name)
-                .Select(i => new ProjectItemDto(
-                    i.Id,
-                    i.WarehouseItemId,
-                    i.WarehouseItem.Name,
-                    i.WarehouseItem.Category,
-                    i.WarehouseItem.Unit,
-                    i.QuantityNeeded,
-                    i.QuantityFromStock,
-                    i.QuantityToPurchase,
-                    i.NeedsPurchase,
-                    i.WarehouseItem.QuantityInStock))
+                .OrderBy(i => i.WarehouseItemId == null
+                    ? i.RequestedName
+                    : i.WarehouseItem!.Name)
+                .Select(i =>
+                {
+                    if (i.WarehouseItemId is null || i.WarehouseItem is null)
+                        return ProjectMaterialsService.MapNonCatalog(i);
+
+                    var available = Math.Max(
+                        0,
+                        i.WarehouseItem.QuantityInStock - reservedByOthers.GetValueOrDefault(i.WarehouseItemId.Value));
+                    return ProjectMaterialsService.MapCatalog(i, i.WarehouseItem, available);
+                })
                 .ToList(),
             project.ProjectWorkers
                 .OrderBy(w => users.TryGetValue(w.UserId, out var u) ? u.FullName : w.UserId)

@@ -17,15 +17,18 @@ public record ProjectListItemDto(
 
 public record ProjectItemDto(
     int Id,
-    int WarehouseItemId,
-    string WarehouseItemName,
+    int? WarehouseItemId,
+    string Name,
     string Category,
     string Unit,
     decimal QuantityNeeded,
     decimal QuantityFromStock,
     decimal QuantityToPurchase,
     bool NeedsPurchase,
-    decimal QuantityInStock);
+    decimal QuantityInStock,
+    /// <summary>On-hand stock minus amounts reserved by other open projects.</summary>
+    decimal QuantityAvailable,
+    bool IsNonCatalog);
 
 public record ProjectWorkerDto(
     int Id,
@@ -86,7 +89,14 @@ public record UpdateProjectRequest(
 
 public record UpdateProjectStatusRequest(string Status);
 
-public record AssignProjectItemRequest(int WarehouseItemId, decimal QuantityNeeded);
+public record AssignProjectItemRequest(
+    int? WarehouseItemId,
+    decimal QuantityNeeded,
+    string? RequestedName,
+    string? RequestedCategory,
+    string? RequestedUnit);
+
+public record UpdateProjectItemRequest(decimal QuantityNeeded);
 
 public record AssignProjectWorkerRequest(string UserId, string? RoleOnProject);
 
@@ -96,12 +106,15 @@ public record WarehouseItemListDto(
     string Category,
     string Unit,
     decimal QuantityInStock,
+    /// <summary>On-hand minus amounts reserved by open projects.</summary>
+    decimal QuantityAvailable,
     decimal? Price,
     string? Supplier,
     string? Notes,
     decimal? LowStockThreshold,
     bool IsLowStock,
-    int UsedInProjectsCount);
+    int UsedInProjectsCount,
+    decimal QuantityToOrder);
 
 public record WarehouseItemDetailDto(
     int Id,
@@ -109,6 +122,8 @@ public record WarehouseItemDetailDto(
     string Category,
     string Unit,
     decimal QuantityInStock,
+    /// <summary>On-hand minus amounts reserved by open projects.</summary>
+    decimal QuantityAvailable,
     decimal? Price,
     string? Supplier,
     string? Notes,
@@ -121,6 +136,7 @@ public record WarehouseItemProjectUsageDto(
     string ProjectName,
     string ProjectStatus,
     decimal QuantityNeeded,
+    decimal QuantityFromStock,
     bool NeedsPurchase);
 
 public record CreateWarehouseItemRequest(
@@ -142,4 +158,14 @@ public record UpdateWarehouseItemRequest(
     string? Supplier,
     string? Notes,
     decimal? LowStockThreshold);
+
+public record NonCatalogPurchaseRequestDto(
+    int ProjectItemId,
+    int ProjectId,
+    string ProjectName,
+    string ProjectStatus,
+    string Name,
+    string Category,
+    string Unit,
+    decimal QuantityToPurchase);
 
