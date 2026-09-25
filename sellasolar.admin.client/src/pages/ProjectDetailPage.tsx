@@ -306,9 +306,18 @@ export default function ProjectDetailPage() {
         Почати роботу
       </Button>
     ) : project.status === 'InProgress' ? (
-      <Button variant="contained" color="success" onClick={() => void changeStatus('Completed')}>
-        Завершити
-      </Button>
+      <>
+        <Button
+          variant="outlined"
+          color="primary"
+          onClick={() => void changeStatus('Awaiting')}
+        >
+          Повернути в очікування
+        </Button>
+        <Button variant="contained" color="success" onClick={() => void changeStatus('Completed')}>
+          Завершити
+        </Button>
+      </>
     ) : (
       <Button
         variant="outlined"
