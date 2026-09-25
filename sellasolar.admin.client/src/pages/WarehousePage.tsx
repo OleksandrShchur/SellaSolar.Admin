@@ -147,7 +147,6 @@ export default function WarehousePage() {
       valueGetter: (_value, row) =>
         row.quantityToOrder > 0 ? `${formatNumber(row.quantityToOrder)} ${row.unit}` : '—',
     },
-    { field: 'supplier', headerName: 'Постачальник', flex: 1, minWidth: 140 },
     {
       field: 'isLowStock',
       headerName: 'Запас',
@@ -390,9 +389,6 @@ export default function WarehousePage() {
                       <Chip size="small" color="warning" label="Низький" />
                     ) : (
                       <Chip size="small" color="success" variant="outlined" label="OK" />
-                    )}
-                    {row.supplier && (
-                      <Chip size="small" variant="outlined" label={row.supplier} />
                     )}
                   </Stack>
                 </CardContent>
