@@ -26,6 +26,12 @@ public partial class ProjectItem
 
     public bool NeedsPurchase { get; set; }
 
+    /// <summary>
+    /// Persisted Σ allocation qty × lot unit cost. Survives stock consume on Completed.
+    /// </summary>
+    [Column(TypeName = "decimal(18, 2)")]
+    public decimal? CostFromStock { get; set; }
+
     [StringLength(200)]
     public string? RequestedName { get; set; }
 
