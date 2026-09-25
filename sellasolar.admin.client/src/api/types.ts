@@ -86,6 +86,16 @@ export interface ProjectPhoto {
   uploadedAt: string
 }
 
+export interface ProjectExpense {
+  id: number
+  category: string
+  amount: number
+  expenseDate?: string | null
+  notes?: string | null
+  createdAt: string
+  updatedAt: string
+}
+
 export interface ProjectDetail {
   id: number
   name: string
@@ -103,6 +113,7 @@ export interface ProjectDetail {
   items: ProjectItem[]
   workers: ProjectWorker[]
   photos: ProjectPhoto[]
+  expenses: ProjectExpense[]
 }
 
 export interface WarehouseItemList {

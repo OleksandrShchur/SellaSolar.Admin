@@ -56,6 +56,15 @@ public record ProjectPhotoDto(
     string? Caption,
     DateTime UploadedAt);
 
+public record ProjectExpenseDto(
+    int Id,
+    string Category,
+    decimal Amount,
+    DateTime? ExpenseDate,
+    string? Notes,
+    DateTime CreatedAt,
+    DateTime UpdatedAt);
+
 public record ProjectDetailDto(
     int Id,
     string Name,
@@ -72,7 +81,8 @@ public record ProjectDetailDto(
     IReadOnlyList<CustomDataDto> CustomData,
     IReadOnlyList<ProjectItemDto> Items,
     IReadOnlyList<ProjectWorkerDto> Workers,
-    IReadOnlyList<ProjectPhotoDto> Photos);
+    IReadOnlyList<ProjectPhotoDto> Photos,
+    IReadOnlyList<ProjectExpenseDto> Expenses);
 
 public record CreateProjectRequest(
     string Name,
@@ -114,6 +124,18 @@ public record ProjectItemLotAllocationInput(int WarehouseStockLotId, decimal Qua
 public record SetProjectItemAllocationsRequest(IReadOnlyList<ProjectItemLotAllocationInput> Allocations);
 
 public record AssignProjectWorkerRequest(string UserId, string? RoleOnProject);
+
+public record CreateProjectExpenseRequest(
+    string Category,
+    decimal Amount,
+    DateTime? ExpenseDate,
+    string? Notes);
+
+public record UpdateProjectExpenseRequest(
+    string Category,
+    decimal Amount,
+    DateTime? ExpenseDate,
+    string? Notes);
 
 public record WarehouseItemListDto(
     int Id,

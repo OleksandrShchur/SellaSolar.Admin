@@ -28,13 +28,14 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import { projectsApi, warehouseApi, usersApi } from '../api'
 import type {
   ProjectDetail,
+  ProjectExpense,
   ProjectItem,
   ProjectStatus,
   WarehouseItemList,
   WarehouseStockLot,
   UserListItem,
 } from '../api/types'
-import { formatDate, formatDateTime, formatNumber, inventoryLabels, workerTypeLabel } from '../utils/labels'
+import { formatDate, formatDateTime, formatMoney, formatNumber, inventoryLabels, workerTypeLabel } from '../utils/labels'
 import { useAuth } from '../auth/AuthContext'
 import { DetailField, DetailFieldGrid, DetailPanel, DetailSection, panelPad } from '../components/DetailPanel'
 import { ProjectStatusChip } from '../components/StatusChips'
@@ -104,6 +105,16 @@ export default function ProjectDetailPage() {
   const [photoCaption, setPhotoCaption] = useState('')
   const [uploading, setUploading] = useState(false)
 
+  const [expenseOpen, setExpenseOpen] = useState(false)
+  const [editingExpense, setEditingExpense] = useState<ProjectExpense | null>(null)
+  const [expenseForm, setExpenseForm] = useState({
+    category: '',
+    amount: '',
+    expenseDate: '',
+    notes: '',
+  })
+  const [expenseSaving, setExpenseSaving] = useState(false)
+
   const load = async () => {
     setLoading(true)
     setError(null)
@@ -135,6 +146,23 @@ export default function ProjectDetailPage() {
     )
     return warehouseItems.filter((w) => !assigned.has(w.id))
   }, [warehouseItems, project])
+
+  const materialsCostTotal = useMemo(() => {
+    if (!project) return 0
+    return project.items.reduce((sum, item) => sum + (item.costFromStock ?? 0), 0)
+  }, [project])
+
+  const manualExpensesTotal = useMemo(() => {
+    if (!project) return 0
+    return (project.expenses ?? []).reduce((sum, e) => sum + e.amount, 0)
+  }, [project])
+
+  const expensesGrandTotal = materialsCostTotal + manualExpensesTotal
+
+  const stockExpenseItems = useMemo(() => {
+    if (!project) return []
+    return project.items.filter((item) => !item.isNonCatalog && item.quantityFromStock > 0)
+  }, [project])
 
   const openEdit = () => {
     if (!project) return
@@ -350,6 +378,67 @@ export default function ProjectDetailPage() {
     }
   }
 
+  const openAddExpense = () => {
+    setEditingExpense(null)
+    setExpenseForm({ category: '', amount: '', expenseDate: '', notes: '' })
+    setExpenseOpen(true)
+  }
+
+  const openEditExpense = (expense: ProjectExpense) => {
+    setEditingExpense(expense)
+    setExpenseForm({
+      category: expense.category,
+      amount: String(expense.amount),
+      expenseDate: expense.expenseDate ? expense.expenseDate.slice(0, 10) : '',
+      notes: expense.notes ?? '',
+    })
+    setExpenseOpen(true)
+  }
+
+  const saveExpense = async () => {
+    const category = expenseForm.category.trim()
+    const amount = Number(expenseForm.amount.replace(',', '.'))
+    if (!category) {
+      setError('Категорія обовʼязкова')
+      return
+    }
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setError('Сума повинна бути більшою за нуль')
+      return
+    }
+    setExpenseSaving(true)
+    setError(null)
+    const body = {
+      category,
+      amount,
+      expenseDate: expenseForm.expenseDate || null,
+      notes: expenseForm.notes.trim() || null,
+    }
+    try {
+      if (editingExpense) {
+        await projectsApi.updateExpense(projectId, editingExpense.id, body)
+      } else {
+        await projectsApi.addExpense(projectId, body)
+      }
+      setExpenseOpen(false)
+      setEditingExpense(null)
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не вдалося зберегти витрату')
+    } finally {
+      setExpenseSaving(false)
+    }
+  }
+
+  const removeExpense = async (expenseId: number) => {
+    try {
+      await projectsApi.removeExpense(projectId, expenseId)
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не вдалося видалити витрату')
+    }
+  }
+
   if (loading) {
     return (
       <Stack spacing={2.5}>
@@ -461,6 +550,7 @@ export default function ProjectDetailPage() {
           >
             <Tab label="Загальна інформація" />
             <Tab label="Матеріали" />
+            <Tab label="Витрати" />
             <Tab label="Працівники" />
             <Tab label="Фото" />
           </Tabs>
@@ -670,6 +760,117 @@ export default function ProjectDetailPage() {
           </TabPanel>
 
           <TabPanel value={tab} index={2}>
+            <Stack spacing={2.5}>
+              <DetailFieldGrid columns={{ xs: 1, sm: 3 }}>
+                <DetailField label="Матеріали зі складу" value={formatMoney(materialsCostTotal)} />
+                <DetailField label="Інші витрати" value={formatMoney(manualExpensesTotal)} />
+                <DetailField label="Разом" value={formatMoney(expensesGrandTotal)} />
+              </DetailFieldGrid>
+
+              <DetailSection title="Матеріали зі складу">
+                <Stack spacing={1.5}>
+                  {stockExpenseItems.map((item) => (
+                    <Box
+                      key={`stock-${item.id}`}
+                      sx={{
+                        p: 2,
+                        borderRadius: 2,
+                        border: '1.5px solid',
+                        borderColor: 'divider',
+                        bgcolor: 'rgba(243, 235, 220, 0.45)',
+                      }}
+                    >
+                      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ sm: 'center' }}>
+                        <Box flex={1}>
+                          <Typography fontWeight={700}>
+                            {item.name}{' '}
+                            <Typography component="span" color="text.secondary">
+                              ({item.category}, {item.unit})
+                            </Typography>
+                          </Typography>
+                          <Typography variant="body2" mt={0.5} color="text.secondary">
+                            {inventoryLabels.fromStock}: {formatNumber(item.quantityFromStock)}
+                            {formatCostBreakdown(item) && <> · {formatCostBreakdown(item)}</>}
+                          </Typography>
+                        </Box>
+                        <Typography fontWeight={800}>{formatMoney(item.costFromStock)}</Typography>
+                        <Chip size="small" variant="outlined" label="Склад" />
+                      </Stack>
+                    </Box>
+                  ))}
+                  {stockExpenseItems.length === 0 && (
+                    <Typography color="text.secondary">
+                      Немає вартості зі складу. Розподіліть партії на вкладці «Матеріали».
+                    </Typography>
+                  )}
+                </Stack>
+              </DetailSection>
+
+              <DetailSection>
+                <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1}>
+                  <Typography variant="subtitle1" fontWeight={800} sx={{ letterSpacing: '-0.01em' }}>
+                    Інші витрати
+                  </Typography>
+                  {project.status !== 'Completed' && (
+                    <Button variant="contained" color="primary" onClick={openAddExpense}>
+                      Додати витрату
+                    </Button>
+                  )}
+                </Stack>
+                <Stack spacing={1.5}>
+                  {(project.expenses ?? []).map((expense) => (
+                    <Box
+                      key={expense.id}
+                      sx={{
+                        p: 2,
+                        borderRadius: 2,
+                        border: '1.5px solid',
+                        borderColor: 'divider',
+                        bgcolor: 'rgba(243, 235, 220, 0.45)',
+                        '&:hover': { boxShadow: 1, borderColor: 'primary.dark' },
+                      }}
+                    >
+                      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ sm: 'center' }}>
+                        <Box flex={1}>
+                          <Typography fontWeight={700}>{expense.category}</Typography>
+                          <Typography variant="body2" mt={0.5} color="text.secondary">
+                            {expense.expenseDate
+                              ? formatDate(expense.expenseDate)
+                              : 'Дата не вказана'}
+                            {expense.notes ? ` · ${expense.notes}` : ''}
+                          </Typography>
+                        </Box>
+                        <Typography fontWeight={800}>{formatMoney(expense.amount)}</Typography>
+                        {project.status !== 'Completed' && (
+                          <>
+                            <IconButton
+                              color="primary"
+                              onClick={() => openEditExpense(expense)}
+                              aria-label="Редагувати витрату"
+                            >
+                              <EditOutlinedIcon />
+                            </IconButton>
+                            <IconButton
+                              color="error"
+                              onClick={() => void removeExpense(expense.id)}
+                              aria-label="Видалити витрату"
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </>
+                        )}
+                      </Stack>
+                    </Box>
+                  ))}
+                  {(project.expenses ?? []).length === 0 && (
+                    <Typography color="text.secondary">Інших витрат ще немає</Typography>
+                  )}
+                </Stack>
+              </DetailSection>
+            </Stack>
+          </TabPanel>
+
+          <TabPanel value={tab} index={3}>
             <Stack direction="row" justifyContent="space-between" mb={2} alignItems="center" gap={1}>
               <Typography variant="subtitle1" fontWeight={800} sx={{ letterSpacing: '-0.01em' }}>
                 Призначені працівники
@@ -725,7 +926,7 @@ export default function ProjectDetailPage() {
             </Stack>
           </TabPanel>
 
-          <TabPanel value={tab} index={3}>
+          <TabPanel value={tab} index={4}>
             <Stack spacing={2} mb={2}>
               <TextField
                 label="Підпис до фото"
@@ -1168,6 +1369,65 @@ export default function ProjectDetailPage() {
             disabled={!selectedWorkerId}
           >
             Призначити
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={expenseOpen}
+        onClose={() => {
+          if (!expenseSaving) setExpenseOpen(false)
+        }}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>{editingExpense ? 'Редагувати витрату' : 'Додати витрату'}</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} mt={1}>
+            <TextField
+              label="Категорія"
+              placeholder="Роботи, непередбачені витрати…"
+              fullWidth
+              required
+              value={expenseForm.category}
+              onChange={(e) => setExpenseForm({ ...expenseForm, category: e.target.value })}
+            />
+            <TextField
+              label="Сума (₴)"
+              fullWidth
+              required
+              value={expenseForm.amount}
+              onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })}
+            />
+            <TextField
+              type="date"
+              label="Дата"
+              InputLabelProps={{ shrink: true }}
+              fullWidth
+              value={expenseForm.expenseDate}
+              onChange={(e) => setExpenseForm({ ...expenseForm, expenseDate: e.target.value })}
+            />
+            <TextField
+              label="Нотатки"
+              multiline
+              minRows={2}
+              fullWidth
+              value={expenseForm.notes}
+              onChange={(e) => setExpenseForm({ ...expenseForm, notes: e.target.value })}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button variant="text" disabled={expenseSaving} onClick={() => setExpenseOpen(false)}>
+            Скасувати
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            disabled={expenseSaving}
+            onClick={() => void saveExpense()}
+          >
+            {expenseSaving ? 'Збереження…' : 'Зберегти'}
           </Button>
         </DialogActions>
       </Dialog>

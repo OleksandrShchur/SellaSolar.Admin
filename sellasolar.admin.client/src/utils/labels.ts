@@ -56,6 +56,11 @@ export const formatNumber = (value?: number | null) => {
   return new Intl.NumberFormat('uk-UA', { maximumFractionDigits: 2 }).format(value)
 }
 
+export const formatMoney = (value?: number | null) => {
+  if (value === null || value === undefined) return '—'
+  return `${formatNumber(value)} ₴`
+}
+
 export const inventoryLabels = {
   needsPurchase: 'Потрібно закупіти',
   needsAllocation: 'Потрібно розподілити',

@@ -189,7 +189,8 @@ public class ProjectMaterialsService
             {
                 ProjectItemId = item.Id,
                 WarehouseStockLotId = input.WarehouseStockLotId,
-                Quantity = input.Quantity
+                Quantity = input.Quantity,
+                WarehouseStockLot = lots[input.WarehouseStockLotId]
             });
         }
 
@@ -198,6 +199,7 @@ public class ProjectMaterialsService
             excludeProjectId: projectId,
             ct);
         ApplyDerivedStockFields(item, total, maxFromStock);
+        ApplyCostFromStock(item);
         item.Project.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
 
@@ -287,6 +289,7 @@ public class ProjectMaterialsService
             item.WarehouseItemId.Value,
             excludeProjectId: item.ProjectId,
             ct));
+        ApplyCostFromStock(item);
         item.Project.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
     }
@@ -413,6 +416,36 @@ public class ProjectMaterialsService
         item.QuantityFromStock = fromStock;
         item.QuantityToPurchase = Math.Max(0, item.QuantityNeeded - fromStock);
         item.NeedsPurchase = item.QuantityNeeded > maxFromStock;
+    }
+
+    /// <summary>
+    /// Persists project material cost from loaded allocations + lots.
+    /// Call after allocations are replaced/updated and lots are available.
+    /// </summary>
+    private static void ApplyCostFromStock(ProjectItem item)
+    {
+        var allocations = item.ProjectItemLotAllocations;
+        if (allocations is null || allocations.Count == 0)
+        {
+            item.CostFromStock = null;
+            return;
+        }
+
+        decimal? total = 0;
+        foreach (var a in allocations)
+        {
+            if (a.Quantity <= 0)
+                continue;
+            if (a.WarehouseStockLot is null)
+            {
+                // Incomplete graph — leave existing snapshot untouched.
+                return;
+            }
+
+            total += a.Quantity * a.WarehouseStockLot.UnitCost;
+        }
+
+        item.CostFromStock = total == 0 ? null : total;
     }
 
     private static void ConsumeAllocations(ProjectItem item)
@@ -560,9 +593,9 @@ public class ProjectMaterialsService
             })
             .ToList();
 
-        decimal? costFromStock = allocationDtos.Count == 0
-            ? null
-            : allocationDtos.Sum(a => a.Quantity * a.UnitCost);
+        decimal? costFromStock = allocationDtos.Count > 0
+            ? allocationDtos.Sum(a => a.Quantity * a.UnitCost)
+            : entity.CostFromStock;
 
         // NeedsPurchase = must buy (needed exceeds free stock), not merely unallocated.
         var needsPurchase = entity.QuantityNeeded > available;
@@ -618,9 +651,11 @@ public class ProjectMaterialsService
             })
             .ToList();
 
-        decimal? costFromStock = allocationDtos.Count == 0
-            ? null
-            : allocationDtos.Sum(a => a.Quantity * a.UnitCost);
+        // Prefer live allocation math when lots are loaded; else persisted snapshot
+        // (Completed projects / legacy lines without navigation loads).
+        decimal? costFromStock = allocationDtos.Count > 0
+            ? allocationDtos.Sum(a => a.Quantity * a.UnitCost)
+            : entity.CostFromStock;
 
         var needsPurchase = entity.QuantityNeeded > quantityAvailable;
 

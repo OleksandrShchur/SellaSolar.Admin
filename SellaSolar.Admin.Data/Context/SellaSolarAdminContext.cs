@@ -16,6 +16,8 @@ public partial class SellaSolarAdminContext : DbContext
 
     public virtual DbSet<ProjectCustomDatum> ProjectCustomData { get; set; }
 
+    public virtual DbSet<ProjectExpense> ProjectExpenses { get; set; }
+
     public virtual DbSet<ProjectItem> ProjectItems { get; set; }
 
     public virtual DbSet<ProjectItemLotAllocation> ProjectItemLotAllocations { get; set; }
@@ -39,6 +41,14 @@ public partial class SellaSolarAdminContext : DbContext
         modelBuilder.Entity<ProjectCustomDatum>(entity =>
         {
             entity.HasOne(d => d.Project).WithMany(p => p.ProjectCustomData).HasConstraintName("FK_ProjectCustomData_Projects");
+        });
+
+        modelBuilder.Entity<ProjectExpense>(entity =>
+        {
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_ProjectExpenses_CreatedAt");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_ProjectExpenses_UpdatedAt");
+
+            entity.HasOne(d => d.Project).WithMany(p => p.ProjectExpenses).HasConstraintName("FK_ProjectExpenses_Projects");
         });
 
         modelBuilder.Entity<ProjectItem>(entity =>
