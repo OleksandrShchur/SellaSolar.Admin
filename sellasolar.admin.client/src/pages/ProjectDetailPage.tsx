@@ -1442,7 +1442,7 @@ export default function ProjectDetailPage() {
               onChange={(e) => setExpenseForm({ ...expenseForm, category: e.target.value })}
             />
             <TextField
-              label="Сума (₴)"
+              label="Сума ($)"
               fullWidth
               required
               value={expenseForm.amount}

@@ -215,7 +215,6 @@ export default function WarehouseDetailPage() {
             label={inventoryLabels.available}
             value={`${formatNumber(item.quantityAvailable)} ${item.unit}`}
           />
-          <DetailField label="Постачальник" value={item.supplier || '—'} />
           <DetailField label="Поріг низького запасу" value={formatNumber(item.lowStockThreshold)} />
           <DetailField fullWidth label="Примітки" value={item.notes || '—'} />
         </DetailFieldGrid>
