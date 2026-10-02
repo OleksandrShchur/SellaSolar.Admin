@@ -380,8 +380,10 @@ public class WarehouseService
             .Select(a => new
             {
                 a.WarehouseStockLotId,
+                a.Quantity,
                 a.ProjectItem.ProjectId,
-                ProjectName = a.ProjectItem.Project.Name
+                ProjectName = a.ProjectItem.Project.Name,
+                ProjectStatus = a.ProjectItem.Project.Status
             })
             .ToListAsync(ct);
 
@@ -391,7 +393,11 @@ public class WarehouseService
                 g => g.Key,
                 g => (IReadOnlyList<WarehouseLotProjectUsageDto>)g
                     .GroupBy(x => x.ProjectId)
-                    .Select(p => new WarehouseLotProjectUsageDto(p.Key, p.First().ProjectName))
+                    .Select(p => new WarehouseLotProjectUsageDto(
+                        p.Key,
+                        p.First().ProjectName,
+                        p.First().ProjectStatus,
+                        p.Sum(x => x.Quantity)))
                     .OrderBy(p => p.ProjectName)
                     .ToList());
     }

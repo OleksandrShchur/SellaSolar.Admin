@@ -152,7 +152,11 @@ public record WarehouseItemListDto(
     int UsedInProjectsCount,
     decimal QuantityToOrder);
 
-public record WarehouseLotProjectUsageDto(int ProjectId, string ProjectName);
+public record WarehouseLotProjectUsageDto(
+    int ProjectId,
+    string ProjectName,
+    string ProjectStatus,
+    decimal QuantityAllocated);
 
 public record WarehouseStockLotDto(
     int LotId,

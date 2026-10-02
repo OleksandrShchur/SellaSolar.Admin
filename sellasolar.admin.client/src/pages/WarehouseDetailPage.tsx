@@ -11,7 +11,6 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
-  Link,
   Stack,
   Table,
   TableBody,
@@ -502,19 +501,39 @@ export default function WarehouseDetailPage() {
             <Typography variant="body2" color="text.secondary">
               {inventoryLabels.deleteLotInUseHint}
             </Typography>
-            <Stack spacing={1}>
+            <Stack spacing={1.5}>
               {(lotInUse?.usedInProjects ?? []).map((p) => (
-                <Link
+                <Box
                   key={p.projectId}
                   component={RouterLink}
                   to={`/projects/${p.projectId}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  underline="hover"
-                  fontWeight={600}
+                  sx={{
+                    p: 2,
+                    borderRadius: 2,
+                    bgcolor: 'rgba(243, 235, 220, 0.55)',
+                    border: '1.5px solid',
+                    borderColor: 'divider',
+                    textDecoration: 'none',
+                    color: 'inherit',
+                    '&:hover': {
+                      boxShadow: 1,
+                      borderColor: 'primary.dark',
+                    },
+                  }}
                 >
-                  {p.projectName}
-                </Link>
+                  <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+                    <Typography fontWeight={700} flex={1} sx={{ minWidth: 0 }} noWrap>
+                      {p.projectName}
+                    </Typography>
+                    <ProjectStatusChip status={p.projectStatus} />
+                    <Typography variant="body2" fontWeight={600}>
+                      {inventoryLabels.used}: {formatNumber(p.quantityAllocated)}
+                      {item ? ` ${item.unit}` : ''}
+                    </Typography>
+                  </Stack>
+                </Box>
               ))}
             </Stack>
           </Stack>

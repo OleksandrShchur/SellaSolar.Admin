@@ -135,6 +135,8 @@ export interface WarehouseItemList {
 export interface WarehouseLotProjectUsage {
   projectId: number
   projectName: string
+  projectStatus: ProjectStatus
+  quantityAllocated: number
 }
 
 export interface WarehouseStockLot {
