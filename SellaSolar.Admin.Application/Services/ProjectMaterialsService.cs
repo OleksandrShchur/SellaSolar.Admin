@@ -8,7 +8,8 @@ using SellaSolar.Admin.Domain.Constants;
 namespace SellaSolar.Admin.Application.Services;
 
 /// <summary>
-/// Assigns warehouse materials to projects. Catalog lines soft-reserve via manual lot allocations.
+/// Assigns warehouse materials to projects. Catalog lines soft-reserve via lot allocations.
+/// With a single stock lot, free qty is auto-allocated; with 2+ lots the admin chooses manually.
 /// Completing a project requires full lot allocation and sufficient lot on-hand, then consumes stock.
 /// Non-catalog requests are fully flagged as NeedsPurchase and do not block completion.
 /// </summary>
@@ -108,9 +109,13 @@ public class ProjectMaterialsService
             throw new ValidationException(
                 $"Потрібна кількість ({request.QuantityNeeded}) менша за вже розподілені партії ({allocated}). Спочатку зменшіть розподіл партій.");
 
-        var maxFromStock = await GetUnreservedStockAsync(item.WarehouseItemId.Value, excludeProjectId: projectId, ct);
         item.QuantityNeeded = request.QuantityNeeded;
-        ApplyDerivedStockFields(item, allocated, maxFromStock);
+        await TryAutoAllocateSingleLotAsync(item, ct);
+
+        var fromStock = item.ProjectItemLotAllocations.Sum(a => a.Quantity);
+        var maxFromStock = await GetUnreservedStockAsync(item.WarehouseItemId.Value, excludeProjectId: projectId, ct);
+        ApplyDerivedStockFields(item, fromStock, maxFromStock);
+        ApplyCostFromStock(item);
         item.Project.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
 
@@ -396,7 +401,6 @@ public class ProjectMaterialsService
             throw new ConflictException(
                 "Ця позиція складу вже додана до проекту. Видаліть її або оберіть іншу.");
 
-        // Manual allocation: no auto-reserve from free stock.
         var maxFromStock = await GetUnreservedStockAsync(warehouseItemId, excludeProjectId: project.Id, ct);
         var entity = new ProjectItem
         {
@@ -412,7 +416,65 @@ public class ProjectMaterialsService
         project.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
 
+        // Single lot → auto-allocate; 2+ lots → admin chooses via «Розподілити партії».
+        await TryAutoAllocateSingleLotAsync(entity, ct);
+        var fromStock = entity.ProjectItemLotAllocations.Sum(a => a.Quantity);
+        ApplyDerivedStockFields(entity, fromStock, maxFromStock);
+        ApplyCostFromStock(entity);
+        await _db.SaveChangesAsync(ct);
+
         return await MapCatalogAsync(entity, warehouseItem, ct);
+    }
+
+    /// <summary>
+    /// When the catalog item has exactly one stock lot, allocate as much free qty as possible
+    /// toward QuantityNeeded. With 0 or 2+ lots, leave allocation to the admin.
+    /// Does nothing if the line already has allocations on a different lot.
+    /// </summary>
+    private async Task TryAutoAllocateSingleLotAsync(ProjectItem item, CancellationToken ct)
+    {
+        if (item.WarehouseItemId is null)
+            return;
+
+        var lots = await _db.WarehouseStockLots
+            .Where(l => l.WarehouseItemId == item.WarehouseItemId.Value)
+            .ToListAsync(ct);
+
+        if (lots.Count != 1)
+            return;
+
+        var lot = lots[0];
+
+        // Respect an existing multi-lot choice (should not happen when lots.Count == 1, but keep safe).
+        if (item.ProjectItemLotAllocations.Any(a => a.WarehouseStockLotId != lot.Id))
+            return;
+
+        var reservedByOthers = await GetLotReservedByOthersAsync(
+            new[] { lot.Id },
+            excludeProjectItemId: item.Id,
+            ct);
+        // Free includes this line's current allocation on the lot (excluded from reservedByOthers).
+        var freeIncludingThis = Math.Max(0, lot.QuantityOnHand - reservedByOthers.GetValueOrDefault(lot.Id));
+        var targetQty = Math.Min(item.QuantityNeeded, freeIncludingThis);
+        if (targetQty <= 0)
+            return;
+
+        var existing = item.ProjectItemLotAllocations.FirstOrDefault(a => a.WarehouseStockLotId == lot.Id);
+        if (existing is null)
+        {
+            item.ProjectItemLotAllocations.Add(new ProjectItemLotAllocation
+            {
+                ProjectItemId = item.Id,
+                WarehouseStockLotId = lot.Id,
+                Quantity = targetQty,
+                WarehouseStockLot = lot
+            });
+        }
+        else if (existing.Quantity != targetQty)
+        {
+            existing.Quantity = targetQty;
+            existing.WarehouseStockLot ??= lot;
+        }
     }
 
     private async Task<ProjectItemDto> AddNonCatalogItemAsync(
