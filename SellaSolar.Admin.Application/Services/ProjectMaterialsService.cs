@@ -9,8 +9,8 @@ namespace SellaSolar.Admin.Application.Services;
 
 /// <summary>
 /// Assigns warehouse materials to projects. Catalog lines soft-reserve via manual lot allocations.
-/// Completing a project consumes allocated lot QuantityOnHand (and catalog QuantityInStock).
-/// Non-catalog requests are fully flagged as NeedsPurchase.
+/// Completing a project requires full lot allocation and sufficient lot on-hand, then consumes stock.
+/// Non-catalog requests are fully flagged as NeedsPurchase and do not block completion.
 /// </summary>
 public class ProjectMaterialsService
 {
@@ -292,6 +292,51 @@ public class ProjectMaterialsService
         ApplyCostFromStock(item);
         item.Project.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>
+    /// Hard-blocks completing a project when catalog materials are not fully allocated
+    /// or when an allocated lot no longer has enough QuantityOnHand.
+    /// Non-catalog lines do not block completion.
+    /// </summary>
+    public void EnsureCanComplete(Project project)
+    {
+        foreach (var item in project.ProjectItems)
+        {
+            if (item.WarehouseItemId is null)
+                continue;
+
+            var name = item.WarehouseItem?.Name ?? $"#{item.Id}";
+            var allocated = item.ProjectItemLotAllocations?.Sum(a => a.Quantity) ?? 0m;
+            if (allocated < item.QuantityNeeded || item.QuantityFromStock < item.QuantityNeeded)
+            {
+                throw new ConflictException(
+                    $"Неможливо завершити проект: матеріал «{name}» не повністю розподілений по партіях " +
+                    $"({item.QuantityFromStock} з {item.QuantityNeeded}).");
+            }
+
+            if (item.ProjectItemLotAllocations is null)
+                continue;
+
+            foreach (var allocation in item.ProjectItemLotAllocations)
+            {
+                if (allocation.Quantity <= 0)
+                    continue;
+
+                if (allocation.WarehouseStockLot is null)
+                {
+                    throw new ConflictException(
+                        $"Неможливо завершити проект: для матеріалу «{name}» не знайдено партію розподілу.");
+                }
+
+                if (allocation.WarehouseStockLot.QuantityOnHand < allocation.Quantity)
+                {
+                    throw new ConflictException(
+                        $"Неможливо завершити проект: на партії недостатньо залишку для матеріалу «{name}» " +
+                        $"(потрібно {allocation.Quantity}, на партії {allocation.WarehouseStockLot.QuantityOnHand}).");
+                }
+            }
+        }
     }
 
     /// <summary>

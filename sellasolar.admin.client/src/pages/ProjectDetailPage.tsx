@@ -216,6 +216,7 @@ export default function ProjectDetailPage() {
   }
 
   const changeStatus = async (status: ProjectStatus) => {
+    setError(null)
     try {
       const updated = await projectsApi.updateStatus(projectId, status)
       setProject(updated ?? null)
@@ -459,6 +460,17 @@ export default function ProjectDetailPage() {
   }
   if (!project) return <Alert severity="error">{error ?? 'Проект не знайдено'}</Alert>
 
+  const tryComplete = () => {
+    const incomplete = project.items.some(
+      (item) => !item.isNonCatalog && item.quantityFromStock < item.quantityNeeded,
+    )
+    if (incomplete) {
+      setError(inventoryLabels.cannotCompleteIncompleteAllocations)
+      return
+    }
+    void changeStatus('Completed')
+  }
+
   const statusAction =
     project.status === 'Awaiting' ? (
       <Button variant="contained" color="primary" onClick={() => void changeStatus('InProgress')}>
@@ -473,7 +485,7 @@ export default function ProjectDetailPage() {
         >
           Повернути в очікування
         </Button>
-        <Button variant="contained" color="success" onClick={() => void changeStatus('Completed')}>
+        <Button variant="contained" color="success" onClick={tryComplete}>
           Завершити
         </Button>
       </>
@@ -1053,7 +1065,9 @@ export default function ProjectDetailPage() {
               >
                 <MenuItem value="Awaiting">Очікує</MenuItem>
                 <MenuItem value="InProgress">У роботі</MenuItem>
-                <MenuItem value="Completed">Завершено</MenuItem>
+                {editForm.status === 'Completed' && (
+                  <MenuItem value="Completed">Завершено</MenuItem>
+                )}
               </Select>
             </FormControl>
             <TextField
