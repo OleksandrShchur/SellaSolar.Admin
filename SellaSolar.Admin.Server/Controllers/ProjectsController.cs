@@ -73,6 +73,10 @@ public class ProjectsController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
+        catch (ConflictException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
     }
 
     [HttpPatch("{id:int}/status")]
@@ -92,6 +96,10 @@ public class ProjectsController : ControllerBase
         catch (ValidationException ex)
         {
             return BadRequest(new { message = ex.Message });
+        }
+        catch (ConflictException ex)
+        {
+            return Conflict(new { message = ex.Message });
         }
     }
 
