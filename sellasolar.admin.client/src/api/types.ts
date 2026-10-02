@@ -132,6 +132,11 @@ export interface WarehouseItemList {
   quantityToOrder: number
 }
 
+export interface WarehouseLotProjectUsage {
+  projectId: number
+  projectName: string
+}
+
 export interface WarehouseStockLot {
   lotId: number
   unitCost: number
@@ -141,6 +146,8 @@ export interface WarehouseStockLot {
   receivedAt: string
   supplier?: string | null
   notes?: string | null
+  /** Open projects (Awaiting / InProgress) that allocate from this lot. */
+  usedInProjects: WarehouseLotProjectUsage[]
 }
 
 export interface WarehouseItemProjectUsage {

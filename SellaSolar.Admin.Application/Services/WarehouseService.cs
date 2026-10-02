@@ -144,8 +144,9 @@ public class WarehouseService
 
         var lotIds = item.WarehouseStockLots.Select(l => l.Id).ToList();
         var reservedByLot = await GetLotReservedOpenAsync(lotIds, excludeProjectItemId: null, ct);
+        var projectsByLot = await GetLotOpenProjectsAsync(lotIds, ct);
 
-        return MapDetail(item, Available(item.QuantityInStock, reserved), reserved, reservedByLot);
+        return MapDetail(item, Available(item.QuantityInStock, reserved), reserved, reservedByLot, projectsByLot);
     }
 
     public async Task<IReadOnlyList<WarehouseStockLotDto>> GetLotsAsync(int warehouseItemId, CancellationToken ct = default)
@@ -161,8 +162,15 @@ public class WarehouseService
             .ThenByDescending(l => l.Id)
             .ToListAsync(ct);
 
-        var reservedByLot = await GetLotReservedOpenAsync(lots.Select(l => l.Id).ToList(), excludeProjectItemId: null, ct);
-        return lots.Select(l => MapLot(l, reservedByLot.GetValueOrDefault(l.Id))).ToList();
+        var lotIds = lots.Select(l => l.Id).ToList();
+        var reservedByLot = await GetLotReservedOpenAsync(lotIds, excludeProjectItemId: null, ct);
+        var projectsByLot = await GetLotOpenProjectsAsync(lotIds, ct);
+        return lots
+            .Select(l => MapLot(
+                l,
+                reservedByLot.GetValueOrDefault(l.Id),
+                projectsByLot.GetValueOrDefault(l.Id) ?? Array.Empty<WarehouseLotProjectUsageDto>()))
+            .ToList();
     }
 
     public async Task<WarehouseItemDetailDto> CreateAsync(CreateWarehouseItemRequest request, CancellationToken ct = default)
@@ -295,6 +303,43 @@ public class WarehouseService
         await _db.SaveChangesAsync(ct);
     }
 
+    /// <summary>
+    /// Deletes a stock lot when it is not allocated by any open project.
+    /// Completed-project allocation rows are removed so the FK allows delete;
+    /// <see cref="ProjectItem.CostFromStock"/> snapshots are kept.
+    /// </summary>
+    public async Task<WarehouseItemDetailDto> DeleteLotAsync(
+        int warehouseItemId,
+        int lotId,
+        CancellationToken ct = default)
+    {
+        var entity = await _db.WarehouseItems
+            .Include(w => w.WarehouseStockLots)
+            .FirstOrDefaultAsync(w => w.Id == warehouseItemId, ct)
+            ?? throw new NotFoundException($"Warehouse item {warehouseItemId} was not found.");
+
+        var lot = entity.WarehouseStockLots.FirstOrDefault(l => l.Id == lotId)
+            ?? throw new NotFoundException($"Lot {lotId} was not found.");
+
+        var openProjects = await GetLotOpenProjectsAsync([lotId], ct);
+        if (openProjects.GetValueOrDefault(lotId) is { Count: > 0 })
+            throw new ConflictException(
+                "Неможливо видалити партію, яка використовується в відкритих проектах.");
+
+        // Historical allocations (e.g. Completed) still reference the lot via FK.
+        var leftoverAllocations = await _db.ProjectItemLotAllocations
+            .Where(a => a.WarehouseStockLotId == lotId)
+            .ToListAsync(ct);
+        if (leftoverAllocations.Count > 0)
+            _db.ProjectItemLotAllocations.RemoveRange(leftoverAllocations);
+
+        entity.QuantityInStock = Math.Max(0, entity.QuantityInStock - lot.QuantityOnHand);
+        _db.WarehouseStockLots.Remove(lot);
+        await _db.SaveChangesAsync(ct);
+
+        return (await GetByIdAsync(warehouseItemId, ct))!;
+    }
+
     internal async Task<Dictionary<int, decimal>> GetLotReservedOpenAsync(
         IReadOnlyCollection<int> lotIds,
         int? excludeProjectItemId,
@@ -317,6 +362,38 @@ public class WarehouseService
             .GroupBy(a => a.WarehouseStockLotId)
             .Select(g => new { LotId = g.Key, Reserved = g.Sum(x => x.Quantity) })
             .ToDictionaryAsync(x => x.LotId, x => x.Reserved, ct);
+    }
+
+    private async Task<Dictionary<int, IReadOnlyList<WarehouseLotProjectUsageDto>>> GetLotOpenProjectsAsync(
+        IReadOnlyCollection<int> lotIds,
+        CancellationToken ct)
+    {
+        if (lotIds.Count == 0)
+            return new Dictionary<int, IReadOnlyList<WarehouseLotProjectUsageDto>>();
+
+        var rows = await _db.ProjectItemLotAllocations
+            .AsNoTracking()
+            .Where(a =>
+                lotIds.Contains(a.WarehouseStockLotId) &&
+                (a.ProjectItem.Project.Status == ProjectStatuses.Awaiting ||
+                 a.ProjectItem.Project.Status == ProjectStatuses.InProgress))
+            .Select(a => new
+            {
+                a.WarehouseStockLotId,
+                a.ProjectItem.ProjectId,
+                ProjectName = a.ProjectItem.Project.Name
+            })
+            .ToListAsync(ct);
+
+        return rows
+            .GroupBy(r => r.WarehouseStockLotId)
+            .ToDictionary(
+                g => g.Key,
+                g => (IReadOnlyList<WarehouseLotProjectUsageDto>)g
+                    .GroupBy(x => x.ProjectId)
+                    .Select(p => new WarehouseLotProjectUsageDto(p.Key, p.First().ProjectName))
+                    .OrderBy(p => p.ProjectName)
+                    .ToList());
     }
 
     private static void ValidateCatalog(string name, string category, string unit)
@@ -354,7 +431,10 @@ public class WarehouseService
             usedCount,
             quantityToOrder);
 
-    private static WarehouseStockLotDto MapLot(WarehouseStockLot lot, decimal reserved) =>
+    private static WarehouseStockLotDto MapLot(
+        WarehouseStockLot lot,
+        decimal reserved,
+        IReadOnlyList<WarehouseLotProjectUsageDto> usedInProjects) =>
         new(
             lot.Id,
             lot.UnitCost,
@@ -363,13 +443,15 @@ public class WarehouseService
             Math.Max(0, lot.QuantityOnHand - reserved),
             lot.ReceivedAt,
             lot.Supplier,
-            lot.Notes);
+            lot.Notes,
+            usedInProjects);
 
     private static WarehouseItemDetailDto MapDetail(
         WarehouseItem item,
         decimal quantityAvailable,
         decimal reserved,
-        IReadOnlyDictionary<int, decimal> reservedByLot) =>
+        IReadOnlyDictionary<int, decimal> reservedByLot,
+        IReadOnlyDictionary<int, IReadOnlyList<WarehouseLotProjectUsageDto>> projectsByLot) =>
         new(
             item.Id,
             item.Name,
@@ -384,7 +466,10 @@ public class WarehouseService
             item.WarehouseStockLots
                 .OrderByDescending(l => l.ReceivedAt)
                 .ThenByDescending(l => l.Id)
-                .Select(l => MapLot(l, reservedByLot.GetValueOrDefault(l.Id)))
+                .Select(l => MapLot(
+                    l,
+                    reservedByLot.GetValueOrDefault(l.Id),
+                    projectsByLot.GetValueOrDefault(l.Id) ?? Array.Empty<WarehouseLotProjectUsageDto>()))
                 .ToList(),
             item.ProjectItems
                 .Where(pi => ProjectStatuses.IsOpen(pi.Project.Status))

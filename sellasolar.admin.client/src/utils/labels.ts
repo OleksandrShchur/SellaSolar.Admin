@@ -124,4 +124,9 @@ export const inventoryLabels = {
   noLots: 'Партій ще немає. Додайте першу поставку.',
   editQtyBlockedHint:
     'Щоб зменшити потрібну кількість нижче розподілу — спочатку зменшіть розподіл партій.',
+  deleteLot: 'Видалити партію',
+  deleteLotConfirm: 'Видалити партію?',
+  deleteLotInUseTitle: 'Партію неможливо видалити',
+  deleteLotInUseHint:
+    'Ця партія використовується в відкритих проектах. Спочатку зніміть розподіл.',
 } as const

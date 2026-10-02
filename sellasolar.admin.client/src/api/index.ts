@@ -175,4 +175,6 @@ export const warehouseApi = {
   update: (id: number, body: unknown) =>
     apiSend<WarehouseItemDetail>(`/api/warehouse-items/${id}`, 'PUT', body),
   remove: (id: number) => apiSend<void>(`/api/warehouse-items/${id}`, 'DELETE'),
+  removeLot: (id: number, lotId: number) =>
+    apiSend<WarehouseItemDetail>(`/api/warehouse-items/${id}/lots/${lotId}`, 'DELETE'),
 }

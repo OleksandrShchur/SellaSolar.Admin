@@ -61,6 +61,23 @@ public class WarehouseItemsController : ControllerBase
         }
     }
 
+    [HttpDelete("{id:int}/lots/{lotId:int}")]
+    public async Task<ActionResult<WarehouseItemDetailDto>> DeleteLot(int id, int lotId, CancellationToken ct)
+    {
+        try
+        {
+            return Ok(await _warehouse.DeleteLotAsync(id, lotId, ct));
+        }
+        catch (NotFoundException)
+        {
+            return NotFound();
+        }
+        catch (ConflictException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+    }
+
     [HttpPost("{id:int}/receive")]
     public async Task<ActionResult<WarehouseItemDetailDto>> Receive(
         int id,

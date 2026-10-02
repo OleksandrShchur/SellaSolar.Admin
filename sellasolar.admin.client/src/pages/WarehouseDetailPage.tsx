@@ -11,6 +11,7 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
+  Link,
   Stack,
   Table,
   TableBody,
@@ -18,11 +19,13 @@ import {
   TableHead,
   TableRow,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import DeleteIcon from '@mui/icons-material/Delete'
 import { warehouseApi } from '../api'
-import type { WarehouseItemDetail } from '../api/types'
+import type { WarehouseItemDetail, WarehouseStockLot } from '../api/types'
 import { formatDateTime, formatNumber, inventoryLabels } from '../utils/labels'
 import { DetailField, DetailFieldGrid, DetailPanel } from '../components/DetailPanel'
 import { ProjectStatusChip } from '../components/StatusChips'
@@ -37,6 +40,9 @@ export default function WarehouseDetailPage() {
   const [open, setOpen] = useState(false)
   const [receiveOpen, setReceiveOpen] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [lotPendingDelete, setLotPendingDelete] = useState<WarehouseStockLot | null>(null)
+  const [lotInUse, setLotInUse] = useState<WarehouseStockLot | null>(null)
+  const [deletingLot, setDeletingLot] = useState(false)
   const [form, setForm] = useState({
     name: '',
     category: '',
@@ -153,6 +159,31 @@ export default function WarehouseDetailPage() {
     }
   }
 
+  const requestDeleteLot = (lot: WarehouseStockLot) => {
+    if ((lot.usedInProjects?.length ?? 0) > 0) {
+      setLotInUse(lot)
+      return
+    }
+    setLotPendingDelete(lot)
+  }
+
+  const confirmDeleteLot = async () => {
+    if (!lotPendingDelete) return
+    setDeletingLot(true)
+    setError(null)
+    try {
+      const updated = await warehouseApi.removeLot(itemId, lotPendingDelete.lotId)
+      setItem(updated ?? null)
+      setLotPendingDelete(null)
+    } catch (err) {
+      setLotPendingDelete(null)
+      setError(err instanceof Error ? err.message : 'Не вдалося видалити партію')
+      await load()
+    } finally {
+      setDeletingLot(false)
+    }
+  }
+
   if (!item && !error) {
     return (
       <Stack spacing={2.5}>
@@ -242,6 +273,7 @@ export default function WarehouseDetailPage() {
                   <TableCell align="right">{inventoryLabels.reserved}</TableCell>
                   <TableCell align="right">{inventoryLabels.available}</TableCell>
                   <TableCell>Постачальник</TableCell>
+                  <TableCell align="right" width={56} />
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -253,6 +285,18 @@ export default function WarehouseDetailPage() {
                     <TableCell align="right">{formatNumber(lot.quantityReserved)}</TableCell>
                     <TableCell align="right">{formatNumber(lot.quantityFree)}</TableCell>
                     <TableCell>{lot.supplier || '—'}</TableCell>
+                    <TableCell align="right">
+                      <Tooltip title={inventoryLabels.deleteLot}>
+                        <IconButton
+                          size="small"
+                          color="error"
+                          aria-label={inventoryLabels.deleteLot}
+                          onClick={() => requestDeleteLot(lot)}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -425,6 +469,59 @@ export default function WarehouseDetailPage() {
             disabled={saving || !receiveForm.quantity || receiveForm.unitCost === ''}
           >
             {inventoryLabels.receive}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(lotPendingDelete)}
+        onClose={() => !deletingLot && setLotPendingDelete(null)}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>{inventoryLabels.deleteLotConfirm}</DialogTitle>
+        <DialogActions>
+          <Button variant="text" onClick={() => setLotPendingDelete(null)} disabled={deletingLot}>
+            Скасувати
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={() => void confirmDeleteLot()}
+            disabled={deletingLot}
+          >
+            Видалити
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={Boolean(lotInUse)} onClose={() => setLotInUse(null)} fullWidth maxWidth="sm">
+        <DialogTitle>{inventoryLabels.deleteLotInUseTitle}</DialogTitle>
+        <DialogContent>
+          <Stack spacing={1.5} mt={0.5}>
+            <Typography variant="body2" color="text.secondary">
+              {inventoryLabels.deleteLotInUseHint}
+            </Typography>
+            <Stack spacing={1}>
+              {(lotInUse?.usedInProjects ?? []).map((p) => (
+                <Link
+                  key={p.projectId}
+                  component={RouterLink}
+                  to={`/projects/${p.projectId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  underline="hover"
+                  fontWeight={600}
+                >
+                  {p.projectName}
+                </Link>
+              ))}
+            </Stack>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button variant="contained" onClick={() => setLotInUse(null)}>
+            Зрозуміло
           </Button>
         </DialogActions>
       </Dialog>
