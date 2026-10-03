@@ -169,6 +169,11 @@ public class ProjectService
             ?? throw new NotFoundException($"Project {id} was not found.");
 
         var previousStatus = project.Status;
+        if (previousStatus != ProjectStatuses.Completed && request.Status == ProjectStatuses.Completed)
+        {
+            throw new ConflictException(
+                "Завершення проекту лише через кнопку «Завершити».");
+        }
 
         project.Name = request.Name.Trim();
         project.Description = request.Description;
@@ -203,6 +208,9 @@ public class ProjectService
             ?? throw new NotFoundException($"Project {id} was not found.");
 
         var previousStatus = project.Status;
+        if (previousStatus != ProjectStatuses.Completed && status == ProjectStatuses.Completed)
+            _materials.EnsureCanComplete(project);
+
         project.Status = status;
         if (status == ProjectStatuses.Completed && project.EndDate is null)
             project.EndDate = DateTime.UtcNow;

@@ -52,6 +52,13 @@ function TabPanel({ value, index, children }: TabPanelProps) {
   return <Box>{children}</Box>
 }
 
+/** Split unallocated qty into free-stock-to-allocate vs purchase shortfall (matches warehouse «Замовити»). */
+function materialCoverage(item: ProjectItem) {
+  const toOrder = Math.max(0, item.quantityNeeded - item.quantityAvailable)
+  const unallocated = Math.max(0, item.quantityToPurchase - toOrder)
+  return { toOrder, unallocated }
+}
+
 export default function ProjectDetailPage() {
   const { id } = useParams()
   const projectId = Number(id)
@@ -216,6 +223,7 @@ export default function ProjectDetailPage() {
   }
 
   const changeStatus = async (status: ProjectStatus) => {
+    setError(null)
     try {
       const updated = await projectsApi.updateStatus(projectId, status)
       setProject(updated ?? null)
@@ -459,6 +467,17 @@ export default function ProjectDetailPage() {
   }
   if (!project) return <Alert severity="error">{error ?? 'Проект не знайдено'}</Alert>
 
+  const tryComplete = () => {
+    const incomplete = project.items.some(
+      (item) => !item.isNonCatalog && item.quantityFromStock < item.quantityNeeded,
+    )
+    if (incomplete) {
+      setError(inventoryLabels.cannotCompleteIncompleteAllocations)
+      return
+    }
+    void changeStatus('Completed')
+  }
+
   const statusAction =
     project.status === 'Awaiting' ? (
       <Button variant="contained" color="primary" onClick={() => void changeStatus('InProgress')}>
@@ -473,7 +492,7 @@ export default function ProjectDetailPage() {
         >
           Повернути в очікування
         </Button>
-        <Button variant="contained" color="success" onClick={() => void changeStatus('Completed')}>
+        <Button variant="contained" color="success" onClick={tryComplete}>
           Завершити
         </Button>
       </>
@@ -641,21 +660,25 @@ export default function ProjectDetailPage() {
               )}
             </Stack>
             <Stack spacing={1.5}>
-              {project.items.map((item) => (
+              {project.items.map((item) => {
+                const { toOrder, unallocated } = materialCoverage(item)
+                const showPurchaseHint = toOrder > 0
+                const showAllocHint = !item.isNonCatalog && unallocated > 0
+                return (
                 <Box
                   key={item.id}
                   sx={{
                     p: 2,
                     borderRadius: 2,
                     border: '1.5px solid',
-                    borderColor: item.needsPurchase
+                    borderColor: showPurchaseHint
                       ? 'warning.main'
-                      : !item.isNonCatalog && item.quantityToPurchase > 0
+                      : showAllocHint
                         ? 'info.main'
                         : 'divider',
-                    bgcolor: item.needsPurchase
+                    bgcolor: showPurchaseHint
                       ? 'rgba(237, 108, 2, 0.06)'
-                      : !item.isNonCatalog && item.quantityToPurchase > 0
+                      : showAllocHint
                         ? 'rgba(2, 136, 209, 0.06)'
                         : 'rgba(243, 235, 220, 0.45)',
                     '&:hover': { boxShadow: 1, borderColor: 'primary.dark' },
@@ -695,21 +718,27 @@ export default function ProjectDetailPage() {
                           <>
                             {inventoryLabels.needed}: {formatNumber(item.quantityNeeded)} ·{' '}
                             {inventoryLabels.fromStock}: {formatNumber(item.quantityFromStock)}
-                            {item.quantityToPurchase > 0 && (
+                            {unallocated > 0 && (
                               <>
                                 {' '}
                                 ·{' '}
                                 <Box
                                   component="span"
-                                  sx={{
-                                    color: item.needsPurchase ? 'warning.dark' : 'info.dark',
-                                    fontWeight: 700,
-                                  }}
+                                  sx={{ color: 'info.dark', fontWeight: 700 }}
                                 >
-                                  {item.needsPurchase
-                                    ? inventoryLabels.toOrder
-                                    : inventoryLabels.unallocated}
-                                  : {formatNumber(item.quantityToPurchase)}
+                                  {inventoryLabels.unallocated}: {formatNumber(unallocated)}
+                                </Box>
+                              </>
+                            )}
+                            {toOrder > 0 && (
+                              <>
+                                {' '}
+                                ·{' '}
+                                <Box
+                                  component="span"
+                                  sx={{ color: 'warning.dark', fontWeight: 700 }}
+                                >
+                                  {inventoryLabels.toOrder}: {formatNumber(toOrder)}
                                 </Box>
                               </>
                             )}
@@ -729,15 +758,12 @@ export default function ProjectDetailPage() {
                         )}
                       </Typography>
                     </Box>
-                    {project.status !== 'Completed' && item.needsPurchase && (
+                    {project.status !== 'Completed' && showPurchaseHint && (
                       <Chip color="warning" label={inventoryLabels.needsPurchase} />
                     )}
-                    {project.status !== 'Completed' &&
-                      !item.isNonCatalog &&
-                      !item.needsPurchase &&
-                      item.quantityToPurchase > 0 && (
-                        <Chip color="info" label={inventoryLabels.needsAllocation} />
-                      )}
+                    {project.status !== 'Completed' && showAllocHint && (
+                      <Chip color="info" label={inventoryLabels.needsAllocation} />
+                    )}
                     {project.status !== 'Completed' && !item.isNonCatalog && (
                       <Button
                         size="small"
@@ -770,7 +796,8 @@ export default function ProjectDetailPage() {
                     )}
                   </Stack>
                 </Box>
-              ))}
+                )
+              })}
               {project.items.length === 0 && (
                 <Typography color="text.secondary">Матеріали ще не додано</Typography>
               )}
@@ -1053,7 +1080,9 @@ export default function ProjectDetailPage() {
               >
                 <MenuItem value="Awaiting">Очікує</MenuItem>
                 <MenuItem value="InProgress">У роботі</MenuItem>
-                <MenuItem value="Completed">Завершено</MenuItem>
+                {editForm.status === 'Completed' && (
+                  <MenuItem value="Completed">Завершено</MenuItem>
+                )}
               </Select>
             </FormControl>
             <TextField
