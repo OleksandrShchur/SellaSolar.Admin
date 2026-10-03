@@ -5,6 +5,7 @@ import {
   Box,
   Button,
   Chip,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -13,6 +14,9 @@ import {
   IconButton,
   InputLabel,
   Link,
+  List,
+  ListItem,
+  ListItemText,
   MenuItem,
   Select,
   Stack,
@@ -22,10 +26,14 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material'
 import DeleteIcon from '@mui/icons-material/Delete'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import DownloadIcon from '@mui/icons-material/Download'
+import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined'
 import { projectsApi, warehouseApi, usersApi } from '../api'
 import type {
   ProjectDetail,
@@ -65,6 +73,8 @@ export default function ProjectDetailPage() {
   const navigate = useNavigate()
   const { hasRole } = useAuth()
   const canManageUsers = hasRole('Admin')
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
   const [project, setProject] = useState<ProjectDetail | null>(null)
   const [tab, setTab] = useState(0)
@@ -126,6 +136,14 @@ export default function ProjectDetailPage() {
   })
   const [expenseSaving, setExpenseSaving] = useState(false)
 
+  const [reportBlockedOpen, setReportBlockedOpen] = useState(false)
+  const [reportBlockedMessage, setReportBlockedMessage] = useState<string | null>(null)
+  const [reportBlockedItems, setReportBlockedItems] = useState<string[]>([])
+  const [reportPreviewOpen, setReportPreviewOpen] = useState(false)
+  const [reportPreviewUrl, setReportPreviewUrl] = useState<string | null>(null)
+  const [reportFileName, setReportFileName] = useState('nakladna.pdf')
+  const [reportGenerating, setReportGenerating] = useState(false)
+
   const load = async () => {
     setLoading(true)
     setError(null)
@@ -143,6 +161,12 @@ export default function ProjectDetailPage() {
     if (!Number.isFinite(projectId)) return
     void load()
   }, [projectId])
+
+  useEffect(() => {
+    return () => {
+      if (reportPreviewUrl) URL.revokeObjectURL(reportPreviewUrl)
+    }
+  }, [reportPreviewUrl])
 
   const availableWorkers = useMemo(() => {
     if (!project) return []
@@ -495,6 +519,47 @@ export default function ProjectDetailPage() {
     void changeStatus('Completed')
   }
 
+  const closeReportPreview = () => {
+    setReportPreviewOpen(false)
+    if (reportPreviewUrl) {
+      URL.revokeObjectURL(reportPreviewUrl)
+      setReportPreviewUrl(null)
+    }
+  }
+
+  const handleGenerateReport = async () => {
+    setError(null)
+    setReportGenerating(true)
+    try {
+      const readiness = await projectsApi.reportReadiness(projectId)
+      if (!readiness.canGenerate) {
+        setReportBlockedMessage(readiness.message ?? inventoryLabels.generateReportBlockedHint)
+        setReportBlockedItems(readiness.blockingItems ?? [])
+        setReportBlockedOpen(true)
+        return
+      }
+
+      const { blob, fileName } = await projectsApi.generateReport(projectId)
+      if (reportPreviewUrl) URL.revokeObjectURL(reportPreviewUrl)
+      const url = URL.createObjectURL(blob)
+      setReportPreviewUrl(url)
+      setReportFileName(fileName ?? `nakladna-project-${projectId}.pdf`)
+      setReportPreviewOpen(true)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не вдалося згенерувати накладну')
+    } finally {
+      setReportGenerating(false)
+    }
+  }
+
+  const downloadReport = () => {
+    if (!reportPreviewUrl) return
+    const anchor = document.createElement('a')
+    anchor.href = reportPreviewUrl
+    anchor.download = reportFileName
+    anchor.click()
+  }
+
   const statusAction =
     project.status === 'Awaiting' ? (
       <Button variant="contained" color="primary" onClick={() => void changeStatus('InProgress')}>
@@ -548,6 +613,17 @@ export default function ProjectDetailPage() {
           </Box>
         </Stack>
         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ flexShrink: 0 }}>
+          <Button
+            variant="outlined"
+            color="primary"
+            startIcon={
+              reportGenerating ? <CircularProgress size={16} color="inherit" /> : <ReceiptLongOutlinedIcon />
+            }
+            onClick={() => void handleGenerateReport()}
+            disabled={reportGenerating}
+          >
+            {reportGenerating ? inventoryLabels.generateReportGenerating : inventoryLabels.generateReport}
+          </Button>
           <Button variant="outlined" color="primary" onClick={openEdit}>
             Редагувати
           </Button>
@@ -1554,6 +1630,90 @@ export default function ProjectDetailPage() {
             onClick={() => void confirmRemoveItem()}
           >
             {deletingItem ? 'Видалення…' : 'Видалити'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={reportBlockedOpen}
+        onClose={() => setReportBlockedOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>{inventoryLabels.generateReportBlockedTitle}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary">
+            {reportBlockedMessage ?? inventoryLabels.generateReportBlockedHint}
+          </Typography>
+          {reportBlockedItems.length > 0 && (
+            <Box mt={2}>
+              <Typography variant="subtitle2" fontWeight={700} gutterBottom>
+                {inventoryLabels.generateReportBlockedItems}
+              </Typography>
+              <List dense disablePadding>
+                {reportBlockedItems.map((name) => (
+                  <ListItem key={name} disableGutters sx={{ py: 0.25 }}>
+                    <ListItemText primary={`• ${name}`} primaryTypographyProps={{ variant: 'body2' }} />
+                  </ListItem>
+                ))}
+              </List>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button variant="contained" color="primary" onClick={() => setReportBlockedOpen(false)}>
+            {inventoryLabels.generateReportClose}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={reportPreviewOpen}
+        onClose={closeReportPreview}
+        fullWidth
+        maxWidth={isMobile ? 'sm' : 'md'}
+      >
+        <DialogTitle>{inventoryLabels.generateReportTitle}</DialogTitle>
+        <DialogContent sx={{ pt: 1 }}>
+          {isMobile ? (
+            <Alert severity="info">
+              {inventoryLabels.generateReportPreviewUnavailable}
+            </Alert>
+          ) : (
+            <>
+              <Typography variant="body2" color="text.secondary" mb={1.5}>
+                {inventoryLabels.generateReportPreview}
+              </Typography>
+              {reportPreviewUrl ? (
+                <Box
+                  component="iframe"
+                  title={inventoryLabels.generateReportPreview}
+                  src={reportPreviewUrl}
+                  sx={{
+                    width: '100%',
+                    height: 640,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    borderRadius: 1,
+                    bgcolor: 'background.paper',
+                  }}
+                />
+              ) : null}
+            </>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 2, pb: 2, gap: 1 }}>
+          <Button variant="text" color="primary" onClick={closeReportPreview}>
+            {inventoryLabels.generateReportClose}
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<DownloadIcon />}
+            onClick={downloadReport}
+            disabled={!reportPreviewUrl}
+          >
+            {inventoryLabels.generateReportDownload}
           </Button>
         </DialogActions>
       </Dialog>

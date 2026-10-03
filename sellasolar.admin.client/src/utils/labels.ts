@@ -128,6 +128,18 @@ export const inventoryLabels = {
     'Щоб зменшити потрібну кількість нижче розподілу — спочатку зменшіть розподіл партій.',
   cannotCompleteIncompleteAllocations:
     'Неможливо завершити: розподіліть усі матеріали зі складу по партіях.',
+  generateReport: 'Згенерувати накладну',
+  generateReportTitle: 'Накладна проєкту',
+  generateReportBlockedTitle: 'Накладну ще не можна згенерувати',
+  generateReportBlockedHint:
+    'Не всі матеріали закуплені та розподілені по партіях, або проєкт не в статусі «У роботі» / «Завершено».',
+  generateReportBlockedItems: 'Проблемні позиції:',
+  generateReportPreview: 'Попередній перегляд',
+  generateReportPreviewUnavailable:
+    'У мобільному браузері попередній перегляд недоступний. Натисніть «Завантажити PDF», щоб відкрити накладну.',
+  generateReportDownload: 'Завантажити PDF',
+  generateReportGenerating: 'Генерація…',
+  generateReportClose: 'Закрити',
   deleteLot: 'Видалити партію',
   deleteLotConfirm: 'Видалити партію?',
   deleteLotInUseTitle: 'Партію неможливо видалити',

@@ -93,6 +93,30 @@ export async function apiUpload<T>(url: string, formData: FormData): Promise<T> 
   return handleResponse<T>(response)
 }
 
+/** Fetches a binary response (PDF, etc.) with auth cookies. */
+export async function apiGetBlob(url: string): Promise<{ blob: Blob; fileName: string | null }> {
+  await ensureCsrfToken()
+  const response = await fetch(url, { credentials: 'include' })
+  if (response.status === 401) {
+    clearCsrfToken()
+    const message = await parseError(response)
+    onUnauthorized?.(message || 'Сесію завершено. Увійдіть знову.')
+    throw new Error(message || 'Сесію завершено. Увійдіть знову.')
+  }
+  if (!response.ok) throw new Error(await parseError(response))
+
+  const disposition = response.headers.get('Content-Disposition')
+  let fileName: string | null = null
+  if (disposition) {
+    const utfMatch = /filename\*=UTF-8''([^;]+)/i.exec(disposition)
+    const plainMatch = /filename="?([^";]+)"?/i.exec(disposition)
+    if (utfMatch?.[1]) fileName = decodeURIComponent(utfMatch[1])
+    else if (plainMatch?.[1]) fileName = plainMatch[1]
+  }
+
+  return { blob: await response.blob(), fileName }
+}
+
 /** Login does not require CSRF header (exempt on server). */
 export async function apiLogin<T>(url: string, body: unknown): Promise<T> {
   await ensureCsrfToken()
