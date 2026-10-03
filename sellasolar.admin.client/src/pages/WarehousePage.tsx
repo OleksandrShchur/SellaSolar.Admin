@@ -75,6 +75,7 @@ export default function WarehousePage() {
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
+  const [promotingId, setPromotingId] = useState<number | null>(null)
 
   const load = async () => {
     setLoading(true)
@@ -199,6 +200,19 @@ export default function WarehousePage() {
     }
   }
 
+  const addToCatalog = async (projectItemId: number) => {
+    setPromotingId(projectItemId)
+    setError(null)
+    try {
+      await warehouseApi.addPurchaseRequestToCatalog(projectItemId)
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не вдалося додати в каталог')
+    } finally {
+      setPromotingId(null)
+    }
+  }
+
   const showOrderMode = stockFilter === 'order'
   const showPurchaseRequests = stockFilter !== 'low' && purchaseRequests.length > 0
 
@@ -308,47 +322,75 @@ export default function WarehousePage() {
       {showPurchaseRequests && (
         <Box sx={{ p: panelPad, ...surfaceSx }}>
           <Typography variant="subtitle1" fontWeight={800} mb={1.5}>
-            Запити поза каталогом
+            {inventoryLabels.purchaseRequestsTitle}
           </Typography>
           <Stack spacing={1.25}>
-            {purchaseRequests.map((req) => (
-              <Box
-                key={req.projectItemId}
-                sx={{
-                  p: 1.75,
-                  borderRadius: 2,
-                  border: '1.5px solid',
-                  borderColor: 'error.light',
-                  bgcolor: 'rgba(211, 47, 47, 0.04)',
-                }}
-              >
-                <Stack
-                  direction={{ xs: 'column', sm: 'row' }}
-                  spacing={1}
-                  alignItems={{ sm: 'center' }}
-                  justifyContent="space-between"
+            {purchaseRequests.map((req) => {
+              const inCatalog = req.warehouseItemId != null
+              return (
+                <Box
+                  key={req.projectItemId}
+                  sx={{
+                    p: 1.75,
+                    borderRadius: 2,
+                    border: '1.5px solid',
+                    borderColor: 'error.light',
+                    bgcolor: 'rgba(211, 47, 47, 0.04)',
+                  }}
                 >
-                  <Box>
-                    <Typography fontWeight={700}>
-                      {req.name}{' '}
-                      <Typography component="span" color="text.secondary">
-                        ({req.category}, {req.unit})
+                  <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    spacing={1}
+                    alignItems={{ sm: 'center' }}
+                    justifyContent="space-between"
+                  >
+                    <Box>
+                      <Typography fontWeight={700}>
+                        {req.name}{' '}
+                        <Typography component="span" color="text.secondary">
+                          ({req.category}, {req.unit})
+                        </Typography>
                       </Typography>
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Проект: {req.projectName} · {statusLabel(req.projectStatus)} ·{' '}
-                      {inventoryLabels.toOrder}: {formatNumber(req.quantityToPurchase)} {req.unit}
-                    </Typography>
-                  </Box>
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <Chip size="small" color="error" label={inventoryLabels.notInWarehouse} />
-                    <Button size="small" onClick={() => navigate(`/projects/${req.projectId}`)}>
-                      Відкрити проект
-                    </Button>
+                      <Typography variant="body2" color="text.secondary">
+                        Проект: {req.projectName} · {statusLabel(req.projectStatus)} ·{' '}
+                        {inventoryLabels.toOrder}: {formatNumber(req.quantityToPurchase)} {req.unit}
+                      </Typography>
+                    </Box>
+                    <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+                      <Chip
+                        size="small"
+                        color="error"
+                        label={
+                          inCatalog ? inventoryLabels.needsPurchase : inventoryLabels.notInWarehouse
+                        }
+                      />
+                      {!inCatalog && (
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          disabled={promotingId === req.projectItemId}
+                          onClick={() => void addToCatalog(req.projectItemId)}
+                        >
+                          {inventoryLabels.addToCatalog}
+                        </Button>
+                      )}
+                      {inCatalog && (
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={() => navigate(`/warehouse/${req.warehouseItemId}`)}
+                        >
+                          Відкрити на складі
+                        </Button>
+                      )}
+                      <Button size="small" onClick={() => navigate(`/projects/${req.projectId}`)}>
+                        Відкрити проект
+                      </Button>
+                    </Stack>
                   </Stack>
-                </Stack>
-              </Box>
-            ))}
+                </Box>
+              )
+            })}
           </Stack>
         </Box>
       )}

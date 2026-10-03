@@ -100,24 +100,41 @@ public class WarehouseService
     {
         var openStatuses = new[] { ProjectStatuses.Awaiting, ProjectStatuses.InProgress };
 
-        return await _db.ProjectItems
+        // Include legacy outside-catalog lines and catalog lines that still need purchase
+        // (e.g. qty 0 items created via «Новий матеріал»).
+        var rows = await _db.ProjectItems
             .AsNoTracking()
             .Where(pi =>
-                pi.WarehouseItemId == null &&
                 pi.NeedsPurchase &&
                 openStatuses.Contains(pi.Project.Status))
-            .OrderBy(pi => pi.RequestedName)
-            .ThenBy(pi => pi.Project.Name)
-            .Select(pi => new NonCatalogPurchaseRequestDto(
+            .Select(pi => new
+            {
                 pi.Id,
                 pi.ProjectId,
-                pi.Project.Name,
-                pi.Project.Status,
-                pi.RequestedName!,
-                pi.RequestedCategory!,
-                pi.RequestedUnit!,
-                pi.QuantityToPurchase))
+                ProjectName = pi.Project.Name,
+                ProjectStatus = pi.Project.Status,
+                Name = pi.WarehouseItem != null ? pi.WarehouseItem.Name : pi.RequestedName!,
+                Category = pi.WarehouseItem != null ? pi.WarehouseItem.Category : pi.RequestedCategory!,
+                Unit = pi.WarehouseItem != null ? pi.WarehouseItem.Unit : pi.RequestedUnit!,
+                pi.QuantityToPurchase,
+                pi.WarehouseItemId
+            })
             .ToListAsync(ct);
+
+        return rows
+            .OrderBy(r => r.Name)
+            .ThenBy(r => r.ProjectName)
+            .Select(r => new NonCatalogPurchaseRequestDto(
+                r.Id,
+                r.ProjectId,
+                r.ProjectName,
+                r.ProjectStatus,
+                r.Name,
+                r.Category,
+                r.Unit,
+                r.QuantityToPurchase,
+                r.WarehouseItemId))
+            .ToList();
     }
 
     public async Task<IReadOnlyList<string>> GetCategoriesAsync(CancellationToken ct = default) =>

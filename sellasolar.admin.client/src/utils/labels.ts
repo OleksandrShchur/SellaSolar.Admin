@@ -97,6 +97,8 @@ export const formatMoney = (value?: number | null) => {
 }
 
 export const inventoryLabels = {
+  addToCatalog: 'Додати в каталог',
+  purchaseRequestsTitle: 'Запити на закупівлю',
   needsPurchase: 'Потрібно закупіти',
   needsAllocation: 'Потрібно розподілити',
   needsOrder: 'Потрібно замовити',

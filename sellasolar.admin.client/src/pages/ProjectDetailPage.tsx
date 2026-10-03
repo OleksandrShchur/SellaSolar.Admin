@@ -1171,7 +1171,8 @@ export default function ProjectDetailPage() {
                   {availableWarehouseItems.map((item) => (
                     <MenuItem key={item.id} value={item.id}>
                       {item.name} ({inventoryLabels.available}:{' '}
-                      {formatNumber(item.quantityAvailable)} {item.unit})
+                      {formatNumber(item.quantityAvailable)} {item.unit}
+                      {item.quantityAvailable <= 0 ? ` · ${inventoryLabels.needsPurchase}` : ''})
                     </MenuItem>
                   ))}
                 </Select>
@@ -1212,7 +1213,7 @@ export default function ProjectDetailPage() {
             <Typography variant="body2" color="text.secondary">
               {itemMode === 'catalog'
                 ? 'Після додавання розподіліть партії вручну («Розподілити партії»). Без розподілу весь обсяг буде «Потрібно закупіти». Списання зі складу — лише після завершення проекту.'
-                : 'Матеріал поза каталогом буде повністю позначено як «Потрібно закупіти» і з’явиться на складі у фільтрі «Потрібно замовити».'}
+                : 'Новий матеріал з’явиться в каталозі складу з кількістю 0 (якщо ще немає з такою назвою), буде позначено як «Потрібно закупіти» і стане доступним для інших проектів у списку «Зі складу».'}
             </Typography>
           </Stack>
         </DialogContent>
