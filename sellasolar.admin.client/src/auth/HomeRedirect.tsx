@@ -6,8 +6,5 @@ export default function HomeRedirect() {
   if (hasRole('Worker') && !hasRole('Admin')) {
     return <Navigate to="/my-jobs" replace />
   }
-  if (hasRole('Admin')) {
-    return <Navigate to="/users" replace />
-  }
   return <Navigate to="/projects" replace />
 }

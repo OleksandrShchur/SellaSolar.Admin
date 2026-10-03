@@ -38,12 +38,16 @@ import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined
 import { usersApi } from '../api'
 import type { AppRole, UserListItem, WorkerType } from '../api/types'
 import { appRoleLabel, formatPhone } from '../utils/labels'
+import ConfirmDialog from '../components/ConfirmDialog'
 import RowActionsMenu, { type RowActionItem } from '../components/RowActionsMenu'
 import { RoleChip, UserStatusChip, workerTypeDisplay } from '../components/StatusChips'
 import { surfaceSx, panelPad, dataGridSx } from '../components/DetailPanel'
 
 type RoleFilter = '' | 'Admin' | 'Worker'
 type StatusFilter = 'active' | 'blocked' | 'inactive'
+type PendingUserAction =
+  | { kind: 'deactivate'; user: UserListItem }
+  | { kind: 'unblock'; user: UserListItem }
 
 const roles: AppRole[] = ['Admin', 'Worker']
 
@@ -91,6 +95,8 @@ export default function UsersPage() {
   const [resetUserId, setResetUserId] = useState<string | null>(null)
   const [newPassword, setNewPassword] = useState('')
   const [saving, setSaving] = useState(false)
+  const [pendingAction, setPendingAction] = useState<PendingUserAction | null>(null)
+  const [confirmingAction, setConfirmingAction] = useState(false)
 
   const load = async () => {
     setLoading(true)
@@ -149,21 +155,22 @@ export default function UsersPage() {
     }
   }
 
-  const deactivate = async (id: string) => {
+  const confirmPendingAction = async () => {
+    if (!pendingAction) return
+    setConfirmingAction(true)
+    setError(null)
     try {
-      await usersApi.deactivate(id)
+      if (pendingAction.kind === 'deactivate') {
+        await usersApi.deactivate(pendingAction.user.id)
+      } else {
+        await usersApi.unblock(pendingAction.user.id)
+      }
+      setPendingAction(null)
       await load()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Помилка')
-    }
-  }
-
-  const unblock = async (id: string) => {
-    try {
-      await usersApi.unblock(id)
-      await load()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Помилка')
+    } finally {
+      setConfirmingAction(false)
     }
   }
 
@@ -190,7 +197,7 @@ export default function UsersPage() {
         key: 'unblock',
         label: 'Розблокувати',
         icon: <LockOpenOutlinedIcon fontSize="small" />,
-        onClick: () => void unblock(row.id),
+        onClick: () => setPendingAction({ kind: 'unblock', user: row }),
         tone: 'warning',
       })
     }
@@ -201,7 +208,7 @@ export default function UsersPage() {
           key: 'deactivate',
           label: 'Деактивувати',
           icon: <PersonOffOutlinedIcon fontSize="small" />,
-          onClick: () => void deactivate(row.id),
+          onClick: () => setPendingAction({ kind: 'deactivate', user: row }),
           tone: 'danger',
         })
       }
@@ -667,6 +674,30 @@ export default function UsersPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <ConfirmDialog
+        open={Boolean(pendingAction)}
+        title={
+          pendingAction?.kind === 'deactivate'
+            ? 'Деактивувати співробітника?'
+            : 'Розблокувати співробітника?'
+        }
+        message={
+          pendingAction
+            ? pendingAction.kind === 'deactivate'
+              ? `Деактивувати «${pendingAction.user.fullName}»?`
+              : `Розблокувати «${pendingAction.user.fullName}»?`
+            : null
+        }
+        confirmLabel={pendingAction?.kind === 'deactivate' ? 'Деактивувати' : 'Розблокувати'}
+        confirmingLabel={
+          pendingAction?.kind === 'deactivate' ? 'Деактивація…' : 'Розблокування…'
+        }
+        confirmColor={pendingAction?.kind === 'deactivate' ? 'error' : 'warning'}
+        confirming={confirmingAction}
+        onCancel={() => setPendingAction(null)}
+        onConfirm={() => void confirmPendingAction()}
+      />
     </Stack>
   )
 }

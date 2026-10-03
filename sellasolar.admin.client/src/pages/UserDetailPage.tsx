@@ -22,10 +22,13 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import { usersApi } from '../api'
 import type { AppRole, UserListItem, WorkerType } from '../api/types'
 import { appRoleLabel, formatPhone, toTelHref } from '../utils/labels'
+import ConfirmDialog from '../components/ConfirmDialog'
 import { DetailField, DetailFieldGrid, DetailPanel } from '../components/DetailPanel'
 import { UserStatusChip, workerTypeDisplay } from '../components/StatusChips'
 
 const roles: AppRole[] = ['Admin', 'Worker']
+
+type PendingUserAction = 'deactivate' | 'unblock'
 
 function PhoneLink({ phone }: { phone?: string | null }) {
   const href = toTelHref(phone)
@@ -54,6 +57,8 @@ export default function UserDetailPage() {
 
   const [resetOpen, setResetOpen] = useState(false)
   const [newPassword, setNewPassword] = useState('')
+  const [pendingAction, setPendingAction] = useState<PendingUserAction | null>(null)
+  const [confirmingAction, setConfirmingAction] = useState(false)
 
   const load = async () => {
     if (!id) return
@@ -126,23 +131,22 @@ export default function UserDetailPage() {
     }
   }
 
-  const deactivate = async () => {
-    if (!user) return
+  const confirmPendingAction = async () => {
+    if (!user || !pendingAction) return
+    setConfirmingAction(true)
+    setError(null)
     try {
-      await usersApi.deactivate(user.id)
+      if (pendingAction === 'deactivate') {
+        await usersApi.deactivate(user.id)
+      } else {
+        await usersApi.unblock(user.id)
+      }
+      setPendingAction(null)
       await load()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Помилка')
-    }
-  }
-
-  const unblock = async () => {
-    if (!user) return
-    try {
-      await usersApi.unblock(user.id)
-      await load()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Помилка')
+    } finally {
+      setConfirmingAction(false)
     }
   }
 
@@ -194,12 +198,20 @@ export default function UserDetailPage() {
             Скинути пароль
           </Button>
           {user.isBlocked && (
-            <Button color="warning" variant="contained" onClick={() => void unblock()}>
+            <Button
+              color="warning"
+              variant="contained"
+              onClick={() => setPendingAction('unblock')}
+            >
               Розблокувати
             </Button>
           )}
           {user.isActive && user.role === 'Worker' && (
-            <Button color="error" variant="outlined" onClick={() => void deactivate()}>
+            <Button
+              color="error"
+              variant="outlined"
+              onClick={() => setPendingAction('deactivate')}
+            >
               Деактивувати
             </Button>
           )}
@@ -325,6 +337,26 @@ export default function UserDetailPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <ConfirmDialog
+        open={Boolean(pendingAction)}
+        title={
+          pendingAction === 'deactivate'
+            ? 'Деактивувати співробітника?'
+            : 'Розблокувати співробітника?'
+        }
+        message={
+          pendingAction === 'deactivate'
+            ? `Деактивувати «${user.fullName}»?`
+            : `Розблокувати «${user.fullName}»?`
+        }
+        confirmLabel={pendingAction === 'deactivate' ? 'Деактивувати' : 'Розблокувати'}
+        confirmingLabel={pendingAction === 'deactivate' ? 'Деактивація…' : 'Розблокування…'}
+        confirmColor={pendingAction === 'deactivate' ? 'error' : 'warning'}
+        confirming={confirmingAction}
+        onCancel={() => setPendingAction(null)}
+        onConfirm={() => void confirmPendingAction()}
+      />
     </Stack>
   )
 }
