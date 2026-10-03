@@ -161,7 +161,7 @@ public class ProjectReportService
 
         var brand = Color.FromHex(BrandOrange);
         var grandTotal = lines.Sum(l => l.Total);
-        var dateLabel = FormatUkrainianDate(generatedAt);
+        var dateLabel = FormatWorkDateRange(project, generatedAt);
 
         return Document.Create(container =>
         {
@@ -312,6 +312,25 @@ public class ProjectReportService
         if (string.IsNullOrWhiteSpace(unit) || unit.Equals("шт", StringComparison.OrdinalIgnoreCase))
             return qty;
         return unit is "м" or "м." ? $"{qty}{unit}" : $"{qty} {unit}";
+    }
+
+    private static string FormatWorkDateRange(Project project, DateTime today)
+    {
+        var start = (project.StartDate ?? project.CreatedAt).Date;
+        var end = project.Status == ProjectStatuses.Completed
+            ? (project.EndDate ?? today).Date
+            : today.Date;
+
+        if (end < start)
+            end = start;
+
+        if (start == end)
+            return FormatUkrainianDate(start);
+
+        if (start.Year == end.Year)
+            return $"{start.Day} {UkMonths[start.Month - 1]} — {end.Day} {UkMonths[end.Month - 1]} {end.Year}";
+
+        return $"{FormatUkrainianDate(start)} — {FormatUkrainianDate(end)}";
     }
 
     private static string FormatUkrainianDate(DateTime date)
