@@ -135,6 +135,8 @@ export const inventoryLabels = {
     'Не всі матеріали закуплені та розподілені по партіях, або проєкт не в статусі «У роботі» / «Завершено».',
   generateReportBlockedItems: 'Проблемні позиції:',
   generateReportPreview: 'Попередній перегляд',
+  generateReportPreviewUnavailable:
+    'У мобільному браузері попередній перегляд недоступний. Натисніть «Завантажити PDF», щоб відкрити накладну.',
   generateReportDownload: 'Завантажити PDF',
   generateReportGenerating: 'Генерація…',
   generateReportClose: 'Закрити',

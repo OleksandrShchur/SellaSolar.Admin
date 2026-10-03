@@ -26,6 +26,8 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material'
 import DeleteIcon from '@mui/icons-material/Delete'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
@@ -71,6 +73,8 @@ export default function ProjectDetailPage() {
   const navigate = useNavigate()
   const { hasRole } = useAuth()
   const canManageUsers = hasRole('Admin')
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
   const [project, setProject] = useState<ProjectDetail | null>(null)
   const [tab, setTab] = useState(0)
@@ -1667,31 +1671,39 @@ export default function ProjectDetailPage() {
         open={reportPreviewOpen}
         onClose={closeReportPreview}
         fullWidth
-        maxWidth="md"
+        maxWidth={isMobile ? 'sm' : 'md'}
       >
         <DialogTitle>{inventoryLabels.generateReportTitle}</DialogTitle>
         <DialogContent sx={{ pt: 1 }}>
-          <Typography variant="body2" color="text.secondary" mb={1.5}>
-            {inventoryLabels.generateReportPreview}
-          </Typography>
-          {reportPreviewUrl ? (
-            <Box
-              component="iframe"
-              title={inventoryLabels.generateReportPreview}
-              src={reportPreviewUrl}
-              sx={{
-                width: '100%',
-                height: { xs: 420, sm: 640 },
-                border: '1px solid',
-                borderColor: 'divider',
-                borderRadius: 1,
-                bgcolor: 'background.paper',
-              }}
-            />
-          ) : null}
+          {isMobile ? (
+            <Alert severity="info">
+              {inventoryLabels.generateReportPreviewUnavailable}
+            </Alert>
+          ) : (
+            <>
+              <Typography variant="body2" color="text.secondary" mb={1.5}>
+                {inventoryLabels.generateReportPreview}
+              </Typography>
+              {reportPreviewUrl ? (
+                <Box
+                  component="iframe"
+                  title={inventoryLabels.generateReportPreview}
+                  src={reportPreviewUrl}
+                  sx={{
+                    width: '100%',
+                    height: 640,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    borderRadius: 1,
+                    bgcolor: 'background.paper',
+                  }}
+                />
+              ) : null}
+            </>
+          )}
         </DialogContent>
-        <DialogActions>
-          <Button variant="text" onClick={closeReportPreview}>
+        <DialogActions sx={{ px: 2, pb: 2, gap: 1 }}>
+          <Button variant="text" color="primary" onClick={closeReportPreview}>
             {inventoryLabels.generateReportClose}
           </Button>
           <Button
