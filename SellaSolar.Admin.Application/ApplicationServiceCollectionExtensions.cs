@@ -9,6 +9,7 @@ public static class ApplicationServiceCollectionExtensions
     {
         services.AddScoped<ProjectMaterialsService>();
         services.AddScoped<ProjectService>();
+        services.AddScoped<ProjectReportService>();
         services.AddScoped<WarehouseService>();
         services.AddScoped<AuthService>();
         services.AddScoped<UserManagementService>();

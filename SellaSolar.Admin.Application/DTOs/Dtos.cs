@@ -232,3 +232,8 @@ public record NonCatalogPurchaseRequestDto(
     decimal QuantityToPurchase,
     /// <summary>Set when the line is already linked to a catalog item (qty may still be 0).</summary>
     int? WarehouseItemId);
+
+public record ProjectReportReadinessDto(
+    bool CanGenerate,
+    string? Message,
+    IReadOnlyList<string> BlockingItems);

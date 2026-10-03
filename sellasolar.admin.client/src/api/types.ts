@@ -96,6 +96,12 @@ export interface ProjectExpense {
   updatedAt: string
 }
 
+export interface ProjectReportReadiness {
+  canGenerate: boolean
+  message?: string | null
+  blockingItems: string[]
+}
+
 export interface ProjectDetail {
   id: number
   name: string

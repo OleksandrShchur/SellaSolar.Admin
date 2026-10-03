@@ -13,11 +13,16 @@ namespace SellaSolar.Admin.Server.Controllers;
 public class ProjectsController : ControllerBase
 {
     private readonly ProjectService _projects;
+    private readonly ProjectReportService _reports;
     private readonly IWebHostEnvironment _env;
 
-    public ProjectsController(ProjectService projects, IWebHostEnvironment env)
+    public ProjectsController(
+        ProjectService projects,
+        ProjectReportService reports,
+        IWebHostEnvironment env)
     {
         _projects = projects;
+        _reports = reports;
         _env = env;
     }
 
@@ -114,6 +119,37 @@ public class ProjectsController : ControllerBase
         catch (NotFoundException)
         {
             return NotFound();
+        }
+    }
+
+    [HttpGet("{id:int}/report/readiness")]
+    public async Task<ActionResult<ProjectReportReadinessDto>> GetReportReadiness(int id, CancellationToken ct)
+    {
+        try
+        {
+            return Ok(await _reports.GetReadinessAsync(id, ct));
+        }
+        catch (NotFoundException)
+        {
+            return NotFound();
+        }
+    }
+
+    [HttpGet("{id:int}/report")]
+    public async Task<IActionResult> GenerateReport(int id, CancellationToken ct)
+    {
+        try
+        {
+            var (pdf, fileName) = await _reports.GenerateAsync(id, ct);
+            return File(pdf, "application/pdf", fileName);
+        }
+        catch (NotFoundException)
+        {
+            return NotFound();
+        }
+        catch (ConflictException ex)
+        {
+            return Conflict(new { message = ex.Message });
         }
     }
 

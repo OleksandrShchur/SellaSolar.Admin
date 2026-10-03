@@ -1,4 +1,4 @@
-import { apiGet, apiSend, apiUpload } from './client'
+import { apiGet, apiGetBlob, apiSend, apiUpload } from './client'
 import type {
   AppRole,
   CurrentUser,
@@ -8,6 +8,7 @@ import type {
   ProjectItem,
   ProjectListItem,
   ProjectPhoto,
+  ProjectReportReadiness,
   ProjectStatus,
   ProjectWorker,
   WarehouseItemDetail,
@@ -138,6 +139,9 @@ export const projectsApi = {
   ) => apiSend<ProjectExpense>(`/api/projects/${id}/expenses/${expenseId}`, 'PUT', body),
   removeExpense: (id: number, expenseId: number) =>
     apiSend<void>(`/api/projects/${id}/expenses/${expenseId}`, 'DELETE'),
+  reportReadiness: (id: number) =>
+    apiGet<ProjectReportReadiness>(`/api/projects/${id}/report/readiness`),
+  generateReport: (id: number) => apiGetBlob(`/api/projects/${id}/report`),
 }
 
 export const warehouseApi = {
