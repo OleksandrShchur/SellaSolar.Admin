@@ -20,8 +20,6 @@ import {
   MenuItem,
   Select,
   Stack,
-  Tab,
-  Tabs,
   TextField,
   ToggleButton,
   ToggleButtonGroup,
@@ -34,6 +32,8 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import DownloadIcon from '@mui/icons-material/Download'
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined'
+import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined'
+import UndoOutlinedIcon from '@mui/icons-material/UndoOutlined'
 import { projectsApi, warehouseApi, usersApi } from '../api'
 import type {
   ProjectDetail,
@@ -50,6 +50,8 @@ import { formatDate, formatDateTime, formatMoney, formatNumber, formatPhone, inv
 import { useAuth } from '../auth/AuthContext'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { DetailField, DetailFieldGrid, DetailPanel, DetailSection, panelPad } from '../components/DetailPanel'
+import RowActionsMenu, { type RowActionItem } from '../components/RowActionsMenu'
+import ScrollableTabs from '../components/ScrollableTabs'
 import { ProjectStatusChip } from '../components/StatusChips'
 
 type PendingDelete =
@@ -84,6 +86,7 @@ export default function ProjectDetailPage() {
   const canManageUsers = hasRole('Admin')
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+  const isSmUp = useMediaQuery(theme.breakpoints.up('sm'))
 
   const [project, setProject] = useState<ProjectDetail | null>(null)
   const [tab, setTab] = useState(0)
@@ -599,24 +602,15 @@ export default function ProjectDetailPage() {
     anchor.click()
   }
 
-  const statusAction =
+  const primaryStatusButton =
     project.status === 'Awaiting' ? (
       <Button variant="contained" color="primary" onClick={() => void changeStatus('InProgress')}>
         Почати роботу
       </Button>
     ) : project.status === 'InProgress' ? (
-      <>
-        <Button
-          variant="outlined"
-          color="primary"
-          onClick={() => void changeStatus('Awaiting')}
-        >
-          Повернути в очікування
-        </Button>
-        <Button variant="contained" color="success" onClick={tryComplete}>
-          Завершити
-        </Button>
-      </>
+      <Button variant="contained" color="success" onClick={tryComplete}>
+        Завершити
+      </Button>
     ) : (
       <Button
         variant="outlined"
@@ -626,6 +620,40 @@ export default function ProjectDetailPage() {
         Повернути в роботу
       </Button>
     )
+
+  const headerMenuItems: RowActionItem[] = [
+    {
+      key: 'edit',
+      label: 'Редагувати',
+      icon: <EditOutlinedIcon fontSize="small" />,
+      onClick: openEdit,
+    },
+    {
+      key: 'report',
+      label: reportGenerating
+        ? inventoryLabels.generateReportGenerating
+        : inventoryLabels.generateReport,
+      icon: reportGenerating ? (
+        <CircularProgress size={16} color="inherit" />
+      ) : (
+        <ReceiptLongOutlinedIcon fontSize="small" />
+      ),
+      onClick: () => void handleGenerateReport(),
+      disabled: reportGenerating,
+    },
+    ...(project.status === 'InProgress'
+      ? ([
+          { kind: 'divider', key: 'status-divider' } as const,
+          {
+            key: 'revert-awaiting',
+            label: 'Повернути в очікування',
+            icon: <UndoOutlinedIcon fontSize="small" />,
+            onClick: () => void changeStatus('Awaiting'),
+            tone: 'warning' as const,
+          },
+        ] satisfies RowActionItem[])
+      : []),
+  ]
 
   return (
     <Stack spacing={2.5}>
@@ -641,7 +669,7 @@ export default function ProjectDetailPage() {
           </IconButton>
           <Box sx={{ minWidth: 0 }}>
             <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
-              <Typography variant="h6" fontWeight={700} noWrap>
+              <Typography variant="h6" fontWeight={700} sx={{ wordBreak: 'break-word' }}>
                 {project.name}
               </Typography>
               <ProjectStatusChip status={project.status} />
@@ -651,22 +679,15 @@ export default function ProjectDetailPage() {
             </Typography>
           </Box>
         </Stack>
-        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ flexShrink: 0 }}>
-          <Button
-            variant="outlined"
-            color="primary"
-            startIcon={
-              reportGenerating ? <CircularProgress size={16} color="inherit" /> : <ReceiptLongOutlinedIcon />
-            }
-            onClick={() => void handleGenerateReport()}
-            disabled={reportGenerating}
-          >
-            {reportGenerating ? inventoryLabels.generateReportGenerating : inventoryLabels.generateReport}
-          </Button>
-          <Button variant="outlined" color="primary" onClick={openEdit}>
-            Редагувати
-          </Button>
-          {statusAction}
+        <Stack
+          direction="row"
+          spacing={1}
+          alignItems="center"
+          justifyContent={{ xs: 'flex-end', sm: 'flex-start' }}
+          sx={{ flexShrink: 0, width: { xs: '100%', sm: 'auto' }, pl: { xs: 5, sm: 0 } }}
+        >
+          {primaryStatusButton}
+          <RowActionsMenu items={headerMenuItems} />
         </Stack>
       </Stack>
 
@@ -678,44 +699,11 @@ export default function ProjectDetailPage() {
 
       <DetailPanel sx={{ p: 0, overflow: 'hidden' }}>
         <Box sx={{ px: panelPad, pt: panelPad }}>
-          <Tabs
+          <ScrollableTabs
             value={tab}
             onChange={(_, v) => setTab(v)}
-            variant="scrollable"
-            textColor="inherit"
-            sx={{
-              minHeight: 40,
-              bgcolor: 'transparent',
-              '& .MuiTabs-flexContainer': {
-                gap: 2.5,
-              },
-              '& .MuiTab-root': {
-                textTransform: 'none',
-                fontWeight: 600,
-                fontSize: '0.9375rem',
-                color: 'text.secondary',
-                minHeight: 40,
-                minWidth: 0,
-                px: 0,
-                py: 1,
-                '&.Mui-selected': {
-                  color: 'text.primary',
-                  fontWeight: 700,
-                },
-              },
-              '& .MuiTabs-indicator': {
-                height: 3,
-                borderRadius: '3px 3px 0 0',
-                backgroundColor: 'primary.dark',
-              },
-            }}
-          >
-            <Tab label="Загальна інформація" />
-            <Tab label="Матеріали" />
-            <Tab label="Витрати" />
-            <Tab label="Працівники" />
-            <Tab label="Фото" />
-          </Tabs>
+            labels={['Загальна інформація', 'Матеріали', 'Витрати', 'Працівники', 'Фото']}
+          />
         </Box>
         <Box sx={{ borderBottom: '1px solid', borderColor: 'divider' }} />
 
@@ -791,16 +779,44 @@ export default function ProjectDetailPage() {
                 </Button>
               )}
             </Stack>
-            <Stack spacing={1.5}>
+            <Stack spacing={1.25}>
               {project.items.map((item) => {
                 const { toOrder, unallocated } = materialCoverage(item)
                 const showPurchaseHint = toOrder > 0
                 const showAllocHint = !item.isNonCatalog && unallocated > 0
+                const canManage = project.status !== 'Completed'
+                const showAllocateBtn = canManage && !item.isNonCatalog && isSmUp
+                const materialMenuItems: RowActionItem[] = [
+                  ...(!item.isNonCatalog && !isSmUp
+                    ? [
+                        {
+                          key: 'allocate',
+                          label: inventoryLabels.allocateLots,
+                          icon: <Inventory2OutlinedIcon fontSize="small" />,
+                          onClick: () => void openAllocations(item),
+                        } satisfies RowActionItem,
+                      ]
+                    : []),
+                  {
+                    key: 'edit',
+                    label: 'Редагувати кількість',
+                    icon: <EditOutlinedIcon fontSize="small" />,
+                    onClick: () => openEditItem(item.id, item.quantityNeeded),
+                  },
+                  { kind: 'divider', key: 'del-div' },
+                  {
+                    key: 'delete',
+                    label: 'Видалити',
+                    icon: <DeleteIcon fontSize="small" />,
+                    onClick: () => setPendingDelete({ kind: 'item', item }),
+                    tone: 'danger',
+                  },
+                ]
                 return (
                 <Box
                   key={item.id}
                   sx={{
-                    p: 2,
+                    p: { xs: 1.5, sm: 2 },
                     borderRadius: 2,
                     border: '1.5px solid',
                     borderColor: showPurchaseHint
@@ -816,8 +832,8 @@ export default function ProjectDetailPage() {
                     '&:hover': { boxShadow: 1, borderColor: 'primary.dark' },
                   }}
                 >
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ sm: 'center' }}>
-                    <Box flex={1}>
+                  <Stack direction="row" spacing={1} alignItems="flex-start">
+                    <Box flex={1} sx={{ minWidth: 0 }}>
                       <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
                         <Typography fontWeight={700}>
                           {item.name}{' '}
@@ -889,39 +905,30 @@ export default function ProjectDetailPage() {
                           </>
                         )}
                       </Typography>
+                      {canManage && (showPurchaseHint || showAllocHint) && (
+                        <Stack direction="row" spacing={0.75} mt={1} flexWrap="wrap" useFlexGap>
+                          {showPurchaseHint && (
+                            <Chip size="small" color="warning" label={inventoryLabels.needsPurchase} />
+                          )}
+                          {showAllocHint && (
+                            <Chip size="small" color="info" label={inventoryLabels.needsAllocation} />
+                          )}
+                        </Stack>
+                      )}
                     </Box>
-                    {project.status !== 'Completed' && showPurchaseHint && (
-                      <Chip color="warning" label={inventoryLabels.needsPurchase} />
-                    )}
-                    {project.status !== 'Completed' && showAllocHint && (
-                      <Chip color="info" label={inventoryLabels.needsAllocation} />
-                    )}
-                    {project.status !== 'Completed' && !item.isNonCatalog && (
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        onClick={() => void openAllocations(item)}
-                      >
-                        {inventoryLabels.allocateLots}
-                      </Button>
-                    )}
-                    {project.status !== 'Completed' && (
-                      <IconButton
-                        color="primary"
-                        onClick={() => openEditItem(item.id, item.quantityNeeded)}
-                        aria-label="Редагувати кількість"
-                      >
-                        <EditOutlinedIcon />
-                      </IconButton>
-                    )}
-                    {project.status !== 'Completed' && (
-                      <IconButton
-                        color="error"
-                        onClick={() => setPendingDelete({ kind: 'item', item })}
-                        aria-label="Видалити матеріал"
-                      >
-                        <DeleteIcon />
-                      </IconButton>
+                    {canManage && (
+                      <Stack direction="row" spacing={0.5} alignItems="center" sx={{ flexShrink: 0 }}>
+                        {showAllocateBtn && (
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            onClick={() => void openAllocations(item)}
+                          >
+                            {inventoryLabels.allocateShort}
+                          </Button>
+                        )}
+                        <RowActionsMenu items={materialMenuItems} />
+                      </Stack>
                     )}
                   </Stack>
                 </Box>
@@ -991,12 +998,12 @@ export default function ProjectDetailPage() {
                     </Button>
                   )}
                 </Stack>
-                <Stack spacing={1.5}>
+                <Stack spacing={1.25}>
                   {(project.expenses ?? []).map((expense) => (
                     <Box
                       key={expense.id}
                       sx={{
-                        p: 2,
+                        p: { xs: 1.5, sm: 2 },
                         borderRadius: 2,
                         border: '1.5px solid',
                         borderColor: 'divider',
@@ -1004,8 +1011,8 @@ export default function ProjectDetailPage() {
                         '&:hover': { boxShadow: 1, borderColor: 'primary.dark' },
                       }}
                     >
-                      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ sm: 'center' }}>
-                        <Box flex={1}>
+                      <Stack direction="row" spacing={1} alignItems="flex-start">
+                        <Box flex={1} sx={{ minWidth: 0 }}>
                           <Typography fontWeight={700}>{expense.category}</Typography>
                           <Typography variant="body2" mt={0.5} color="text.secondary">
                             {expense.expenseDate
@@ -1014,24 +1021,28 @@ export default function ProjectDetailPage() {
                             {expense.notes ? ` · ${expense.notes}` : ''}
                           </Typography>
                         </Box>
-                        <Typography fontWeight={800}>{formatMoney(expense.amount)}</Typography>
+                        <Typography fontWeight={800} sx={{ flexShrink: 0, pt: 0.25 }}>
+                          {formatMoney(expense.amount)}
+                        </Typography>
                         {project.status !== 'Completed' && (
-                          <>
-                            <IconButton
-                              color="primary"
-                              onClick={() => openEditExpense(expense)}
-                              aria-label="Редагувати витрату"
-                            >
-                              <EditOutlinedIcon />
-                            </IconButton>
-                            <IconButton
-                              color="error"
-                              onClick={() => setPendingDelete({ kind: 'expense', expense })}
-                              aria-label="Видалити витрату"
-                            >
-                              <DeleteIcon />
-                            </IconButton>
-                          </>
+                          <RowActionsMenu
+                            items={[
+                              {
+                                key: 'edit',
+                                label: 'Редагувати',
+                                icon: <EditOutlinedIcon fontSize="small" />,
+                                onClick: () => openEditExpense(expense),
+                              },
+                              { kind: 'divider', key: 'del-div' },
+                              {
+                                key: 'delete',
+                                label: 'Видалити',
+                                icon: <DeleteIcon fontSize="small" />,
+                                onClick: () => setPendingDelete({ kind: 'expense', expense }),
+                                tone: 'danger',
+                              },
+                            ]}
+                          />
                         )}
                       </Stack>
                     </Box>
@@ -1053,12 +1064,12 @@ export default function ProjectDetailPage() {
                 Призначити
               </Button>
             </Stack>
-            <Stack spacing={1.5}>
+            <Stack spacing={1.25}>
               {project.workers.map((worker) => (
                 <Box
                   key={worker.id}
                   sx={{
-                    p: 2,
+                    p: { xs: 1.5, sm: 2 },
                     borderRadius: 2,
                     border: '1.5px solid',
                     borderColor: 'divider',
@@ -1066,8 +1077,8 @@ export default function ProjectDetailPage() {
                     '&:hover': { boxShadow: 1, borderColor: 'primary.dark' },
                   }}
                 >
-                  <Stack direction="row" alignItems="center" spacing={1}>
-                    <Box flex={1}>
+                  <Stack direction="row" alignItems="flex-start" spacing={1}>
+                    <Box flex={1} sx={{ minWidth: 0 }}>
                       <Typography fontWeight={700}>
                         {worker.fullName}
                         {worker.workerType ? ` · ${workerTypeLabel(worker.workerType)}` : ''}
@@ -1084,13 +1095,19 @@ export default function ProjectDetailPage() {
                         {formatDateTime(worker.assignedAt)}
                       </Typography>
                     </Box>
-                    <IconButton
-                      color="error"
-                      onClick={() => setPendingDelete({ kind: 'worker', worker })}
-                      aria-label="Прибрати працівника"
-                    >
-                      <DeleteIcon />
-                    </IconButton>
+                    {project.status !== 'Completed' && (
+                      <RowActionsMenu
+                        items={[
+                          {
+                            key: 'remove',
+                            label: 'Прибрати з проекту',
+                            icon: <DeleteIcon fontSize="small" />,
+                            onClick: () => setPendingDelete({ kind: 'worker', worker }),
+                            tone: 'danger',
+                          },
+                        ]}
+                      />
+                    )}
                   </Stack>
                 </Box>
               ))}
