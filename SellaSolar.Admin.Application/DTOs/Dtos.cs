@@ -152,6 +152,12 @@ public record WarehouseItemListDto(
     int UsedInProjectsCount,
     decimal QuantityToOrder);
 
+public record WarehouseLotProjectUsageDto(
+    int ProjectId,
+    string ProjectName,
+    string ProjectStatus,
+    decimal QuantityAllocated);
+
 public record WarehouseStockLotDto(
     int LotId,
     decimal UnitCost,
@@ -160,7 +166,9 @@ public record WarehouseStockLotDto(
     decimal QuantityFree,
     DateTime ReceivedAt,
     string? Supplier,
-    string? Notes);
+    string? Notes,
+    /// <summary>Open projects (Awaiting / InProgress) that allocate from this lot.</summary>
+    IReadOnlyList<WarehouseLotProjectUsageDto> UsedInProjects);
 
 public record WarehouseItemDetailDto(
     int Id,

@@ -126,4 +126,9 @@ export const inventoryLabels = {
     'Щоб зменшити потрібну кількість нижче розподілу — спочатку зменшіть розподіл партій.',
   cannotCompleteIncompleteAllocations:
     'Неможливо завершити: розподіліть усі матеріали зі складу по партіях.',
+  deleteLot: 'Видалити партію',
+  deleteLotConfirm: 'Видалити партію?',
+  deleteLotInUseTitle: 'Партію неможливо видалити',
+  deleteLotInUseHint:
+    'Ця партія використовується в відкритих проектах. Спочатку зніміть розподіл.',
 } as const
