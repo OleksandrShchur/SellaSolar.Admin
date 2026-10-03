@@ -137,7 +137,7 @@ export default function ProjectDetailPage() {
   const [reportBlockedItems, setReportBlockedItems] = useState<string[]>([])
   const [reportPreviewOpen, setReportPreviewOpen] = useState(false)
   const [reportPreviewUrl, setReportPreviewUrl] = useState<string | null>(null)
-  const [reportFileName, setReportFileName] = useState('kvytantsiya.pdf')
+  const [reportFileName, setReportFileName] = useState('nakladna.pdf')
   const [reportGenerating, setReportGenerating] = useState(false)
 
   const load = async () => {
@@ -539,10 +539,10 @@ export default function ProjectDetailPage() {
       if (reportPreviewUrl) URL.revokeObjectURL(reportPreviewUrl)
       const url = URL.createObjectURL(blob)
       setReportPreviewUrl(url)
-      setReportFileName(fileName ?? `kvytantsiya-project-${projectId}.pdf`)
+      setReportFileName(fileName ?? `nakladna-project-${projectId}.pdf`)
       setReportPreviewOpen(true)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Не вдалося згенерувати квитанцію')
+      setError(err instanceof Error ? err.message : 'Не вдалося згенерувати накладну')
     } finally {
       setReportGenerating(false)
     }

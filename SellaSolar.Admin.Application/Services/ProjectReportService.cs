@@ -58,7 +58,7 @@ public class ProjectReportService
         var logoPath = ResolveLogoPath();
         var pdf = BuildPdf(project, lines, generatedAt, logoPath);
         var safeName = SanitizeFileName(project.Name);
-        var fileName = $"kvytantsiya-{safeName}-{generatedAt:yyyyMMdd}.pdf";
+        var fileName = $"nakladna-{safeName}-{generatedAt:yyyyMMdd}.pdf";
         return (pdf, fileName);
     }
 
@@ -73,11 +73,12 @@ public class ProjectReportService
 
     private static ProjectReportReadinessDto EvaluateReadiness(Project project)
     {
-        if (project.Status != ProjectStatuses.InProgress)
+        if (project.Status != ProjectStatuses.InProgress
+            && project.Status != ProjectStatuses.Completed)
         {
             return new ProjectReportReadinessDto(
                 false,
-                "Квитанцію можна згенерувати лише для проєкту в статусі «У роботі».",
+                "Накладну можна згенерувати лише для проєкту в статусі «У роботі» або «Завершено».",
                 Array.Empty<string>());
         }
 
@@ -110,7 +111,7 @@ public class ProjectReportService
         {
             return new ProjectReportReadinessDto(
                 false,
-                "Не всі матеріали закуплені та розподілені по партіях. Завершіть закупівлю й розподіл, щоб згенерувати квитанцію.",
+                "Не всі матеріали закуплені та розподілені по партіях. Завершіть закупівлю й розподіл, щоб згенерувати накладну.",
                 blocking);
         }
 

@@ -128,11 +128,11 @@ export const inventoryLabels = {
     'Щоб зменшити потрібну кількість нижче розподілу — спочатку зменшіть розподіл партій.',
   cannotCompleteIncompleteAllocations:
     'Неможливо завершити: розподіліть усі матеріали зі складу по партіях.',
-  generateReport: 'Згенерувати квитанцію',
-  generateReportTitle: 'Квитанція проєкту',
-  generateReportBlockedTitle: 'Квитанцію ще не можна згенерувати',
+  generateReport: 'Згенерувати накладну',
+  generateReportTitle: 'Накладна проєкту',
+  generateReportBlockedTitle: 'Накладну ще не можна згенерувати',
   generateReportBlockedHint:
-    'Не всі матеріали закуплені та розподілені по партіях, або проєкт не в статусі «У роботі».',
+    'Не всі матеріали закуплені та розподілені по партіях, або проєкт не в статусі «У роботі» / «Завершено».',
   generateReportBlockedItems: 'Проблемні позиції:',
   generateReportPreview: 'Попередній перегляд',
   generateReportDownload: 'Завантажити PDF',
