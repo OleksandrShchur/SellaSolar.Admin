@@ -229,4 +229,6 @@ public record NonCatalogPurchaseRequestDto(
     string Name,
     string Category,
     string Unit,
-    decimal QuantityToPurchase);
+    decimal QuantityToPurchase,
+    /// <summary>Set when the line is already linked to a catalog item (qty may still be 0).</summary>
+    int? WarehouseItemId);

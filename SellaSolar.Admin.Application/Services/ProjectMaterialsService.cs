@@ -11,7 +11,8 @@ namespace SellaSolar.Admin.Application.Services;
 /// Assigns warehouse materials to projects. Catalog lines soft-reserve via lot allocations.
 /// With a single stock lot, free qty is auto-allocated; with 2+ lots the admin chooses manually.
 /// Completing a project requires full lot allocation and sufficient lot on-hand, then consumes stock.
-/// Non-catalog requests are fully flagged as NeedsPurchase and do not block completion.
+/// «Новий матеріал» finds or creates a catalog item (qty 0) so it can be reused on other projects.
+/// Legacy non-catalog lines (null WarehouseItemId) do not block completion until promoted.
 /// </summary>
 public class ProjectMaterialsService
 {
@@ -43,13 +44,66 @@ public class ProjectMaterialsService
         if (hasCatalog)
             return await AddCatalogItemAsync(project, request.WarehouseItemId!.Value, request.QuantityNeeded, ct);
 
-        return await AddNonCatalogItemAsync(
-            project,
+        // «Новий матеріал»: ensure a shared catalog identity (often qty 0 / needs purchase).
+        var warehouseItem = await FindOrCreateWarehouseItemAsync(
             request.RequestedName!.Trim(),
             request.RequestedCategory!.Trim(),
             request.RequestedUnit!.Trim(),
-            request.QuantityNeeded,
             ct);
+        return await AddCatalogItemAsync(project, warehouseItem.Id, request.QuantityNeeded, ct);
+    }
+
+    /// <summary>
+    /// Links a legacy non-catalog project line to a catalog item (find-or-create by name).
+    /// Also promotes other open non-catalog lines with the same name when safe.
+    /// </summary>
+    public async Task<int> PromoteNonCatalogToCatalogAsync(int projectItemId, CancellationToken ct = default)
+    {
+        var item = await _db.ProjectItems
+            .Include(pi => pi.Project)
+            .FirstOrDefaultAsync(pi => pi.Id == projectItemId, ct)
+            ?? throw new NotFoundException($"Project item {projectItemId} was not found.");
+
+        if (item.WarehouseItemId is not null)
+            throw new ConflictException("Цей матеріал уже в каталозі складу.");
+
+        if (string.IsNullOrWhiteSpace(item.RequestedName) ||
+            string.IsNullOrWhiteSpace(item.RequestedCategory) ||
+            string.IsNullOrWhiteSpace(item.RequestedUnit))
+            throw new ValidationException("Неповні дані матеріалу поза каталогом.");
+
+        var name = item.RequestedName.Trim();
+        var category = item.RequestedCategory.Trim();
+        var unit = item.RequestedUnit.Trim();
+
+        var warehouseItem = await FindOrCreateWarehouseItemAsync(name, category, unit, ct);
+
+        await LinkNonCatalogToWarehouseAsync(item, warehouseItem, ct);
+
+        // Reuse: promote other open non-catalog lines with the same requested name.
+        var openStatuses = new[] { ProjectStatuses.Awaiting, ProjectStatuses.InProgress };
+        var siblings = await _db.ProjectItems
+            .Include(pi => pi.Project)
+            .Where(pi =>
+                pi.Id != item.Id &&
+                pi.WarehouseItemId == null &&
+                pi.RequestedName == name &&
+                openStatuses.Contains(pi.Project.Status))
+            .ToListAsync(ct);
+
+        foreach (var sibling in siblings)
+        {
+            var alreadyHasCatalog = await _db.ProjectItems.AnyAsync(
+                pi => pi.ProjectId == sibling.ProjectId && pi.WarehouseItemId == warehouseItem.Id,
+                ct);
+            if (alreadyHasCatalog)
+                continue;
+
+            await LinkNonCatalogToWarehouseAsync(sibling, warehouseItem, ct);
+        }
+
+        await _db.SaveChangesAsync(ct);
+        return warehouseItem.Id;
     }
 
     public async Task RemoveItemAsync(int projectId, int projectItemId, CancellationToken ct = default)
@@ -395,8 +449,14 @@ public class ProjectMaterialsService
         var warehouseItem = await _db.WarehouseItems.FirstOrDefaultAsync(w => w.Id == warehouseItemId, ct)
             ?? throw new NotFoundException($"Warehouse item {warehouseItemId} was not found.");
 
+        var nameLower = warehouseItem.Name.ToLower();
         var alreadyAssigned = await _db.ProjectItems
-            .AnyAsync(pi => pi.ProjectId == project.Id && pi.WarehouseItemId == warehouseItemId, ct);
+            .AnyAsync(pi =>
+                pi.ProjectId == project.Id &&
+                (pi.WarehouseItemId == warehouseItemId ||
+                 (pi.WarehouseItemId == null &&
+                  pi.RequestedName != null &&
+                  pi.RequestedName.ToLower() == nameLower)), ct);
         if (alreadyAssigned)
             throw new ConflictException(
                 "Ця позиція складу вже додана до проекту. Видаліть її або оберіть іншу.");
@@ -477,41 +537,72 @@ public class ProjectMaterialsService
         }
     }
 
-    private async Task<ProjectItemDto> AddNonCatalogItemAsync(
-        Project project,
+    /// <summary>
+    /// Finds a catalog item by name (case-insensitive) or creates one with quantity 0.
+    /// </summary>
+    private async Task<WarehouseItem> FindOrCreateWarehouseItemAsync(
         string name,
         string category,
         string unit,
-        decimal quantityNeeded,
         CancellationToken ct)
     {
-        var alreadyRequested = await _db.ProjectItems
-            .AnyAsync(pi =>
-                pi.ProjectId == project.Id &&
-                pi.WarehouseItemId == null &&
-                pi.RequestedName == name, ct);
-        if (alreadyRequested)
-            throw new ConflictException(
-                "Цей матеріал уже запрошено для проекту. Видаліть його або оберіть іншу назву.");
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ValidationException("Назва обов’язкова.");
+        if (string.IsNullOrWhiteSpace(category))
+            throw new ValidationException("Категорія обов’язкова.");
+        if (string.IsNullOrWhiteSpace(unit))
+            throw new ValidationException("Одиниця виміру обов’язкова.");
 
-        var entity = new ProjectItem
+        var existing = await _db.WarehouseItems
+            .FirstOrDefaultAsync(w => w.Name.ToLower() == name.ToLower(), ct);
+        if (existing is not null)
+            return existing;
+
+        var entity = new WarehouseItem
         {
-            ProjectId = project.Id,
-            WarehouseItemId = null,
-            RequestedName = name,
-            RequestedCategory = category,
-            RequestedUnit = unit,
-            QuantityNeeded = quantityNeeded,
-            QuantityFromStock = 0,
-            QuantityToPurchase = quantityNeeded,
-            NeedsPurchase = true
+            Name = name,
+            Category = category,
+            Unit = unit,
+            QuantityInStock = 0,
+            Price = null,
+            Supplier = null,
+            Notes = null,
+            LowStockThreshold = null
         };
-
-        _db.ProjectItems.Add(entity);
-        project.UpdatedAt = DateTime.UtcNow;
+        _db.WarehouseItems.Add(entity);
         await _db.SaveChangesAsync(ct);
+        return entity;
+    }
 
-        return MapNonCatalog(entity);
+    private async Task LinkNonCatalogToWarehouseAsync(
+        ProjectItem item,
+        WarehouseItem warehouseItem,
+        CancellationToken ct)
+    {
+        var alreadyAssigned = await _db.ProjectItems.AnyAsync(
+            pi => pi.ProjectId == item.ProjectId && pi.WarehouseItemId == warehouseItem.Id,
+            ct);
+        if (alreadyAssigned)
+            throw new ConflictException(
+                $"Проект «{item.Project.Name}» уже містить позицію складу «{warehouseItem.Name}».");
+
+        item.WarehouseItemId = warehouseItem.Id;
+        item.WarehouseItem = warehouseItem;
+        item.RequestedName = null;
+        item.RequestedCategory = null;
+        item.RequestedUnit = null;
+
+        var maxFromStock = await GetUnreservedStockAsync(
+            warehouseItem.Id,
+            excludeProjectId: item.ProjectId,
+            ct);
+        ApplyDerivedStockFields(item, fromStock: 0, maxFromStock);
+        item.Project.UpdatedAt = DateTime.UtcNow;
+
+        await TryAutoAllocateSingleLotAsync(item, ct);
+        var fromStock = item.ProjectItemLotAllocations.Sum(a => a.Quantity);
+        ApplyDerivedStockFields(item, fromStock, maxFromStock);
+        ApplyCostFromStock(item);
     }
 
     /// <summary>

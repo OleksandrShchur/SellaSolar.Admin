@@ -98,6 +98,8 @@ export default function ProjectDetailPage() {
   const [editingItemId, setEditingItemId] = useState<number | null>(null)
   const [editQuantityNeeded, setEditQuantityNeeded] = useState('1')
   const [editItemSaving, setEditItemSaving] = useState(false)
+  const [itemPendingDelete, setItemPendingDelete] = useState<ProjectItem | null>(null)
+  const [deletingItem, setDeletingItem] = useState(false)
 
   const [allocOpen, setAllocOpen] = useState(false)
   const [allocItem, setAllocItem] = useState<ProjectItem | null>(null)
@@ -356,6 +358,21 @@ export default function ProjectDetailPage() {
       setError(err instanceof Error ? err.message : 'Не вдалося оновити кількість')
     } finally {
       setEditItemSaving(false)
+    }
+  }
+
+  const confirmRemoveItem = async () => {
+    if (!itemPendingDelete) return
+    setDeletingItem(true)
+    setError(null)
+    try {
+      await projectsApi.removeItem(projectId, itemPendingDelete.id)
+      setItemPendingDelete(null)
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Помилка видалення')
+    } finally {
+      setDeletingItem(false)
     }
   }
 
@@ -785,11 +802,8 @@ export default function ProjectDetailPage() {
                     {project.status !== 'Completed' && (
                       <IconButton
                         color="error"
-                        onClick={() =>
-                          void projectsApi.removeItem(projectId, item.id).then(load).catch((err) => {
-                            setError(err instanceof Error ? err.message : 'Помилка видалення')
-                          })
-                        }
+                        onClick={() => setItemPendingDelete(item)}
+                        aria-label="Видалити матеріал"
                       >
                         <DeleteIcon />
                       </IconButton>
@@ -1171,7 +1185,8 @@ export default function ProjectDetailPage() {
                   {availableWarehouseItems.map((item) => (
                     <MenuItem key={item.id} value={item.id}>
                       {item.name} ({inventoryLabels.available}:{' '}
-                      {formatNumber(item.quantityAvailable)} {item.unit})
+                      {formatNumber(item.quantityAvailable)} {item.unit}
+                      {item.quantityAvailable <= 0 ? ` · ${inventoryLabels.needsPurchase}` : ''})
                     </MenuItem>
                   ))}
                 </Select>
@@ -1212,7 +1227,7 @@ export default function ProjectDetailPage() {
             <Typography variant="body2" color="text.secondary">
               {itemMode === 'catalog'
                 ? 'Після додавання розподіліть партії вручну («Розподілити партії»). Без розподілу весь обсяг буде «Потрібно закупіти». Списання зі складу — лише після завершення проекту.'
-                : 'Матеріал поза каталогом буде повністю позначено як «Потрібно закупіти» і з’явиться на складі у фільтрі «Потрібно замовити».'}
+                : 'Новий матеріал з’явиться в каталозі складу з кількістю 0 (якщо ще немає з такою назвою), буде позначено як «Потрібно закупіти» і стане доступним для інших проектів у списку «Зі складу».'}
             </Typography>
           </Stack>
         </DialogContent>
@@ -1506,6 +1521,39 @@ export default function ProjectDetailPage() {
             onClick={() => void saveExpense()}
           >
             {expenseSaving ? 'Збереження…' : 'Зберегти'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(itemPendingDelete)}
+        onClose={() => !deletingItem && setItemPendingDelete(null)}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>Видалити матеріал?</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary">
+            {itemPendingDelete
+              ? `Прибрати «${itemPendingDelete.name}» з цього проекту?`
+              : null}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            variant="text"
+            disabled={deletingItem}
+            onClick={() => setItemPendingDelete(null)}
+          >
+            Скасувати
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            disabled={deletingItem}
+            onClick={() => void confirmRemoveItem()}
+          >
+            {deletingItem ? 'Видалення…' : 'Видалити'}
           </Button>
         </DialogActions>
       </Dialog>

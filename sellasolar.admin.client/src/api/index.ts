@@ -156,6 +156,11 @@ export const warehouseApi = {
       })}`,
     ),
   purchaseRequests: () => apiGet<NonCatalogPurchaseRequest[]>('/api/warehouse-items/purchase-requests'),
+  addPurchaseRequestToCatalog: (projectItemId: number) =>
+    apiSend<WarehouseItemDetail>(
+      `/api/warehouse-items/purchase-requests/${projectItemId}/add-to-catalog`,
+      'POST',
+    ),
   categories: () => apiGet<string[]>('/api/warehouse-items/categories'),
   get: (id: number) => apiGet<WarehouseItemDetail>(`/api/warehouse-items/${id}`),
   lots: (id: number) => apiGet<WarehouseStockLot[]>(`/api/warehouse-items/${id}/lots`),

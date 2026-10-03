@@ -37,6 +37,31 @@ public class WarehouseItemsController : ControllerBase
         CancellationToken ct) =>
         Ok(await _warehouse.GetNonCatalogPurchaseRequestsAsync(ct));
 
+    [HttpPost("purchase-requests/{projectItemId:int}/add-to-catalog")]
+    public async Task<ActionResult<WarehouseItemDetailDto>> AddPurchaseRequestToCatalog(
+        int projectItemId,
+        CancellationToken ct)
+    {
+        try
+        {
+            var warehouseItemId = await _materials.PromoteNonCatalogToCatalogAsync(projectItemId, ct);
+            var detail = await _warehouse.GetByIdAsync(warehouseItemId, ct);
+            return Ok(detail!);
+        }
+        catch (NotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (ValidationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (ConflictException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+    }
+
     [HttpGet("categories")]
     public async Task<ActionResult<IReadOnlyList<string>>> GetCategories(CancellationToken ct) =>
         Ok(await _warehouse.GetCategoriesAsync(ct));

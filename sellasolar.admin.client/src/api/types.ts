@@ -185,4 +185,6 @@ export interface NonCatalogPurchaseRequest {
   category: string
   unit: string
   quantityToPurchase: number
+  /** Set when already linked to catalog (may still have qty 0). */
+  warehouseItemId?: number | null
 }
