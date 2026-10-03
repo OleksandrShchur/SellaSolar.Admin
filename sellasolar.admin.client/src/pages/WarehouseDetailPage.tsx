@@ -26,6 +26,7 @@ import DeleteIcon from '@mui/icons-material/Delete'
 import { warehouseApi } from '../api'
 import type { WarehouseItemDetail, WarehouseStockLot } from '../api/types'
 import { formatDateTime, formatNumber, inventoryLabels } from '../utils/labels'
+import ConfirmDialog from '../components/ConfirmDialog'
 import { DetailField, DetailFieldGrid, DetailPanel } from '../components/DetailPanel'
 import { ProjectStatusChip } from '../components/StatusChips'
 
@@ -478,54 +479,22 @@ export default function WarehouseDetailPage() {
         </DialogActions>
       </Dialog>
 
-      <Dialog
+      <ConfirmDialog
         open={itemDeleteOpen}
-        onClose={() => !deletingItem && setItemDeleteOpen(false)}
-        fullWidth
-        maxWidth="xs"
-      >
-        <DialogTitle>Видалити позицію складу?</DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" color="text.secondary">
-            {item ? `Видалити «${item.name}» зі складу?` : null}
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button variant="text" disabled={deletingItem} onClick={() => setItemDeleteOpen(false)}>
-            Скасувати
-          </Button>
-          <Button
-            variant="contained"
-            color="error"
-            disabled={deletingItem}
-            onClick={() => void remove()}
-          >
-            {deletingItem ? 'Видалення…' : 'Видалити'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        title="Видалити позицію складу?"
+        message={item ? `Видалити «${item.name}» зі складу?` : null}
+        confirming={deletingItem}
+        onCancel={() => setItemDeleteOpen(false)}
+        onConfirm={() => void remove()}
+      />
 
-      <Dialog
+      <ConfirmDialog
         open={Boolean(lotPendingDelete)}
-        onClose={() => !deletingLot && setLotPendingDelete(null)}
-        fullWidth
-        maxWidth="xs"
-      >
-        <DialogTitle>{inventoryLabels.deleteLotConfirm}</DialogTitle>
-        <DialogActions>
-          <Button variant="text" onClick={() => setLotPendingDelete(null)} disabled={deletingLot}>
-            Скасувати
-          </Button>
-          <Button
-            variant="contained"
-            color="error"
-            onClick={() => void confirmDeleteLot()}
-            disabled={deletingLot}
-          >
-            Видалити
-          </Button>
-        </DialogActions>
-      </Dialog>
+        title={inventoryLabels.deleteLotConfirm}
+        confirming={deletingLot}
+        onCancel={() => setLotPendingDelete(null)}
+        onConfirm={() => void confirmDeleteLot()}
+      />
 
       <Dialog open={Boolean(lotInUse)} onClose={() => setLotInUse(null)} fullWidth maxWidth="sm">
         <DialogTitle>{inventoryLabels.deleteLotInUseTitle}</DialogTitle>

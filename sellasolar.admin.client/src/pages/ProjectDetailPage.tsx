@@ -39,15 +39,24 @@ import type {
   ProjectDetail,
   ProjectExpense,
   ProjectItem,
+  ProjectPhoto,
   ProjectStatus,
+  ProjectWorker,
   WarehouseItemList,
   WarehouseStockLot,
   UserListItem,
 } from '../api/types'
 import { formatDate, formatDateTime, formatMoney, formatNumber, formatPhone, inventoryLabels, toTelHref, workerTypeLabel } from '../utils/labels'
 import { useAuth } from '../auth/AuthContext'
+import ConfirmDialog from '../components/ConfirmDialog'
 import { DetailField, DetailFieldGrid, DetailPanel, DetailSection, panelPad } from '../components/DetailPanel'
 import { ProjectStatusChip } from '../components/StatusChips'
+
+type PendingDelete =
+  | { kind: 'item'; item: ProjectItem }
+  | { kind: 'expense'; expense: ProjectExpense }
+  | { kind: 'worker'; worker: ProjectWorker }
+  | { kind: 'photo'; photo: ProjectPhoto }
 
 interface TabPanelProps {
   value: number
@@ -108,8 +117,8 @@ export default function ProjectDetailPage() {
   const [editingItemId, setEditingItemId] = useState<number | null>(null)
   const [editQuantityNeeded, setEditQuantityNeeded] = useState('1')
   const [editItemSaving, setEditItemSaving] = useState(false)
-  const [itemPendingDelete, setItemPendingDelete] = useState<ProjectItem | null>(null)
-  const [deletingItem, setDeletingItem] = useState(false)
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const [allocOpen, setAllocOpen] = useState(false)
   const [allocItem, setAllocItem] = useState<ProjectItem | null>(null)
@@ -385,20 +394,59 @@ export default function ProjectDetailPage() {
     }
   }
 
-  const confirmRemoveItem = async () => {
-    if (!itemPendingDelete) return
-    setDeletingItem(true)
+  const confirmPendingDelete = async () => {
+    if (!pendingDelete) return
+    setDeleting(true)
     setError(null)
     try {
-      await projectsApi.removeItem(projectId, itemPendingDelete.id)
-      setItemPendingDelete(null)
+      if (pendingDelete.kind === 'item') {
+        await projectsApi.removeItem(projectId, pendingDelete.item.id)
+      } else if (pendingDelete.kind === 'expense') {
+        await projectsApi.removeExpense(projectId, pendingDelete.expense.id)
+      } else if (pendingDelete.kind === 'worker') {
+        await projectsApi.removeWorker(projectId, pendingDelete.worker.id)
+      } else {
+        await projectsApi.removePhoto(projectId, pendingDelete.photo.id)
+      }
+      setPendingDelete(null)
       await load()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Помилка видалення')
+      setError(
+        err instanceof Error
+          ? err.message
+          : pendingDelete.kind === 'expense'
+            ? 'Не вдалося видалити витрату'
+            : 'Помилка видалення',
+      )
     } finally {
-      setDeletingItem(false)
+      setDeleting(false)
     }
   }
+
+  const pendingDeleteCopy =
+    pendingDelete?.kind === 'item'
+      ? {
+          title: 'Видалити матеріал?',
+          message: `Прибрати «${pendingDelete.item.name}» з цього проекту?`,
+        }
+      : pendingDelete?.kind === 'expense'
+        ? {
+            title: 'Видалити витрату?',
+            message: `Видалити витрату «${pendingDelete.expense.category}»?`,
+          }
+        : pendingDelete?.kind === 'worker'
+          ? {
+              title: 'Прибрати працівника?',
+              message: `Прибрати «${pendingDelete.worker.fullName}» з цього проекту?`,
+            }
+          : pendingDelete?.kind === 'photo'
+            ? {
+                title: 'Видалити фото?',
+                message: pendingDelete.photo.caption
+                  ? `Видалити фото «${pendingDelete.photo.caption}»?`
+                  : 'Видалити це фото?',
+              }
+            : null
 
   const openAddWorker = async () => {
     setError(null)
@@ -487,15 +535,6 @@ export default function ProjectDetailPage() {
       setError(err instanceof Error ? err.message : 'Не вдалося зберегти витрату')
     } finally {
       setExpenseSaving(false)
-    }
-  }
-
-  const removeExpense = async (expenseId: number) => {
-    try {
-      await projectsApi.removeExpense(projectId, expenseId)
-      await load()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Не вдалося видалити витрату')
     }
   }
 
@@ -878,7 +917,7 @@ export default function ProjectDetailPage() {
                     {project.status !== 'Completed' && (
                       <IconButton
                         color="error"
-                        onClick={() => setItemPendingDelete(item)}
+                        onClick={() => setPendingDelete({ kind: 'item', item })}
                         aria-label="Видалити матеріал"
                       >
                         <DeleteIcon />
@@ -987,7 +1026,7 @@ export default function ProjectDetailPage() {
                             </IconButton>
                             <IconButton
                               color="error"
-                              onClick={() => void removeExpense(expense.id)}
+                              onClick={() => setPendingDelete({ kind: 'expense', expense })}
                               aria-label="Видалити витрату"
                             >
                               <DeleteIcon />
@@ -1047,14 +1086,8 @@ export default function ProjectDetailPage() {
                     </Box>
                     <IconButton
                       color="error"
-                      onClick={() =>
-                        void projectsApi
-                          .removeWorker(projectId, worker.id)
-                          .then(load)
-                          .catch((err) => {
-                            setError(err instanceof Error ? err.message : 'Помилка видалення')
-                          })
-                      }
+                      onClick={() => setPendingDelete({ kind: 'worker', worker })}
+                      aria-label="Прибрати працівника"
                     >
                       <DeleteIcon />
                     </IconButton>
@@ -1118,11 +1151,8 @@ export default function ProjectDetailPage() {
                     </Box>
                     <IconButton
                       color="error"
-                      onClick={() =>
-                        void projectsApi.removePhoto(projectId, photo.id).then(load).catch((err) => {
-                          setError(err instanceof Error ? err.message : 'Помилка видалення')
-                        })
-                      }
+                      onClick={() => setPendingDelete({ kind: 'photo', photo })}
+                      aria-label="Видалити фото"
                     >
                       <DeleteIcon />
                     </IconButton>
@@ -1601,38 +1631,14 @@ export default function ProjectDetailPage() {
         </DialogActions>
       </Dialog>
 
-      <Dialog
-        open={Boolean(itemPendingDelete)}
-        onClose={() => !deletingItem && setItemPendingDelete(null)}
-        fullWidth
-        maxWidth="xs"
-      >
-        <DialogTitle>Видалити матеріал?</DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" color="text.secondary">
-            {itemPendingDelete
-              ? `Прибрати «${itemPendingDelete.name}» з цього проекту?`
-              : null}
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button
-            variant="text"
-            disabled={deletingItem}
-            onClick={() => setItemPendingDelete(null)}
-          >
-            Скасувати
-          </Button>
-          <Button
-            variant="contained"
-            color="error"
-            disabled={deletingItem}
-            onClick={() => void confirmRemoveItem()}
-          >
-            {deletingItem ? 'Видалення…' : 'Видалити'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <ConfirmDialog
+        open={Boolean(pendingDelete)}
+        title={pendingDeleteCopy?.title ?? ''}
+        message={pendingDeleteCopy?.message}
+        confirming={deleting}
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={() => void confirmPendingDelete()}
+      />
 
       <Dialog
         open={reportBlockedOpen}
