@@ -42,6 +42,8 @@ export default function WarehouseDetailPage() {
   const [lotPendingDelete, setLotPendingDelete] = useState<WarehouseStockLot | null>(null)
   const [lotInUse, setLotInUse] = useState<WarehouseStockLot | null>(null)
   const [deletingLot, setDeletingLot] = useState(false)
+  const [itemDeleteOpen, setItemDeleteOpen] = useState(false)
+  const [deletingItem, setDeletingItem] = useState(false)
   const [form, setForm] = useState({
     name: '',
     category: '',
@@ -149,12 +151,16 @@ export default function WarehouseDetailPage() {
   }
 
   const remove = async () => {
-    if (!window.confirm('Видалити позицію складу?')) return
+    setDeletingItem(true)
+    setError(null)
     try {
       await warehouseApi.remove(itemId)
+      setItemDeleteOpen(false)
       navigate('/warehouse')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Не вдалося видалити')
+    } finally {
+      setDeletingItem(false)
     }
   }
 
@@ -223,7 +229,7 @@ export default function WarehouseDetailPage() {
           <Button variant="outlined" color="primary" onClick={openEdit}>
             Редагувати
           </Button>
-          <Button color="error" variant="outlined" onClick={() => void remove()}>
+          <Button color="error" variant="outlined" onClick={() => setItemDeleteOpen(true)}>
             Видалити
           </Button>
         </Stack>
@@ -468,6 +474,33 @@ export default function WarehouseDetailPage() {
             disabled={saving || !receiveForm.quantity || receiveForm.unitCost === ''}
           >
             {inventoryLabels.receive}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={itemDeleteOpen}
+        onClose={() => !deletingItem && setItemDeleteOpen(false)}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>Видалити позицію складу?</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary">
+            {item ? `Видалити «${item.name}» зі складу?` : null}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button variant="text" disabled={deletingItem} onClick={() => setItemDeleteOpen(false)}>
+            Скасувати
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            disabled={deletingItem}
+            onClick={() => void remove()}
+          >
+            {deletingItem ? 'Видалення…' : 'Видалити'}
           </Button>
         </DialogActions>
       </Dialog>
