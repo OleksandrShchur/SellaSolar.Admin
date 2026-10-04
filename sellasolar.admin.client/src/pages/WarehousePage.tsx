@@ -9,6 +9,7 @@ import {
   CardActionArea,
   CardContent,
   Chip,
+  Collapse,
   Dialog,
   DialogActions,
   DialogContent,
@@ -30,13 +31,19 @@ import {
 import { DataGrid, type GridColDef } from '@mui/x-data-grid'
 import AddIcon from '@mui/icons-material/Add'
 import ClearIcon from '@mui/icons-material/Clear'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import FolderOpenOutlinedIcon from '@mui/icons-material/FolderOpenOutlined'
+import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined'
 import SearchIcon from '@mui/icons-material/Search'
 import { warehouseApi } from '../api'
 import type { NonCatalogPurchaseRequest, WarehouseItemList } from '../api/types'
 import { formatNumber, inventoryLabels, statusLabel } from '../utils/labels'
 import { surfaceSx, panelPad, dataGridSx } from '../components/DetailPanel'
+import RowActionsMenu, { type RowActionItem } from '../components/RowActionsMenu'
 
 type StockFilter = 'all' | 'low' | 'order'
+
+const PURCHASE_REQUESTS_EXPANDED_KEY = 'warehouse.purchaseRequests.expanded'
 
 const toggleButtonSx = {
   flexShrink: 0,
@@ -58,9 +65,18 @@ const emptyForm = {
   lowStockThreshold: '',
 }
 
+function readPurchaseRequestsExpanded(): boolean {
+  try {
+    return sessionStorage.getItem(PURCHASE_REQUESTS_EXPANDED_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
 export default function WarehousePage() {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+  const isXs = useMediaQuery(theme.breakpoints.down('sm'))
   const navigate = useNavigate()
 
   const [rows, setRows] = useState<WarehouseItemList[]>([])
@@ -76,6 +92,19 @@ export default function WarehousePage() {
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
   const [promotingId, setPromotingId] = useState<number | null>(null)
+  const [purchaseRequestsExpanded, setPurchaseRequestsExpanded] = useState(readPurchaseRequestsExpanded)
+
+  const togglePurchaseRequests = () => {
+    setPurchaseRequestsExpanded((prev) => {
+      const next = !prev
+      try {
+        sessionStorage.setItem(PURCHASE_REQUESTS_EXPANDED_KEY, next ? '1' : '0')
+      } catch {
+        /* ignore */
+      }
+      return next
+    })
+  }
 
   const load = async () => {
     setLoading(true)
@@ -320,78 +349,140 @@ export default function WarehousePage() {
       </Box>
 
       {showPurchaseRequests && (
-        <Box sx={{ p: panelPad, ...surfaceSx }}>
-          <Typography variant="subtitle1" fontWeight={800} mb={1.5}>
-            {inventoryLabels.purchaseRequestsTitle}
-          </Typography>
-          <Stack spacing={1.25}>
-            {purchaseRequests.map((req) => {
-              const inCatalog = req.warehouseItemId != null
-              return (
-                <Box
-                  key={req.projectItemId}
-                  sx={{
-                    p: 1.75,
-                    borderRadius: 2,
-                    border: '1.5px solid',
-                    borderColor: 'error.light',
-                    bgcolor: 'rgba(211, 47, 47, 0.04)',
-                  }}
-                >
-                  <Stack
-                    direction={{ xs: 'column', sm: 'row' }}
-                    spacing={1}
-                    alignItems={{ sm: 'center' }}
-                    justifyContent="space-between"
-                  >
-                    <Box>
-                      <Typography fontWeight={700}>
-                        {req.name}{' '}
-                        <Typography component="span" color="text.secondary">
-                          ({req.category}, {req.unit})
-                        </Typography>
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Проект: {req.projectName} · {statusLabel(req.projectStatus)} ·{' '}
-                        {inventoryLabels.toOrder}: {formatNumber(req.quantityToPurchase)} {req.unit}
-                      </Typography>
-                    </Box>
-                    <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
-                      <Chip
-                        size="small"
-                        color="error"
-                        label={
-                          inCatalog ? inventoryLabels.needsPurchase : inventoryLabels.notInWarehouse
-                        }
-                      />
-                      {!inCatalog && (
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          disabled={promotingId === req.projectItemId}
-                          onClick={() => void addToCatalog(req.projectItemId)}
-                        >
-                          {inventoryLabels.addToCatalog}
-                        </Button>
-                      )}
-                      {inCatalog && (
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          onClick={() => navigate(`/warehouse/${req.warehouseItemId}`)}
-                        >
-                          Відкрити на складі
-                        </Button>
-                      )}
-                      <Button size="small" onClick={() => navigate(`/projects/${req.projectId}`)}>
-                        Відкрити проект
-                      </Button>
-                    </Stack>
-                  </Stack>
-                </Box>
-              )
-            })}
+        <Box
+          sx={{
+            ...surfaceSx,
+            overflow: 'hidden',
+            borderLeft: '3px solid',
+            borderLeftColor: 'error.main',
+          }}
+        >
+          <Stack
+            component="button"
+            type="button"
+            direction="row"
+            alignItems="center"
+            spacing={1}
+            onClick={togglePurchaseRequests}
+            aria-expanded={purchaseRequestsExpanded}
+            aria-label={
+              purchaseRequestsExpanded
+                ? inventoryLabels.purchaseRequestsCollapse
+                : inventoryLabels.purchaseRequestsExpand
+            }
+            sx={{
+              width: '100%',
+              border: 0,
+              bgcolor: 'rgba(180, 35, 24, 0.04)',
+              cursor: 'pointer',
+              textAlign: 'left',
+              px: panelPad,
+              py: 1.5,
+              font: 'inherit',
+              color: 'inherit',
+              '&:hover': { bgcolor: 'rgba(180, 35, 24, 0.08)' },
+            }}
+          >
+            <Typography variant="subtitle1" fontWeight={800} component="span">
+              {inventoryLabels.purchaseRequestsTitle}
+            </Typography>
+            <Chip
+              size="small"
+              color="error"
+              label={purchaseRequests.length}
+              sx={{ height: 22, minWidth: 28, fontWeight: 800 }}
+            />
+            <Box flex={1} />
+            <ExpandMoreIcon
+              sx={{
+                color: 'text.secondary',
+                transform: purchaseRequestsExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.2s ease',
+              }}
+            />
           </Stack>
+          <Collapse in={purchaseRequestsExpanded}>
+            <Stack spacing={1} sx={{ px: panelPad, pb: panelPad, pt: 0.5 }}>
+              {purchaseRequests.map((req) => {
+                const inCatalog = req.warehouseItemId != null
+                const secondaryItems: RowActionItem[] = inCatalog
+                  ? [
+                      {
+                        key: 'warehouse',
+                        label: inventoryLabels.openOnWarehouse,
+                        icon: <Inventory2OutlinedIcon fontSize="small" />,
+                        onClick: () => navigate(`/warehouse/${req.warehouseItemId}`),
+                      },
+                    ]
+                  : [
+                      {
+                        key: 'catalog',
+                        label: inventoryLabels.addToCatalog,
+                        icon: <AddIcon fontSize="small" />,
+                        onClick: () => void addToCatalog(req.projectItemId),
+                        disabled: promotingId === req.projectItemId,
+                      },
+                    ]
+                return (
+                  <Box
+                    key={req.projectItemId}
+                    sx={{
+                      py: 1,
+                      px: 1.5,
+                      borderRadius: 1.5,
+                      borderLeft: '3px solid',
+                      borderLeftColor: 'error.main',
+                      bgcolor: 'rgba(243, 235, 220, 0.35)',
+                    }}
+                  >
+                    <Stack direction="row" spacing={1} alignItems="flex-start">
+                      <Box flex={1} sx={{ minWidth: 0 }}>
+                        <Typography fontWeight={700}>
+                          {req.name}{' '}
+                          <Typography component="span" color="text.secondary" fontWeight={600}>
+                            · {inventoryLabels.toOrder}: {formatNumber(req.quantityToPurchase)}{' '}
+                            {req.unit}
+                          </Typography>
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {req.projectName} · {statusLabel(req.projectStatus)} · {req.category}
+                        </Typography>
+                      </Box>
+                      <Stack
+                        direction="row"
+                        spacing={0.5}
+                        alignItems="center"
+                        sx={{ flexShrink: 0, mt: { xs: -0.5, sm: 0 } }}
+                      >
+                        <Button
+                          size="small"
+                          onClick={() => navigate(`/projects/${req.projectId}`)}
+                          sx={{ whiteSpace: 'nowrap', display: { xs: 'none', sm: 'inline-flex' } }}
+                        >
+                          {inventoryLabels.openProject}
+                        </Button>
+                        <RowActionsMenu
+                          items={[
+                            ...(isXs
+                              ? [
+                                  {
+                                    key: 'project',
+                                    label: inventoryLabels.openProject,
+                                    icon: <FolderOpenOutlinedIcon fontSize="small" />,
+                                    onClick: () => navigate(`/projects/${req.projectId}`),
+                                  } satisfies RowActionItem,
+                                ]
+                              : []),
+                            ...secondaryItems,
+                          ]}
+                        />
+                      </Stack>
+                    </Stack>
+                  </Box>
+                )
+              })}
+            </Stack>
+          </Collapse>
         </Box>
       )}
 
