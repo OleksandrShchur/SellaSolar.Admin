@@ -37,7 +37,13 @@ import PersonOffOutlinedIcon from '@mui/icons-material/PersonOffOutlined'
 import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined'
 import { usersApi } from '../api'
 import type { AppRole, UserListItem, WorkerType } from '../api/types'
-import { appRoleLabel, formatPhone } from '../utils/labels'
+import {
+  appRoleLabel,
+  formatCardNumberInput,
+  formatPhone,
+  isCardNumberValid,
+  normalizeCardDigits,
+} from '../utils/labels'
 import ConfirmDialog from '../components/ConfirmDialog'
 import RowActionsMenu, { type RowActionItem } from '../components/RowActionsMenu'
 import { RoleChip, UserStatusChip, workerTypeDisplay } from '../components/StatusChips'
@@ -66,6 +72,7 @@ const emptyCreate = {
   role: 'Worker' as AppRole,
   phone: '',
   workerType: 'Installer' as WorkerType,
+  cardNumber: '',
 }
 
 export default function UsersPage() {
@@ -90,6 +97,7 @@ export default function UsersPage() {
     role: 'Worker' as AppRole,
     phone: '',
     workerType: 'Installer' as WorkerType,
+    cardNumber: '',
   })
   const [resetOpen, setResetOpen] = useState(false)
   const [resetUserId, setResetUserId] = useState<string | null>(null)
@@ -136,8 +144,15 @@ export default function UsersPage() {
       role: row.role,
       phone: row.phone ?? '',
       workerType: (row.workerType as WorkerType) || 'Installer',
+      cardNumber: row.cardNumber ?? '',
     })
     setEditOpen(true)
+  }
+
+  const cardNumberForApi = (role: AppRole, cardNumber: string) => {
+    if (role !== 'Worker') return null
+    const digits = normalizeCardDigits(cardNumber)
+    return digits.length > 0 ? digits : null
   }
 
   const openReset = (row: UserListItem) => {
@@ -301,6 +316,7 @@ export default function UsersPage() {
         role: createForm.role,
         phone: createForm.phone,
         workerType: createForm.role === 'Worker' ? createForm.workerType : null,
+        cardNumber: cardNumberForApi(createForm.role, createForm.cardNumber),
       })
       setCreateOpen(false)
       setCreateForm(emptyCreate)
@@ -322,6 +338,7 @@ export default function UsersPage() {
         role: editForm.role,
         phone: editForm.phone,
         workerType: editForm.role === 'Worker' ? editForm.workerType : null,
+        cardNumber: cardNumberForApi(editForm.role, editForm.cardNumber),
       })
       setEditOpen(false)
       await load()
@@ -350,8 +367,10 @@ export default function UsersPage() {
     role: AppRole,
     phone: string,
     workerType: WorkerType,
+    cardNumber: string,
     onPhone: (v: string) => void,
     onType: (v: WorkerType) => void,
+    onCardNumber: (v: string) => void,
   ) => (
     <>
       <TextField
@@ -365,17 +384,40 @@ export default function UsersPage() {
         fullWidth
       />
       {role === 'Worker' ? (
-        <FormControl fullWidth>
-          <InputLabel>Тип працівника</InputLabel>
-          <Select
-            label="Тип працівника"
-            value={workerType}
-            onChange={(e) => onType(e.target.value as WorkerType)}
-          >
-            <MenuItem value="Assembler">Складальник</MenuItem>
-            <MenuItem value="Installer">Монтажник</MenuItem>
-          </Select>
-        </FormControl>
+        <>
+          <FormControl fullWidth>
+            <InputLabel>Тип працівника</InputLabel>
+            <Select
+              label="Тип працівника"
+              value={workerType}
+              onChange={(e) => onType(e.target.value as WorkerType)}
+            >
+              <MenuItem value="Assembler">Складальник</MenuItem>
+              <MenuItem value="Installer">Монтажник</MenuItem>
+            </Select>
+          </FormControl>
+          <TextField
+            label="Номер картки"
+            value={formatCardNumberInput(cardNumber)}
+            onChange={(e) => onCardNumber(normalizeCardDigits(e.target.value))}
+            inputMode="numeric"
+            placeholder="5375 4141 4141 4141"
+            helperText={
+              isCardNumberValid(cardNumber)
+                ? 'Необовʼязково · 16 цифр'
+                : 'Введіть усі 16 цифр або залиште порожнім'
+            }
+            error={!isCardNumberValid(cardNumber)}
+            fullWidth
+            inputProps={{
+              style: {
+                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                letterSpacing: '0.1em',
+                fontWeight: 600,
+              },
+            }}
+          />
+        </>
       ) : null}
     </>
   )
@@ -584,8 +626,10 @@ export default function UsersPage() {
               createForm.role,
               createForm.phone,
               createForm.workerType,
+              createForm.cardNumber,
               (phone) => setCreateForm((f) => ({ ...f, phone })),
               (workerType) => setCreateForm((f) => ({ ...f, workerType })),
+              (cardNumber) => setCreateForm((f) => ({ ...f, cardNumber })),
             )}
           </Stack>
         </DialogContent>
@@ -597,7 +641,7 @@ export default function UsersPage() {
             variant="contained"
             color="primary"
             onClick={() => void createUser()}
-            disabled={saving}
+            disabled={saving || !isCardNumberValid(createForm.cardNumber)}
           >
             Створити
           </Button>
@@ -632,8 +676,10 @@ export default function UsersPage() {
               editForm.role,
               editForm.phone,
               editForm.workerType,
+              editForm.cardNumber,
               (phone) => setEditForm((f) => ({ ...f, phone })),
               (workerType) => setEditForm((f) => ({ ...f, workerType })),
+              (cardNumber) => setEditForm((f) => ({ ...f, cardNumber })),
             )}
           </Stack>
         </DialogContent>
@@ -641,7 +687,12 @@ export default function UsersPage() {
           <Button variant="text" onClick={() => setEditOpen(false)}>
             Скасувати
           </Button>
-          <Button variant="contained" color="primary" onClick={() => void saveEdit()} disabled={saving}>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => void saveEdit()}
+            disabled={saving || !isCardNumberValid(editForm.cardNumber)}
+          >
             Зберегти
           </Button>
         </DialogActions>

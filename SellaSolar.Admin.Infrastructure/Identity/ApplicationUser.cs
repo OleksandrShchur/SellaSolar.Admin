@@ -13,4 +13,7 @@ public class ApplicationUser : IdentityUser
 
     /// <summary>Assembler / Installer when role is Worker; otherwise null.</summary>
     public string? WorkerType { get; set; }
+
+    /// <summary>16-digit bank card number when role is Worker; otherwise null.</summary>
+    public string? CardNumber { get; set; }
 }

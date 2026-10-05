@@ -16,15 +16,27 @@ import {
   Select,
   Stack,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined'
+import CheckOutlinedIcon from '@mui/icons-material/CheckOutlined'
 import { usersApi } from '../api'
 import type { AppRole, UserListItem, WorkerType } from '../api/types'
-import { appRoleLabel, formatPhone, toTelHref } from '../utils/labels'
+import {
+  appRoleLabel,
+  formatCardNumber,
+  formatCardNumberInput,
+  formatPhone,
+  isCardNumberValid,
+  normalizeCardDigits,
+  toTelHref,
+} from '../utils/labels'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { DetailField, DetailFieldGrid, DetailPanel } from '../components/DetailPanel'
 import { UserStatusChip, workerTypeDisplay } from '../components/StatusChips'
+import { brandColors } from '../theme'
 
 const roles: AppRole[] = ['Admin', 'Worker']
 
@@ -37,6 +49,89 @@ function PhoneLink({ phone }: { phone?: string | null }) {
     <Link href={href} underline="hover" color="inherit">
       {formatPhone(phone)}
     </Link>
+  )
+}
+
+function CopyableCardNumber({ cardNumber }: { cardNumber?: string | null }) {
+  const [copied, setCopied] = useState(false)
+  const digits = normalizeCardDigits(cardNumber ?? '')
+  if (!digits) return <>{'—'}</>
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(digits)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 2000)
+    } catch {
+      setCopied(false)
+    }
+  }
+
+  return (
+    <Tooltip title={copied ? 'Скопійовано' : 'Натисніть, щоб скопіювати'}>
+      <Box
+        component="button"
+        type="button"
+        onClick={() => void copy()}
+        aria-label="Скопіювати номер картки"
+        sx={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 1,
+          m: 0,
+          px: 1.5,
+          py: 0.85,
+          border: '1.5px solid',
+          borderColor: brandColors.borderStrong,
+          borderRadius: 1.5,
+          bgcolor: brandColors.morningBg,
+          boxShadow: `0 1px 2px ${brandColors.softShadow}`,
+          color: brandColors.slateInk,
+          cursor: 'pointer',
+          textAlign: 'left',
+          transition: 'border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease',
+          '&:hover': {
+            borderColor: brandColors.primaryDark,
+            bgcolor: brandColors.cream,
+            boxShadow: `0 4px 12px ${brandColors.softShadow}`,
+          },
+          '&:focus-visible': {
+            outline: '2px solid',
+            outlineColor: brandColors.primary,
+            outlineOffset: 2,
+          },
+        }}
+      >
+        <Typography
+          component="span"
+          sx={{
+            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+            fontWeight: 700,
+            fontSize: '0.95rem',
+            letterSpacing: '0.1em',
+            lineHeight: 1.35,
+            color: brandColors.slateInk,
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {formatCardNumber(digits)}
+        </Typography>
+        <Box
+          component="span"
+          sx={{
+            display: 'inline-flex',
+            color: copied ? brandColors.secondaryDark : brandColors.textMuted,
+            lineHeight: 0,
+          }}
+        >
+          {copied ? (
+            <CheckOutlinedIcon sx={{ fontSize: 16 }} />
+          ) : (
+            <ContentCopyOutlinedIcon sx={{ fontSize: 15 }} />
+          )}
+        </Box>
+      </Box>
+    </Tooltip>
   )
 }
 
@@ -53,6 +148,7 @@ export default function UserDetailPage() {
     role: 'Worker' as AppRole,
     phone: '',
     workerType: 'Installer' as WorkerType,
+    cardNumber: '',
   })
 
   const [resetOpen, setResetOpen] = useState(false)
@@ -82,6 +178,7 @@ export default function UserDetailPage() {
       role: user.role,
       phone: user.phone ?? '',
       workerType: (user.workerType as WorkerType) || 'Installer',
+      cardNumber: user.cardNumber ?? '',
     })
     setEditOpen(true)
   }
@@ -96,6 +193,10 @@ export default function UserDetailPage() {
         role: editForm.role,
         phone: editForm.phone,
         workerType: editForm.role === 'Worker' ? editForm.workerType : null,
+        cardNumber:
+          editForm.role === 'Worker'
+            ? normalizeCardDigits(editForm.cardNumber) || null
+            : null,
       })
       if (updated) setUser(updated)
       setEditOpen(false)
@@ -236,6 +337,11 @@ export default function UserDetailPage() {
           <DetailField label="Телефон (логін)">
             <PhoneLink phone={user.phone} />
           </DetailField>
+          {user.role === 'Worker' ? (
+            <DetailField label="Номер картки">
+              <CopyableCardNumber cardNumber={user.cardNumber} />
+            </DetailField>
+          ) : null}
           <DetailField label="Статус">
             <Box sx={{ mt: 0.25 }}>
               <UserStatusChip user={user} />
@@ -284,19 +390,48 @@ export default function UserDetailPage() {
               fullWidth
             />
             {editForm.role === 'Worker' ? (
-              <FormControl fullWidth>
-                <InputLabel>Тип працівника</InputLabel>
-                <Select
-                  label="Тип працівника"
-                  value={editForm.workerType}
+              <>
+                <FormControl fullWidth>
+                  <InputLabel>Тип працівника</InputLabel>
+                  <Select
+                    label="Тип працівника"
+                    value={editForm.workerType}
+                    onChange={(e) =>
+                      setEditForm((f) => ({ ...f, workerType: e.target.value as WorkerType }))
+                    }
+                  >
+                    <MenuItem value="Assembler">Складальник</MenuItem>
+                    <MenuItem value="Installer">Монтажник</MenuItem>
+                  </Select>
+                </FormControl>
+                <TextField
+                  label="Номер картки"
+                  value={formatCardNumberInput(editForm.cardNumber)}
                   onChange={(e) =>
-                    setEditForm((f) => ({ ...f, workerType: e.target.value as WorkerType }))
+                    setEditForm((f) => ({
+                      ...f,
+                      cardNumber: normalizeCardDigits(e.target.value),
+                    }))
                   }
-                >
-                  <MenuItem value="Assembler">Складальник</MenuItem>
-                  <MenuItem value="Installer">Монтажник</MenuItem>
-                </Select>
-              </FormControl>
+                  inputMode="numeric"
+                  placeholder="5375 4141 4141 4141"
+                  helperText={
+                    isCardNumberValid(editForm.cardNumber)
+                      ? 'Необовʼязково · 16 цифр'
+                      : 'Введіть усі 16 цифр або залиште порожнім'
+                  }
+                  error={!isCardNumberValid(editForm.cardNumber)}
+                  fullWidth
+                  inputProps={{
+                    style: {
+                      fontFamily:
+                        'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                      letterSpacing: '0.1em',
+                      fontWeight: 600,
+                    },
+                  }}
+                />
+              </>
             ) : null}
           </Stack>
         </DialogContent>
@@ -304,7 +439,12 @@ export default function UserDetailPage() {
           <Button variant="text" onClick={() => setEditOpen(false)}>
             Скасувати
           </Button>
-          <Button variant="contained" color="primary" onClick={() => void saveEdit()} disabled={saving}>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => void saveEdit()}
+            disabled={saving || !isCardNumberValid(editForm.cardNumber)}
+          >
             Зберегти
           </Button>
         </DialogActions>

@@ -38,6 +38,7 @@ public class ApplicationIdentityDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(u => u.FailedLoginCount).HasDefaultValue(0);
             entity.Property(u => u.CreatedAt).HasDefaultValueSql("SYSUTCDATETIME()");
             entity.Property(u => u.WorkerType).HasMaxLength(20);
+            entity.Property(u => u.CardNumber).HasMaxLength(16);
         });
 
         builder.Entity<AuthSecurityLog>(entity =>

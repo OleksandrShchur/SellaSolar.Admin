@@ -13,13 +13,15 @@ public record CreateUserRequest(
     string FullName,
     string Role,
     string Phone,
-    string? WorkerType);
+    string? WorkerType,
+    string? CardNumber);
 
 public record UpdateUserRequest(
     string FullName,
     string Role,
     string Phone,
-    string? WorkerType);
+    string? WorkerType,
+    string? CardNumber);
 
 public record ResetUserPasswordRequest(string NewPassword);
 
@@ -30,6 +32,7 @@ public record UserListItemDto(
     string Role,
     string? Phone,
     string? WorkerType,
+    string? CardNumber,
     bool IsActive,
     bool IsBlocked,
     DateTimeOffset? BlockedAt,

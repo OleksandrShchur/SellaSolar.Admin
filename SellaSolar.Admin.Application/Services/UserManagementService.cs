@@ -14,6 +14,9 @@ public class UserManagementService
     private const string InvalidPhoneMessage =
         "Телефон має бути у форматі 0XXXXXXXXX (10 цифр, починається з 0).";
 
+    private const string InvalidCardNumberMessage =
+        "Номер картки має містити рівно 16 цифр або бути порожнім.";
+
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly AuthSecurityLogger _securityLogger;
 
@@ -108,6 +111,7 @@ public class UserManagementService
         ValidateRole(request.Role);
         ValidateWorkerType(request.Role, request.WorkerType);
         var phone = RequireCanonicalPhone(request.Phone);
+        var cardNumber = ResolveCardNumber(request.Role, request.CardNumber);
 
         var normalized = PhoneValidator.NormalizeForLookup(phone);
         if (await _userManager.Users.AnyAsync(u => u.NormalizedUserName == normalized, ct))
@@ -121,6 +125,7 @@ public class UserManagementService
             FullName = request.FullName.Trim(),
             PhoneNumber = phone,
             WorkerType = request.Role == AppRoles.Worker ? request.WorkerType : null,
+            CardNumber = cardNumber,
             IsActive = true,
             CreatedAt = DateTimeOffset.UtcNow,
         };
@@ -140,6 +145,7 @@ public class UserManagementService
         ValidateRole(request.Role);
         ValidateWorkerType(request.Role, request.WorkerType);
         var phone = RequireCanonicalPhone(request.Phone);
+        var cardNumber = ResolveCardNumber(request.Role, request.CardNumber);
 
         var user = await _userManager.FindByIdAsync(id)
             ?? throw new NotFoundException("Користувача не знайдено.");
@@ -154,6 +160,7 @@ public class UserManagementService
         user.FullName = request.FullName.Trim();
         user.PhoneNumber = phone;
         user.WorkerType = request.Role == AppRoles.Worker ? request.WorkerType : null;
+        user.CardNumber = cardNumber;
 
         if (!string.Equals(user.UserName, phone, StringComparison.Ordinal))
         {
@@ -271,6 +278,7 @@ public class UserManagementService
             role,
             user.PhoneNumber,
             user.WorkerType,
+            user.CardNumber,
             user.IsActive,
             user.IsBlocked,
             user.BlockedAt,
@@ -320,5 +328,26 @@ public class UserManagementService
         {
             throw new ValidationException("Тип працівника має бути Assembler або Installer.");
         }
+    }
+
+    private static string? ResolveCardNumber(string role, string? cardNumber)
+    {
+        if (role != AppRoles.Worker)
+        {
+            return null;
+        }
+
+        var normalized = CardNumberValidator.NormalizeOptional(cardNumber);
+        if (normalized is null)
+        {
+            return null;
+        }
+
+        if (!CardNumberValidator.IsValid(normalized))
+        {
+            throw new ValidationException(InvalidCardNumberMessage);
+        }
+
+        return normalized;
     }
 }
