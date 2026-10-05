@@ -62,6 +62,36 @@ export const formatNumber = (value?: number | null) => {
   return new Intl.NumberFormat('uk-UA', { maximumFractionDigits: 2 }).format(value)
 }
 
+/** Keeps up to 16 digits for bank card input. */
+export const normalizeCardDigits = (value: string) => value.replace(/\D/g, '').slice(0, 16)
+
+const formatCardDigitsGrouped = (digits: string) => {
+  const parts: string[] = []
+  for (let i = 0; i < digits.length; i += 4) {
+    parts.push(digits.slice(i, i + 4))
+  }
+  return parts.join(' ')
+}
+
+/** Formats card digits as `XXXX XXXX XXXX XXXX` for read-only display. */
+export const formatCardNumber = (value?: string | null) => {
+  const digits = normalizeCardDigits(value ?? '')
+  if (!digits) return '—'
+  return formatCardDigitsGrouped(digits)
+}
+
+/** Same grouping as <formatCardNumber> for form inputs (empty stays empty). */
+export const formatCardNumberInput = (value?: string | null) => {
+  const digits = normalizeCardDigits(value ?? '')
+  if (!digits) return ''
+  return formatCardDigitsGrouped(digits)
+}
+
+export const isCardNumberValid = (value: string) => {
+  const digits = normalizeCardDigits(value)
+  return digits.length === 0 || digits.length === 16
+}
+
 /** Formats UA mobile as `0XX XXX XX XX` (digits only in storage). */
 export const formatPhone = (value?: string | null) => {
   if (!value) return '—'

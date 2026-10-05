@@ -16,12 +16,21 @@ import {
   Select,
   Stack,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import { usersApi } from '../api'
 import type { AppRole, UserListItem, WorkerType } from '../api/types'
-import { appRoleLabel, formatPhone, toTelHref } from '../utils/labels'
+import {
+  appRoleLabel,
+  formatCardNumber,
+  formatCardNumberInput,
+  formatPhone,
+  isCardNumberValid,
+  normalizeCardDigits,
+  toTelHref,
+} from '../utils/labels'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { DetailField, DetailFieldGrid, DetailPanel } from '../components/DetailPanel'
 import { UserStatusChip, workerTypeDisplay } from '../components/StatusChips'
@@ -40,6 +49,42 @@ function PhoneLink({ phone }: { phone?: string | null }) {
   )
 }
 
+function CopyableCardNumber({ cardNumber }: { cardNumber?: string | null }) {
+  const [copied, setCopied] = useState(false)
+  const digits = normalizeCardDigits(cardNumber ?? '')
+  if (!digits) return <>{'—'}</>
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(digits)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 2000)
+    } catch {
+      setCopied(false)
+    }
+  }
+
+  return (
+    <Tooltip title={copied ? 'Скопійовано' : 'Натисніть, щоб скопіювати'}>
+      <Link
+        component="button"
+        type="button"
+        underline="hover"
+        color="inherit"
+        onClick={() => void copy()}
+        sx={{
+          font: 'inherit',
+          letterSpacing: '0.04em',
+          cursor: 'pointer',
+          textAlign: 'left',
+        }}
+      >
+        {formatCardNumber(digits)}
+      </Link>
+    </Tooltip>
+  )
+}
+
 export default function UserDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -53,6 +98,7 @@ export default function UserDetailPage() {
     role: 'Worker' as AppRole,
     phone: '',
     workerType: 'Installer' as WorkerType,
+    cardNumber: '',
   })
 
   const [resetOpen, setResetOpen] = useState(false)
@@ -82,6 +128,7 @@ export default function UserDetailPage() {
       role: user.role,
       phone: user.phone ?? '',
       workerType: (user.workerType as WorkerType) || 'Installer',
+      cardNumber: user.cardNumber ?? '',
     })
     setEditOpen(true)
   }
@@ -96,6 +143,10 @@ export default function UserDetailPage() {
         role: editForm.role,
         phone: editForm.phone,
         workerType: editForm.role === 'Worker' ? editForm.workerType : null,
+        cardNumber:
+          editForm.role === 'Worker'
+            ? normalizeCardDigits(editForm.cardNumber) || null
+            : null,
       })
       if (updated) setUser(updated)
       setEditOpen(false)
@@ -236,6 +287,11 @@ export default function UserDetailPage() {
           <DetailField label="Телефон (логін)">
             <PhoneLink phone={user.phone} />
           </DetailField>
+          {user.role === 'Worker' ? (
+            <DetailField label="Номер картки">
+              <CopyableCardNumber cardNumber={user.cardNumber} />
+            </DetailField>
+          ) : null}
           <DetailField label="Статус">
             <Box sx={{ mt: 0.25 }}>
               <UserStatusChip user={user} />
@@ -284,19 +340,40 @@ export default function UserDetailPage() {
               fullWidth
             />
             {editForm.role === 'Worker' ? (
-              <FormControl fullWidth>
-                <InputLabel>Тип працівника</InputLabel>
-                <Select
-                  label="Тип працівника"
-                  value={editForm.workerType}
+              <>
+                <FormControl fullWidth>
+                  <InputLabel>Тип працівника</InputLabel>
+                  <Select
+                    label="Тип працівника"
+                    value={editForm.workerType}
+                    onChange={(e) =>
+                      setEditForm((f) => ({ ...f, workerType: e.target.value as WorkerType }))
+                    }
+                  >
+                    <MenuItem value="Assembler">Складальник</MenuItem>
+                    <MenuItem value="Installer">Монтажник</MenuItem>
+                  </Select>
+                </FormControl>
+                <TextField
+                  label="Номер картки"
+                  value={formatCardNumberInput(editForm.cardNumber)}
                   onChange={(e) =>
-                    setEditForm((f) => ({ ...f, workerType: e.target.value as WorkerType }))
+                    setEditForm((f) => ({
+                      ...f,
+                      cardNumber: normalizeCardDigits(e.target.value),
+                    }))
                   }
-                >
-                  <MenuItem value="Assembler">Складальник</MenuItem>
-                  <MenuItem value="Installer">Монтажник</MenuItem>
-                </Select>
-              </FormControl>
+                  inputMode="numeric"
+                  placeholder="5375 4141 4141 4141"
+                  helperText={
+                    isCardNumberValid(editForm.cardNumber)
+                      ? 'Необовʼязково · 16 цифр'
+                      : 'Введіть усі 16 цифр або залиште порожнім'
+                  }
+                  error={!isCardNumberValid(editForm.cardNumber)}
+                  fullWidth
+                />
+              </>
             ) : null}
           </Stack>
         </DialogContent>
@@ -304,7 +381,12 @@ export default function UserDetailPage() {
           <Button variant="text" onClick={() => setEditOpen(false)}>
             Скасувати
           </Button>
-          <Button variant="contained" color="primary" onClick={() => void saveEdit()} disabled={saving}>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => void saveEdit()}
+            disabled={saving || !isCardNumberValid(editForm.cardNumber)}
+          >
             Зберегти
           </Button>
         </DialogActions>

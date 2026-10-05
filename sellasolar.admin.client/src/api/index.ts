@@ -47,6 +47,7 @@ export const usersApi = {
     role: AppRole
     phone: string
     workerType?: WorkerType | null
+    cardNumber?: string | null
   }) => apiSend<UserListItem>('/api/users', 'POST', body),
   update: (
     id: string,
@@ -55,6 +56,7 @@ export const usersApi = {
       role: AppRole
       phone: string
       workerType?: WorkerType | null
+      cardNumber?: string | null
     },
   ) => apiSend<UserListItem>(`/api/users/${id}`, 'PUT', body),
   resetPassword: (id: string, body: { newPassword: string }) =>

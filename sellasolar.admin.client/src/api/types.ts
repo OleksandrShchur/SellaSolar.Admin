@@ -16,6 +16,7 @@ export interface UserListItem {
   role: AppRole
   phone?: string | null
   workerType?: WorkerType | null
+  cardNumber?: string | null
   isActive: boolean
   isBlocked: boolean
   blockedAt?: string | null
