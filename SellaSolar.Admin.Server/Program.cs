@@ -62,6 +62,19 @@ builder.Services.AddRateLimiter(options =>
             AutoReplenishment = true,
         });
     });
+
+    const int healthRateLimitPerMinute = 10;
+    options.AddPolicy("health", context =>
+    {
+        var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
+        {
+            Window = TimeSpan.FromMinutes(1),
+            PermitLimit = healthRateLimitPerMinute,
+            QueueLimit = 0,
+            AutoReplenishment = true,
+        });
+    });
 });
 
 builder.Services.AddControllers();
