@@ -409,6 +409,13 @@ export default function UsersPage() {
             }
             error={!isCardNumberValid(cardNumber)}
             fullWidth
+            inputProps={{
+              style: {
+                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                letterSpacing: '0.1em',
+                fontWeight: 600,
+              },
+            }}
           />
         </>
       ) : null}
