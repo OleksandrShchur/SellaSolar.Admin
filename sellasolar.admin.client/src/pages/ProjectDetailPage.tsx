@@ -50,6 +50,7 @@ import { formatDate, formatDateTime, formatMoney, formatNumber, formatPhone, inv
 import { useAuth } from '../auth/AuthContext'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { DetailField, DetailFieldGrid, DetailPanel, DetailSection, panelPad } from '../components/DetailPanel'
+import PhotoUploadDialog from '../components/PhotoUploadDialog'
 import RowActionsMenu, { type RowActionItem } from '../components/RowActionsMenu'
 import ScrollableTabs from '../components/ScrollableTabs'
 import { ProjectStatusChip } from '../components/StatusChips'
@@ -135,8 +136,7 @@ export default function ProjectDetailPage() {
   const [selectedWorkerId, setSelectedWorkerId] = useState<string>('')
   const [roleOnProject, setRoleOnProject] = useState('')
 
-  const [photoCaption, setPhotoCaption] = useState('')
-  const [uploading, setUploading] = useState(false)
+  const [uploadFiles, setUploadFiles] = useState<File[] | null>(null)
 
   const [expenseOpen, setExpenseOpen] = useState(false)
   const [editingExpense, setEditingExpense] = useState<ProjectExpense | null>(null)
@@ -474,19 +474,11 @@ export default function ProjectDetailPage() {
     }
   }
 
-  const uploadPhoto = async (file?: File | null) => {
-    if (!file) return
-    setUploading(true)
+  const openPhotoUpload = (fileList?: FileList | null) => {
+    const selected = Array.from(fileList ?? [])
+    if (selected.length === 0) return
     setError(null)
-    try {
-      await projectsApi.uploadPhoto(projectId, file, photoCaption || undefined)
-      setPhotoCaption('')
-      await load()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Не вдалося завантажити фото')
-    } finally {
-      setUploading(false)
-    }
+    setUploadFiles(selected)
   }
 
   const openAddExpense = () => {
@@ -1118,20 +1110,18 @@ export default function ProjectDetailPage() {
           </TabPanel>
 
           <TabPanel value={tab} index={4}>
-            <Stack spacing={2} mb={2}>
-              <TextField
-                label="Підпис до фото"
-                value={photoCaption}
-                onChange={(e) => setPhotoCaption(e.target.value)}
-                fullWidth
-              />
-              <Button variant="outlined" color="primary" component="label" disabled={uploading}>
-                {uploading ? 'Завантаження...' : 'Завантажити фото'}
+            <Stack spacing={2} mb={2} alignItems="flex-start">
+              <Button variant="outlined" color="primary" component="label">
+                Завантажити фото
                 <input
                   hidden
                   type="file"
                   accept="image/*"
-                  onChange={(e) => void uploadPhoto(e.target.files?.[0])}
+                  multiple
+                  onChange={(e) => {
+                    openPhotoUpload(e.target.files)
+                    e.target.value = ''
+                  }}
                 />
               </Button>
             </Stack>
@@ -1656,6 +1646,19 @@ export default function ProjectDetailPage() {
         onCancel={() => setPendingDelete(null)}
         onConfirm={() => void confirmPendingDelete()}
       />
+
+      {uploadFiles && (
+        <PhotoUploadDialog
+          open
+          projectId={projectId}
+          files={uploadFiles}
+          onClose={() => setUploadFiles(null)}
+          onComplete={async () => {
+            setUploadFiles(null)
+            await load()
+          }}
+        />
+      )}
 
       <Dialog
         open={reportBlockedOpen}

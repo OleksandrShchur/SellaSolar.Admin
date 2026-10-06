@@ -1,4 +1,4 @@
-import { apiGet, apiGetBlob, apiSend, apiUpload } from './client'
+import { apiGet, apiGetBlob, apiSend, apiUpload, type UploadProgress } from './client'
 import type {
   AppRole,
   CurrentUser,
@@ -112,11 +112,11 @@ export const projectsApi = {
     apiSend<ProjectWorker>(`/api/projects/${id}/workers`, 'POST', { userId, roleOnProject }),
   removeWorker: (id: number, assignmentId: number) =>
     apiSend<void>(`/api/projects/${id}/workers/${assignmentId}`, 'DELETE'),
-  uploadPhoto: (id: number, file: File, caption?: string) => {
+  uploadPhoto: (id: number, file: File, caption?: string, onProgress?: (progress: UploadProgress) => void) => {
     const form = new FormData()
     form.append('file', file)
     if (caption) form.append('caption', caption)
-    return apiUpload<ProjectPhoto>(`/api/projects/${id}/photos`, form)
+    return apiUpload<ProjectPhoto>(`/api/projects/${id}/photos`, form, onProgress)
   },
   removePhoto: (id: number, photoId: number) =>
     apiSend<void>(`/api/projects/${id}/photos/${photoId}`, 'DELETE'),
