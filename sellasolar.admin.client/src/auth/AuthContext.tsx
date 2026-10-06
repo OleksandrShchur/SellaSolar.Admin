@@ -7,7 +7,15 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { apiGet, apiLogin, apiSend, clearCsrfToken, ensureCsrfToken, setUnauthorizedHandler } from '../api/client'
+import {
+  apiGet,
+  apiLogin,
+  apiSend,
+  clearCsrfToken,
+  ensureCsrfToken,
+  refreshCsrfToken,
+  setUnauthorizedHandler,
+} from '../api/client'
 import type { AppRole, CurrentUser } from '../api/types'
 
 type AuthState = {
@@ -51,6 +59,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (phone: string, password: string) => {
     await ensureCsrfToken()
     const response = await apiLogin<CurrentUser>('/api/auth/login', { phone, password })
+    // Antiforgery tokens include the user identity — refresh after auth changes.
+    await refreshCsrfToken()
     setUser({
       userId: response.userId,
       username: response.username,
