@@ -7,7 +7,7 @@ public class AuthOptions
     public int SessionDays { get; set; } = 90;
     public int LoginRateLimitPerMinute { get; set; } = 10;
     public int SecurityStampValidationMinutes { get; set; } = 3;
-    public int MaxFailedLoginsBeforeBlock { get; set; } = 3;
+    public int MaxFailedLoginsBeforeBlock { get; set; } = 5;
     public List<SeedAdminOptions> SeedAdmins { get; set; } = [];
 }
 

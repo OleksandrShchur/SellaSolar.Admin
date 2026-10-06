@@ -31,15 +31,18 @@ public class AuthService
 
     public async Task<LoginResponse> LoginAsync(LoginRequest request, string? ipAddress, CancellationToken ct)
     {
+        var invalidCredentials = AuthMessages.InvalidCredentialsWithLockoutHint(
+            _authOptions.MaxFailedLoginsBeforeBlock);
+
         if (string.IsNullOrWhiteSpace(request.Phone) || string.IsNullOrWhiteSpace(request.Password))
         {
-            throw new ValidationException(AuthMessages.InvalidCredentials);
+            throw new ValidationException(invalidCredentials);
         }
 
         // Login accepts only canonical 0XXXXXXXXX (no auto-normalization of +380).
         if (!PhoneValidator.IsValid(request.Phone))
         {
-            throw new ValidationException(AuthMessages.InvalidCredentials);
+            throw new ValidationException(invalidCredentials);
         }
 
         var normalized = PhoneValidator.NormalizeForLookup(request.Phone);
@@ -48,7 +51,7 @@ public class AuthService
 
         if (user is null)
         {
-            throw new ValidationException(AuthMessages.InvalidCredentials);
+            throw new ValidationException(invalidCredentials);
         }
 
         if (user.IsBlocked)
@@ -56,7 +59,7 @@ public class AuthService
             var blockedPasswordOk = await _userManager.CheckPasswordAsync(user, request.Password);
             if (!blockedPasswordOk)
             {
-                throw new ValidationException(AuthMessages.InvalidCredentials);
+                throw new ValidationException(invalidCredentials);
             }
 
             throw new ValidationException(AuthMessages.AccountBlocked);
@@ -67,7 +70,7 @@ public class AuthService
             var inactivePasswordOk = await _userManager.CheckPasswordAsync(user, request.Password);
             if (!inactivePasswordOk)
             {
-                throw new ValidationException(AuthMessages.InvalidCredentials);
+                throw new ValidationException(invalidCredentials);
             }
 
             throw new ValidationException(AuthMessages.AccountInactive);
@@ -94,7 +97,7 @@ public class AuthService
                 await _userManager.UpdateAsync(user);
             }
 
-            throw new ValidationException(AuthMessages.InvalidCredentials);
+            throw new ValidationException(invalidCredentials);
         }
 
         user.FailedLoginCount = 0;
