@@ -1,26 +1,49 @@
 let csrfToken: string | null = null
+let csrfFetch: Promise<string> | null = null
 let onUnauthorized: ((message: string) => void) | null = null
 
 export function setUnauthorizedHandler(handler: (message: string) => void) {
   onUnauthorized = handler
 }
 
-export async function ensureCsrfToken(): Promise<string> {
-  if (csrfToken) return csrfToken
+async function fetchCsrfToken(): Promise<string> {
   const response = await fetch('/api/auth/antiforgery', { credentials: 'include' })
   if (!response.ok) {
     throw new Error('Не вдалося отримати CSRF-токен')
   }
   const data = (await response.json()) as { token?: string }
-  csrfToken = data.token ?? null
-  if (!csrfToken) {
+  const token = data.token ?? null
+  if (!token) {
     throw new Error('Не вдалося отримати CSRF-токен')
   }
-  return csrfToken
+  csrfToken = token
+  return token
+}
+
+export async function ensureCsrfToken(): Promise<string> {
+  if (csrfToken) return csrfToken
+  if (!csrfFetch) {
+    csrfFetch = fetchCsrfToken().finally(() => {
+      csrfFetch = null
+    })
+  }
+  return csrfFetch
+}
+
+/** Drop cached token and fetch a fresh one (e.g. after login / auth change). */
+export async function refreshCsrfToken(): Promise<string> {
+  csrfToken = null
+  csrfFetch = null
+  return ensureCsrfToken()
 }
 
 export function clearCsrfToken() {
   csrfToken = null
+  csrfFetch = null
+}
+
+function isCsrfErrorMessage(message: string): boolean {
+  return /csrf/i.test(message)
 }
 
 async function parseError(response: Response): Promise<string> {
@@ -59,6 +82,19 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return JSON.parse(text) as T
 }
 
+/** Retries once when the server rejects a stale CSRF token. */
+async function withCsrfRetry(request: () => Promise<Response>): Promise<Response> {
+  await ensureCsrfToken()
+  let response = await request()
+  if (response.status !== 400) return response
+
+  const message = await parseError(response.clone())
+  if (!isCsrfErrorMessage(message)) return response
+
+  await refreshCsrfToken()
+  return request()
+}
+
 export async function apiGet<T>(url: string): Promise<T> {
   await ensureCsrfToken()
   const response = await fetch(url, { credentials: 'include' })
@@ -70,13 +106,14 @@ export async function apiSend<T>(
   method: 'POST' | 'PUT' | 'PATCH' | 'DELETE',
   body?: unknown,
 ): Promise<T | void> {
-  await ensureCsrfToken()
-  const response = await fetch(url, {
-    method,
-    credentials: 'include',
-    headers: buildHeaders(method, body),
-    body: body === undefined ? undefined : JSON.stringify(body),
-  })
+  const response = await withCsrfRetry(() =>
+    fetch(url, {
+      method,
+      credentials: 'include',
+      headers: buildHeaders(method, body),
+      body: body === undefined ? undefined : JSON.stringify(body),
+    }),
+  )
   return handleResponse<T>(response)
 }
 
@@ -84,6 +121,14 @@ export type UploadProgress = {
   loaded: number
   total: number
   percent: number
+}
+
+class CsrfError extends Error {
+  readonly csrf = true as const
+  constructor(message: string) {
+    super(message)
+    this.name = 'CsrfError'
+  }
 }
 
 function parseXhrError(xhr: XMLHttpRequest): string {
@@ -97,38 +142,26 @@ function parseXhrError(xhr: XMLHttpRequest): string {
   return `Помилка запиту (${xhr.status})`
 }
 
-export async function apiUpload<T>(
+function uploadWithXhr<T>(
   url: string,
   formData: FormData,
   onProgress?: (progress: UploadProgress) => void,
 ): Promise<T> {
-  await ensureCsrfToken()
-
-  if (!onProgress) {
-    const headers: Record<string, string> = {}
-    if (csrfToken) headers['X-XSRF-TOKEN'] = csrfToken
-    const response = await fetch(url, {
-      method: 'POST',
-      credentials: 'include',
-      headers,
-      body: formData,
-    })
-    return handleResponse<T>(response)
-  }
-
   return new Promise<T>((resolve, reject) => {
     const xhr = new XMLHttpRequest()
     xhr.open('POST', url)
     xhr.withCredentials = true
     if (csrfToken) xhr.setRequestHeader('X-XSRF-TOKEN', csrfToken)
 
-    xhr.upload.onprogress = (event) => {
-      if (!event.lengthComputable || event.total <= 0) return
-      onProgress({
-        loaded: event.loaded,
-        total: event.total,
-        percent: Math.min(100, Math.round((event.loaded / event.total) * 100)),
-      })
+    if (onProgress) {
+      xhr.upload.onprogress = (event) => {
+        if (!event.lengthComputable || event.total <= 0) return
+        onProgress({
+          loaded: event.loaded,
+          total: event.total,
+          percent: Math.min(100, Math.round((event.loaded / event.total) * 100)),
+        })
+      }
     }
 
     xhr.onload = () => {
@@ -139,8 +172,13 @@ export async function apiUpload<T>(
         reject(new Error(message))
         return
       }
+      const errorMessage = parseXhrError(xhr)
+      if (xhr.status === 400 && isCsrfErrorMessage(errorMessage)) {
+        reject(new CsrfError(errorMessage))
+        return
+      }
       if (xhr.status < 200 || xhr.status >= 300) {
-        reject(new Error(parseXhrError(xhr)))
+        reject(new Error(errorMessage))
         return
       }
       if (xhr.status === 204 || !xhr.responseText) {
@@ -158,6 +196,36 @@ export async function apiUpload<T>(
     xhr.onabort = () => reject(new Error('Завантаження скасовано'))
     xhr.send(formData)
   })
+}
+
+export async function apiUpload<T>(
+  url: string,
+  formData: FormData,
+  onProgress?: (progress: UploadProgress) => void,
+): Promise<T> {
+  await ensureCsrfToken()
+
+  if (!onProgress) {
+    const response = await withCsrfRetry(() => {
+      const headers: Record<string, string> = {}
+      if (csrfToken) headers['X-XSRF-TOKEN'] = csrfToken
+      return fetch(url, {
+        method: 'POST',
+        credentials: 'include',
+        headers,
+        body: formData,
+      })
+    })
+    return handleResponse<T>(response)
+  }
+
+  try {
+    return await uploadWithXhr<T>(url, formData, onProgress)
+  } catch (err) {
+    if (!(err instanceof CsrfError)) throw err
+    await refreshCsrfToken()
+    return uploadWithXhr<T>(url, formData, onProgress)
+  }
 }
 
 /** Fetches a binary response (PDF, etc.) with auth cookies. */
