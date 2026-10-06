@@ -3,6 +3,10 @@ namespace SellaSolar.Admin.Application.Auth;
 public static class AuthMessages
 {
     public const string InvalidCredentials = "Невірний телефон або пароль.";
+
+    public static string InvalidCredentialsWithLockoutHint(int maxFailedLoginsBeforeBlock) =>
+        $"{InvalidCredentials} Дозволено {maxFailedLoginsBeforeBlock} невдалих спроб входу — після цього обліковий запис буде заблоковано.";
+
     public const string AccountBlocked =
         "Обліковий запис заблоковано. Зверніться до адміністратора.";
     public const string AccountInactive =
