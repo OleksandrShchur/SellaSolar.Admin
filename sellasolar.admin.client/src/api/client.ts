@@ -80,17 +80,84 @@ export async function apiSend<T>(
   return handleResponse<T>(response)
 }
 
-export async function apiUpload<T>(url: string, formData: FormData): Promise<T> {
+export type UploadProgress = {
+  loaded: number
+  total: number
+  percent: number
+}
+
+function parseXhrError(xhr: XMLHttpRequest): string {
+  try {
+    const data = JSON.parse(xhr.responseText) as { message?: string } | string
+    if (typeof data === 'string' && data) return data
+    if (typeof data === 'object' && data?.message) return data.message
+  } catch {
+    // ignore
+  }
+  return `Помилка запиту (${xhr.status})`
+}
+
+export async function apiUpload<T>(
+  url: string,
+  formData: FormData,
+  onProgress?: (progress: UploadProgress) => void,
+): Promise<T> {
   await ensureCsrfToken()
-  const headers: Record<string, string> = {}
-  if (csrfToken) headers['X-XSRF-TOKEN'] = csrfToken
-  const response = await fetch(url, {
-    method: 'POST',
-    credentials: 'include',
-    headers,
-    body: formData,
+
+  if (!onProgress) {
+    const headers: Record<string, string> = {}
+    if (csrfToken) headers['X-XSRF-TOKEN'] = csrfToken
+    const response = await fetch(url, {
+      method: 'POST',
+      credentials: 'include',
+      headers,
+      body: formData,
+    })
+    return handleResponse<T>(response)
+  }
+
+  return new Promise<T>((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open('POST', url)
+    xhr.withCredentials = true
+    if (csrfToken) xhr.setRequestHeader('X-XSRF-TOKEN', csrfToken)
+
+    xhr.upload.onprogress = (event) => {
+      if (!event.lengthComputable || event.total <= 0) return
+      onProgress({
+        loaded: event.loaded,
+        total: event.total,
+        percent: Math.min(100, Math.round((event.loaded / event.total) * 100)),
+      })
+    }
+
+    xhr.onload = () => {
+      if (xhr.status === 401) {
+        clearCsrfToken()
+        const message = parseXhrError(xhr) || 'Сесію завершено. Увійдіть знову.'
+        onUnauthorized?.(message)
+        reject(new Error(message))
+        return
+      }
+      if (xhr.status < 200 || xhr.status >= 300) {
+        reject(new Error(parseXhrError(xhr)))
+        return
+      }
+      if (xhr.status === 204 || !xhr.responseText) {
+        resolve(undefined as T)
+        return
+      }
+      try {
+        resolve(JSON.parse(xhr.responseText) as T)
+      } catch {
+        reject(new Error('Некоректна відповідь сервера'))
+      }
+    }
+
+    xhr.onerror = () => reject(new Error('Помилка мережі під час завантаження'))
+    xhr.onabort = () => reject(new Error('Завантаження скасовано'))
+    xhr.send(formData)
   })
-  return handleResponse<T>(response)
 }
 
 /** Fetches a binary response (PDF, etc.) with auth cookies. */
