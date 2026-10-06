@@ -55,23 +55,24 @@ See `ai-context/PROJECT_CONTEXT.md` § Stock for the full rules.
 
 ## 1. Create the database
 
-LocalDB (already used in `appsettings`):
+**MonsterASP:** run only [`database/hosting/FreshInstall.sql`](database/hosting/FreshInstall.sql) (see [`database/hosting/README.md`](database/hosting/README.md)). Do not run `001`–`017` one-by-one in the web SQL Manager.
+
+Scripts are hosting-safe (no `GO` / `USE` / statement `;`). Connect to the target database first (`-d` for sqlcmd).
+
+LocalDB:
 
 ```powershell
 sqllocaldb start MSSQLLocalDB
+sqlcmd -S "(localdb)\MSSQLLocalDB" -E -Q "IF DB_ID(N'SellaSolarAdmin') IS NULL CREATE DATABASE SellaSolarAdmin;"
 
-# Schema (in order). Skip scripts already applied on that database.
-sqlcmd -S "(localdb)\MSSQLLocalDB" -E -i database\001_CreateSchema.sql
-sqlcmd -S "(localdb)\MSSQLLocalDB" -E -i database\004_IdentitySchema.sql
-sqlcmd -S "(localdb)\MSSQLLocalDB" -E -i database\006_MergeWorkersIntoUsers.sql
-sqlcmd -S "(localdb)\MSSQLLocalDB" -E -i database\007_PhoneAsUsername.sql
-sqlcmd -S "(localdb)\MSSQLLocalDB" -E -i database\008_DropUnusedIdentityColumns.sql
+# Recommended: full schema in one shot
+sqlcmd -S "(localdb)\MSSQLLocalDB" -E -d SellaSolarAdmin -i database\hosting\FreshInstall.sql
 
-# Optional sample data (UTF-8). Prefer -f 65001 so Ukrainian text is preserved.
-sqlcmd -S "(localdb)\MSSQLLocalDB" -E -f 65001 -i database\002_SeedData.sql
+# Optional sample data (UTF-8)
+sqlcmd -S "(localdb)\MSSQLLocalDB" -E -d SellaSolarAdmin -f 65001 -i database\002_SeedData.sql
 ```
 
-Utility (run only when needed): `database\005_UnblockUserByPhone.sql`.
+Utility (edit `@Phone` first): `database\005_UnblockUserByPhone.sql`.
 
 Connection string (Development):
 
