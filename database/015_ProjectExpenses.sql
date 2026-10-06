@@ -1,14 +1,8 @@
--- Manual project expenses (work, unexpected costs, etc.).
+﻿-- Manual project expenses (work, unexpected costs, etc.).
 -- Inventory / stock costs stay derived from ProjectItem lot allocations — not stored here.
 -- Idempotent via IF OBJECT_ID.
-
-USE SellaSolarAdmin;
-GO
-
-SET ANSI_NULLS ON;
-SET QUOTED_IDENTIFIER ON;
-GO
-
+SET ANSI_NULLS ON
+SET QUOTED_IDENTIFIER ON
 IF OBJECT_ID(N'dbo.ProjectExpenses', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.ProjectExpenses
@@ -25,9 +19,8 @@ BEGIN
             FOREIGN KEY (ProjectId) REFERENCES dbo.Projects (Id) ON DELETE CASCADE,
         CONSTRAINT CK_ProjectExpenses_Amount CHECK (Amount > 0),
         CONSTRAINT CK_ProjectExpenses_Category CHECK (LEN(LTRIM(RTRIM(Category))) > 0)
-    );
+    )
 
     CREATE INDEX IX_ProjectExpenses_ProjectId
-        ON dbo.ProjectExpenses (ProjectId);
+        ON dbo.ProjectExpenses (ProjectId)
 END
-GO

@@ -1,14 +1,11 @@
--- Warehouse stock lots + project item lot allocations (manual costing).
--- One-time: migrate existing QuantityInStock into a single lot per item;
+﻿-- Warehouse stock lots + project item lot allocations (manual costing).
+-- One-time: migrate existing QuantityInStock into a single lot per item
 -- soft-reserve open-project QuantityFromStock against that lot.
 -- Idempotent via __SchemaPatches.
+-- Hosting-safe: no GO / USE.
 
-USE SellaSolarAdmin;
-GO
-
-SET ANSI_NULLS ON;
-SET QUOTED_IDENTIFIER ON;
-GO
+SET ANSI_NULLS ON
+SET QUOTED_IDENTIFIER ON
 
 IF OBJECT_ID(N'dbo.__SchemaPatches', N'U') IS NULL
 BEGIN
@@ -16,9 +13,8 @@ BEGIN
     (
         PatchName NVARCHAR(100) NOT NULL CONSTRAINT PK___SchemaPatches PRIMARY KEY,
         AppliedAt DATETIME2 NOT NULL CONSTRAINT DF___SchemaPatches_AppliedAt DEFAULT (SYSUTCDATETIME())
-    );
+    )
 END
-GO
 
 IF OBJECT_ID(N'dbo.WarehouseStockLots', N'U') IS NULL
 BEGIN
@@ -38,12 +34,11 @@ BEGIN
         CONSTRAINT CK_WarehouseStockLots_UnitCost CHECK (UnitCost >= 0),
         CONSTRAINT CK_WarehouseStockLots_QuantityOnHand CHECK (QuantityOnHand >= 0),
         CONSTRAINT CK_WarehouseStockLots_QuantityReceived CHECK (QuantityReceived > 0)
-    );
+    )
 
     CREATE INDEX IX_WarehouseStockLots_WarehouseItem_ReceivedAt
-        ON dbo.WarehouseStockLots (WarehouseItemId, ReceivedAt);
+        ON dbo.WarehouseStockLots (WarehouseItemId, ReceivedAt)
 END
-GO
 
 IF OBJECT_ID(N'dbo.ProjectItemLotAllocations', N'U') IS NULL
 BEGIN
@@ -59,16 +54,15 @@ BEGIN
             FOREIGN KEY (WarehouseStockLotId) REFERENCES dbo.WarehouseStockLots (Id),
         CONSTRAINT CK_ProjectItemLotAllocations_Quantity CHECK (Quantity > 0),
         CONSTRAINT UQ_ProjectItemLotAllocations_Item_Lot UNIQUE (ProjectItemId, WarehouseStockLotId)
-    );
+    )
 
     CREATE INDEX IX_ProjectItemLotAllocations_WarehouseStockLotId
-        ON dbo.ProjectItemLotAllocations (WarehouseStockLotId);
+        ON dbo.ProjectItemLotAllocations (WarehouseStockLotId)
 END
-GO
 
-IF NOT EXISTS (SELECT 1 FROM dbo.__SchemaPatches WHERE PatchName = N'014_WarehouseStockLots_Migrate')
+EXEC(N'
+IF NOT EXISTS (SELECT 1 FROM dbo.__SchemaPatches WHERE PatchName = N''014_WarehouseStockLots_Migrate'')
 BEGIN
-    -- One lot per catalog item that still has on-hand stock.
     INSERT INTO dbo.WarehouseStockLots
     (
         WarehouseItemId,
@@ -87,7 +81,7 @@ BEGIN
         wi.QuantityInStock,
         SYSUTCDATETIME(),
         wi.Supplier,
-        N'Migrated from pre-lot stock',
+        N''Migrated from pre-lot stock'',
         SYSUTCDATETIME()
     FROM dbo.WarehouseItems wi
     WHERE wi.QuantityInStock > 0
@@ -95,10 +89,8 @@ BEGIN
           SELECT 1
           FROM dbo.WarehouseStockLots l
           WHERE l.WarehouseItemId = wi.Id
-      );
+      )
 
-    -- Soft-reserve open-project lines against the migrated lot (one-time auto-fill).
-    -- Going forward, allocations are always set manually in the UI.
     INSERT INTO dbo.ProjectItemLotAllocations (ProjectItemId, WarehouseStockLotId, Quantity)
     SELECT
         pi.Id,
@@ -109,18 +101,18 @@ BEGIN
     INNER JOIN dbo.WarehouseStockLots lot ON lot.WarehouseItemId = pi.WarehouseItemId
     WHERE pi.WarehouseItemId IS NOT NULL
       AND pi.QuantityFromStock > 0
-      AND p.Status IN (N'Awaiting', N'InProgress')
+      AND p.Status IN (N''Awaiting'', N''InProgress'')
       AND NOT EXISTS (
           SELECT 1
           FROM dbo.ProjectItemLotAllocations a
           WHERE a.ProjectItemId = pi.Id
-      );
+      )
 
-    INSERT INTO dbo.__SchemaPatches (PatchName) VALUES (N'014_WarehouseStockLots_Migrate');
-    PRINT N'014: created lots tables and migrated existing stock / open allocations.';
+    INSERT INTO dbo.__SchemaPatches (PatchName) VALUES (N''014_WarehouseStockLots_Migrate'')
+    PRINT N''014: created lots tables and migrated existing stock / open allocations.''
 END
 ELSE
 BEGIN
-    PRINT N'Skip 014 migrate (already applied).';
+    PRINT N''Skip 014 migrate (already applied).''
 END
-GO
+')
