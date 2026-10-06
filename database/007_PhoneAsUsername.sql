@@ -1,4 +1,4 @@
--- Normalize Identity logins to Ukrainian phone (canonical 0XXXXXXXXX).
+﻿-- Normalize Identity logins to Ukrainian phone (canonical 0XXXXXXXXX).
 -- Converts +380… / 380… phones, sets UserName = PhoneNumber.
 -- Maps legacy seed admins (admin / admin2) to 0981000001 / 0981000002.
 --
@@ -7,15 +7,9 @@
 --
 -- Usage (LocalDB):
 --   sqlcmd -S "(localdb)\MSSQLLocalDB" -E -i database\007_PhoneAsUsername.sql
-
-USE SellaSolarAdmin;
-GO
-
-SET XACT_ABORT ON;
-SET QUOTED_IDENTIFIER ON;
-SET ANSI_NULLS ON;
-GO
-
+SET XACT_ABORT ON
+SET QUOTED_IDENTIFIER ON
+SET ANSI_NULLS ON
 ------------------------------------------------------------------
 -- 1) Normalize PhoneNumber: +380XXXXXXXXX / 380XXXXXXXXX -> 0XXXXXXXXX
 ------------------------------------------------------------------
@@ -38,9 +32,7 @@ WHERE PhoneNumber IS NOT NULL
   AND (
         PhoneNumber LIKE N'+380%'
      OR PhoneNumber LIKE N'380%'
-  );
-GO
-
+  )
 ------------------------------------------------------------------
 -- 2) Legacy seed admins without phone -> assign canonical phones
 ------------------------------------------------------------------
@@ -49,16 +41,14 @@ SET PhoneNumber = N'0981000001',
     UserName = N'0981000001',
     NormalizedUserName = N'0981000001'
 WHERE NormalizedUserName = N'ADMIN'
-  AND (PhoneNumber IS NULL OR LTRIM(RTRIM(PhoneNumber)) = N'');
+  AND (PhoneNumber IS NULL OR LTRIM(RTRIM(PhoneNumber)) = N'')
 
 UPDATE dbo.AspNetUsers
 SET PhoneNumber = N'0981000002',
     UserName = N'0981000002',
     NormalizedUserName = N'0981000002'
 WHERE NormalizedUserName = N'ADMIN2'
-  AND (PhoneNumber IS NULL OR LTRIM(RTRIM(PhoneNumber)) = N'');
-GO
-
+  AND (PhoneNumber IS NULL OR LTRIM(RTRIM(PhoneNumber)) = N'')
 ------------------------------------------------------------------
 -- 3) UserName / NormalizedUserName = canonical PhoneNumber
 ------------------------------------------------------------------
@@ -72,8 +62,5 @@ WHERE PhoneNumber IS NOT NULL
         UserName <> PhoneNumber
      OR NormalizedUserName <> PhoneNumber
      OR PhoneNumber IS NULL
-  );
-GO
-
-PRINT N'007_PhoneAsUsername completed successfully.';
-GO
+  )
+PRINT N'007_PhoneAsUsername completed successfully.'

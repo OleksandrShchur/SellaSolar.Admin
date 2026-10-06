@@ -1,17 +1,11 @@
--- One-time fix: seed ProjectItems historically set QuantityFromStock without
+﻿-- One-time fix: seed ProjectItems historically set QuantityFromStock without
 -- reducing WarehouseItems.QuantityInStock. Deduct those amounts once.
 -- Idempotent guard: only runs if inverter #2 still has the undeducted seed qty (12)
 -- while open+completed project items claim QuantityFromStock against it.
 -- Safe to re-run: the guard skips after stock is corrected.
 -- Apply with: sqlcmd ... -i database\012_ReconcileUndeductedProjectStock.sql -I
-
-USE SellaSolarAdmin;
-GO
-
-SET ANSI_NULLS ON;
-SET QUOTED_IDENTIFIER ON;
-GO
-
+SET ANSI_NULLS ON
+SET QUOTED_IDENTIFIER ON
 IF EXISTS (
     SELECT 1
     FROM dbo.WarehouseItems wi
@@ -32,12 +26,11 @@ BEGIN
         FROM dbo.ProjectItems
         WHERE WarehouseItemId IS NOT NULL
         GROUP BY WarehouseItemId
-    ) x ON x.WarehouseItemId = wi.Id;
+    ) x ON x.WarehouseItemId = wi.Id
 
-    PRINT N'Reconciled warehouse stock from ProjectItems.QuantityFromStock.';
+    PRINT N'Reconciled warehouse stock from ProjectItems.QuantityFromStock.'
 END
 ELSE
 BEGIN
-    PRINT N'Skip reconcile (stock already looks deducted or data differs from seed).';
+    PRINT N'Skip reconcile (stock already looks deducted or data differs from seed).'
 END
-GO

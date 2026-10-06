@@ -1,25 +1,20 @@
--- SellaSolar Admin Panel - Database schema (Database-First)
--- Target: SQL Server / LocalDB
--- Run against an empty database named SellaSolarAdmin (or change USE below).
-
-IF DB_ID(N'SellaSolarAdmin') IS NULL
-BEGIN
-    CREATE DATABASE SellaSolarAdmin;
-END
-GO
-
-USE SellaSolarAdmin;
-GO
+﻿-- SellaSolar Admin Panel - Database schema (Database-First)
+-- Target: SQL Server / LocalDB / shared hosting (MonsterASP)
+--
+-- Connect to the target database first (no CREATE DATABASE / USE / GO).
+-- LocalDB: create DB once, then:
+--   sqlcmd -S "(localdb)\MSSQLLocalDB" -E -Q "IF DB_ID(N'SellaSolarAdmin') IS NULL CREATE DATABASE SellaSolarAdmin;"
+--   sqlcmd -S "(localdb)\MSSQLLocalDB" -E -d SellaSolarAdmin -i database\001_CreateSchema.sql
+-- MonsterASP fresh DB: prefer database\hosting\FreshInstall.sql instead of this incremental chain.
 
 -- Drop in dependency order (idempotent re-run for local dev)
-IF OBJECT_ID(N'dbo.ProjectItems', N'U') IS NOT NULL DROP TABLE dbo.ProjectItems;
-IF OBJECT_ID(N'dbo.ProjectWorkers', N'U') IS NOT NULL DROP TABLE dbo.ProjectWorkers;
-IF OBJECT_ID(N'dbo.ProjectPhotos', N'U') IS NOT NULL DROP TABLE dbo.ProjectPhotos;
-IF OBJECT_ID(N'dbo.ProjectCustomData', N'U') IS NOT NULL DROP TABLE dbo.ProjectCustomData;
-IF OBJECT_ID(N'dbo.Projects', N'U') IS NOT NULL DROP TABLE dbo.Projects;
-IF OBJECT_ID(N'dbo.Workers', N'U') IS NOT NULL DROP TABLE dbo.Workers; -- legacy; removed by 006
-IF OBJECT_ID(N'dbo.WarehouseItems', N'U') IS NOT NULL DROP TABLE dbo.WarehouseItems;
-GO
+IF OBJECT_ID(N'dbo.ProjectItems', N'U') IS NOT NULL DROP TABLE dbo.ProjectItems
+IF OBJECT_ID(N'dbo.ProjectWorkers', N'U') IS NOT NULL DROP TABLE dbo.ProjectWorkers
+IF OBJECT_ID(N'dbo.ProjectPhotos', N'U') IS NOT NULL DROP TABLE dbo.ProjectPhotos
+IF OBJECT_ID(N'dbo.ProjectCustomData', N'U') IS NOT NULL DROP TABLE dbo.ProjectCustomData
+IF OBJECT_ID(N'dbo.Projects', N'U') IS NOT NULL DROP TABLE dbo.Projects
+IF OBJECT_ID(N'dbo.Workers', N'U') IS NOT NULL DROP TABLE dbo.Workers -- legacy, removed by 006
+IF OBJECT_ID(N'dbo.WarehouseItems', N'U') IS NOT NULL DROP TABLE dbo.WarehouseItems
 
 CREATE TABLE dbo.Projects
 (
@@ -35,8 +30,7 @@ CREATE TABLE dbo.Projects
     EndDate         DATETIME2       NULL,
     CreatedAt       DATETIME2       NOT NULL CONSTRAINT DF_Projects_CreatedAt DEFAULT (SYSUTCDATETIME()),
     UpdatedAt       DATETIME2       NOT NULL CONSTRAINT DF_Projects_UpdatedAt DEFAULT (SYSUTCDATETIME())
-);
-GO
+)
 
 CREATE TABLE dbo.ProjectPhotos
 (
@@ -46,8 +40,7 @@ CREATE TABLE dbo.ProjectPhotos
     Caption         NVARCHAR(500)   NULL,
     UploadedAt      DATETIME2       NOT NULL CONSTRAINT DF_ProjectPhotos_UploadedAt DEFAULT (SYSUTCDATETIME()),
     CONSTRAINT FK_ProjectPhotos_Projects FOREIGN KEY (ProjectId) REFERENCES dbo.Projects(Id) ON DELETE CASCADE
-);
-GO
+)
 
 CREATE TABLE dbo.ProjectCustomData
 (
@@ -56,8 +49,7 @@ CREATE TABLE dbo.ProjectCustomData
     [Key]           NVARCHAR(200)   NOT NULL,
     Value           NVARCHAR(MAX)   NOT NULL,
     CONSTRAINT FK_ProjectCustomData_Projects FOREIGN KEY (ProjectId) REFERENCES dbo.Projects(Id) ON DELETE CASCADE
-);
-GO
+)
 
 -- Project assignment targets AspNetUsers (created in 004_IdentitySchema.sql).
 -- FK to AspNetUsers is added by 006_MergeWorkersIntoUsers.sql after Identity exists.
@@ -65,13 +57,12 @@ CREATE TABLE dbo.ProjectWorkers
 (
     Id              INT             NOT NULL IDENTITY(1,1) CONSTRAINT PK_ProjectWorkers PRIMARY KEY,
     ProjectId       INT             NOT NULL,
-    UserId          NVARCHAR(450)   NOT NULL,
+    UserId          NVARCHAR(128)   NOT NULL,
     RoleOnProject   NVARCHAR(100)   NULL,
     AssignedAt      DATETIME2       NOT NULL CONSTRAINT DF_ProjectWorkers_AssignedAt DEFAULT (SYSUTCDATETIME()),
     CONSTRAINT FK_ProjectWorkers_Projects FOREIGN KEY (ProjectId) REFERENCES dbo.Projects(Id) ON DELETE CASCADE,
     CONSTRAINT UQ_ProjectWorkers_Project_User UNIQUE (ProjectId, UserId)
-);
-GO
+)
 
 CREATE TABLE dbo.WarehouseItems
 (
@@ -84,8 +75,7 @@ CREATE TABLE dbo.WarehouseItems
     Supplier            NVARCHAR(200)   NULL,
     Notes               NVARCHAR(MAX)   NULL,
     LowStockThreshold   DECIMAL(18,2)   NULL
-);
-GO
+)
 
 CREATE TABLE dbo.ProjectItems
 (
@@ -99,11 +89,9 @@ CREATE TABLE dbo.ProjectItems
     CONSTRAINT FK_ProjectItems_Projects FOREIGN KEY (ProjectId) REFERENCES dbo.Projects(Id) ON DELETE CASCADE,
     CONSTRAINT FK_ProjectItems_WarehouseItems FOREIGN KEY (WarehouseItemId) REFERENCES dbo.WarehouseItems(Id),
     CONSTRAINT UQ_ProjectItems_Project_WarehouseItem UNIQUE (ProjectId, WarehouseItemId)
-);
-GO
+)
 
-CREATE INDEX IX_Projects_Status ON dbo.Projects(Status);
-CREATE INDEX IX_Projects_Name ON dbo.Projects(Name);
-CREATE INDEX IX_WarehouseItems_Category ON dbo.WarehouseItems(Category);
-CREATE INDEX IX_ProjectWorkers_UserId ON dbo.ProjectWorkers(UserId);
-GO
+CREATE INDEX IX_Projects_Status ON dbo.Projects(Status)
+CREATE INDEX IX_Projects_Name ON dbo.Projects(Name)
+CREATE INDEX IX_WarehouseItems_Category ON dbo.WarehouseItems(Category)
+CREATE INDEX IX_ProjectWorkers_UserId ON dbo.ProjectWorkers(UserId)
