@@ -1110,7 +1110,7 @@ export default function ProjectDetailPage() {
           </TabPanel>
 
           <TabPanel value={tab} index={4}>
-            <Stack spacing={2} mb={2}>
+            <Stack spacing={2} mb={2} alignItems="flex-start">
               <Button variant="outlined" color="primary" component="label">
                 Завантажити фото
                 <input
