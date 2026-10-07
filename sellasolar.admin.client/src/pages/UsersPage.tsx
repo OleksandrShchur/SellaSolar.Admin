@@ -8,6 +8,7 @@ import {
   CardActionArea,
   CardContent,
   Chip,
+  Collapse,
   Dialog,
   DialogActions,
   DialogContent,
@@ -29,6 +30,7 @@ import {
 import { DataGrid, type GridColDef } from '@mui/x-data-grid'
 import AddIcon from '@mui/icons-material/Add'
 import ClearIcon from '@mui/icons-material/Clear'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import SearchIcon from '@mui/icons-material/Search'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import LockResetOutlinedIcon from '@mui/icons-material/LockResetOutlined'
@@ -56,6 +58,18 @@ type PendingUserAction =
   | { kind: 'unblock'; user: UserListItem }
 
 const roles: AppRole[] = ['Admin', 'Worker']
+
+const roleFilterLabel: Record<RoleFilter, string> = {
+  '': 'Усі',
+  Admin: 'Адміни',
+  Worker: 'Працівники',
+}
+
+const statusFilterLabel: Record<StatusFilter, string> = {
+  active: 'Активні',
+  blocked: 'Заблоковані',
+  inactive: 'Деактивовані',
+}
 
 const toggleButtonSx = {
   flexShrink: 0,
@@ -87,6 +101,7 @@ export default function UsersPage() {
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('Worker')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('active')
+  const [filtersExpanded, setFiltersExpanded] = useState(false)
 
   const [createOpen, setCreateOpen] = useState(false)
   const [createForm, setCreateForm] = useState(emptyCreate)
@@ -493,33 +508,111 @@ export default function UsersPage() {
             }}
           />
 
-          <ToggleButtonGroup
-            exclusive
-            size="small"
-            value={roleFilter}
-            onChange={(_, v) => {
-              if (v !== null) setRoleFilter(v as RoleFilter)
-            }}
-            sx={toggleButtonSx}
-          >
-            <ToggleButton value="">Усі</ToggleButton>
-            <ToggleButton value="Admin">Адміни</ToggleButton>
-            <ToggleButton value="Worker">Працівники</ToggleButton>
-          </ToggleButtonGroup>
+          {isMobile ? (
+            <>
+              <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={() => setFiltersExpanded((v) => !v)}
+                  aria-expanded={filtersExpanded}
+                  aria-label={filtersExpanded ? 'Сховати фільтри' : 'Показати фільтри'}
+                  endIcon={
+                    <ExpandMoreIcon
+                      sx={{
+                        transform: filtersExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                        transition: 'transform 0.2s ease',
+                      }}
+                    />
+                  }
+                  sx={{ textTransform: 'none', fontWeight: 600, flexShrink: 0 }}
+                >
+                  Фільтри
+                </Button>
+                {!filtersExpanded && (
+                  <Chip
+                    size="small"
+                    label={`${roleFilterLabel[roleFilter]} · ${statusFilterLabel[statusFilter]}`}
+                    onClick={() => setFiltersExpanded(true)}
+                    sx={{ fontWeight: 600 }}
+                  />
+                )}
+              </Stack>
+              <Collapse in={filtersExpanded} sx={{ width: '100%' }}>
+                <Stack spacing={1.5} sx={{ pt: 0.5 }}>
+                  <ToggleButtonGroup
+                    exclusive
+                    size="small"
+                    value={roleFilter}
+                    onChange={(_, v) => {
+                      if (v !== null) setRoleFilter(v as RoleFilter)
+                    }}
+                    sx={{ ...toggleButtonSx, width: '100%' }}
+                  >
+                    <ToggleButton value="" sx={{ flex: 1 }}>
+                      Усі
+                    </ToggleButton>
+                    <ToggleButton value="Admin" sx={{ flex: 1 }}>
+                      Адміни
+                    </ToggleButton>
+                    <ToggleButton value="Worker" sx={{ flex: 1 }}>
+                      Працівники
+                    </ToggleButton>
+                  </ToggleButtonGroup>
 
-          <ToggleButtonGroup
-            exclusive
-            size="small"
-            value={statusFilter}
-            onChange={(_, v) => {
-              if (v !== null) setStatusFilter(v as StatusFilter)
-            }}
-            sx={toggleButtonSx}
-          >
-            <ToggleButton value="active">Активні</ToggleButton>
-            <ToggleButton value="blocked">Заблоковані</ToggleButton>
-            <ToggleButton value="inactive">Деактивовані</ToggleButton>
-          </ToggleButtonGroup>
+                  <ToggleButtonGroup
+                    exclusive
+                    size="small"
+                    value={statusFilter}
+                    onChange={(_, v) => {
+                      if (v !== null) setStatusFilter(v as StatusFilter)
+                    }}
+                    sx={{ ...toggleButtonSx, width: '100%' }}
+                  >
+                    <ToggleButton value="active" sx={{ flex: 1 }}>
+                      Активні
+                    </ToggleButton>
+                    <ToggleButton value="blocked" sx={{ flex: 1 }}>
+                      Заблоковані
+                    </ToggleButton>
+                    <ToggleButton value="inactive" sx={{ flex: 1 }}>
+                      Деактивовані
+                    </ToggleButton>
+                  </ToggleButtonGroup>
+                </Stack>
+              </Collapse>
+            </>
+          ) : (
+            <>
+              <ToggleButtonGroup
+                exclusive
+                size="small"
+                value={roleFilter}
+                onChange={(_, v) => {
+                  if (v !== null) setRoleFilter(v as RoleFilter)
+                }}
+                sx={toggleButtonSx}
+              >
+                <ToggleButton value="">Усі</ToggleButton>
+                <ToggleButton value="Admin">Адміни</ToggleButton>
+                <ToggleButton value="Worker">Працівники</ToggleButton>
+              </ToggleButtonGroup>
+
+              <ToggleButtonGroup
+                exclusive
+                size="small"
+                value={statusFilter}
+                onChange={(_, v) => {
+                  if (v !== null) setStatusFilter(v as StatusFilter)
+                }}
+                sx={toggleButtonSx}
+              >
+                <ToggleButton value="active">Активні</ToggleButton>
+                <ToggleButton value="blocked">Заблоковані</ToggleButton>
+                <ToggleButton value="inactive">Деактивовані</ToggleButton>
+              </ToggleButtonGroup>
+            </>
+          )}
         </Stack>
       </Box>
 
