@@ -1,5 +1,6 @@
 import { useId, useState, type ReactNode } from 'react'
 import {
+  Button,
   Divider,
   IconButton,
   ListItemIcon,
@@ -8,6 +9,7 @@ import {
   MenuItem,
   Tooltip,
 } from '@mui/material'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
 
 export type RowActionItem =
@@ -27,12 +29,15 @@ type Props = {
   label?: string
   items: RowActionItem[]
   size?: 'small' | 'medium'
+  /** `icon` = ⋮ (tables); `button` = labeled «Дії» control (detail headers) */
+  trigger?: 'icon' | 'button'
 }
 
 export default function RowActionsMenu({
   label = 'Дії',
   items,
   size = 'small',
+  trigger = 'icon',
 }: Props) {
   const menuId = useId()
   const [anchor, setAnchor] = useState<null | HTMLElement>(null)
@@ -40,27 +45,56 @@ export default function RowActionsMenu({
 
   const close = () => setAnchor(null)
 
+  const openMenu = (el: HTMLElement) => setAnchor(el)
+
   return (
     <>
-      <Tooltip title={label}>
-        <IconButton
+      {trigger === 'button' ? (
+        <Button
           size={size}
+          variant="outlined"
+          color="primary"
           aria-label={label}
           aria-controls={open ? menuId : undefined}
           aria-haspopup="true"
           aria-expanded={open ? 'true' : undefined}
           onClick={(e) => {
             e.stopPropagation()
-            setAnchor(e.currentTarget)
+            openMenu(e.currentTarget)
           }}
-          sx={{
-            color: 'text.secondary',
-            '&:hover': { color: 'text.primary', bgcolor: 'action.hover' },
-          }}
+          endIcon={
+            <ExpandMoreIcon
+              sx={{
+                transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.2s ease',
+              }}
+            />
+          }
+          sx={{ textTransform: 'none', fontWeight: 600, flexShrink: 0 }}
         >
-          <MoreVertIcon fontSize="small" />
-        </IconButton>
-      </Tooltip>
+          {label}
+        </Button>
+      ) : (
+        <Tooltip title={label}>
+          <IconButton
+            size={size}
+            aria-label={label}
+            aria-controls={open ? menuId : undefined}
+            aria-haspopup="true"
+            aria-expanded={open ? 'true' : undefined}
+            onClick={(e) => {
+              e.stopPropagation()
+              openMenu(e.currentTarget)
+            }}
+            sx={{
+              color: 'text.secondary',
+              '&:hover': { color: 'text.primary', bgcolor: 'action.hover' },
+            }}
+          >
+            <MoreVertIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      )}
       <Menu
         id={menuId}
         anchorEl={anchor}
