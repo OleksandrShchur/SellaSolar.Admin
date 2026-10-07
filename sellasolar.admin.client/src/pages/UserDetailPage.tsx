@@ -18,10 +18,17 @@ import {
   TextField,
   Tooltip,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined'
 import CheckOutlinedIcon from '@mui/icons-material/CheckOutlined'
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
+import LockResetOutlinedIcon from '@mui/icons-material/LockResetOutlined'
+import LockOpenOutlinedIcon from '@mui/icons-material/LockOpenOutlined'
+import PersonOffOutlinedIcon from '@mui/icons-material/PersonOffOutlined'
+import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined'
 import { usersApi } from '../api'
 import type { AppRole, UserListItem, WorkerType } from '../api/types'
 import {
@@ -35,6 +42,7 @@ import {
 } from '../utils/labels'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { DetailField, DetailFieldGrid, DetailPanel } from '../components/DetailPanel'
+import RowActionsMenu, { type RowActionItem } from '../components/RowActionsMenu'
 import { UserStatusChip, workerTypeDisplay } from '../components/StatusChips'
 import { brandColors } from '../theme'
 
@@ -138,6 +146,8 @@ function CopyableCardNumber({ cardNumber }: { cardNumber?: string | null }) {
 export default function UserDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const [user, setUser] = useState<UserListItem | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -260,6 +270,55 @@ export default function UserDetailPage() {
   }
   if (!user) return <Alert severity="error">{error}</Alert>
 
+  const headerMenuItems: RowActionItem[] = [
+    {
+      key: 'edit',
+      label: 'Редагувати',
+      icon: <EditOutlinedIcon fontSize="small" />,
+      onClick: openEdit,
+    },
+    {
+      key: 'password',
+      label: 'Скинути пароль',
+      icon: <LockResetOutlinedIcon fontSize="small" />,
+      onClick: () => {
+        setNewPassword('')
+        setResetOpen(true)
+      },
+    },
+  ]
+
+  const statusActions: RowActionItem[] = []
+  if (user.isBlocked) {
+    statusActions.push({
+      key: 'unblock',
+      label: 'Розблокувати',
+      icon: <LockOpenOutlinedIcon fontSize="small" />,
+      onClick: () => setPendingAction('unblock'),
+      tone: 'warning',
+    })
+  }
+  if (user.isActive && user.role === 'Worker') {
+    statusActions.push({
+      key: 'deactivate',
+      label: 'Деактивувати',
+      icon: <PersonOffOutlinedIcon fontSize="small" />,
+      onClick: () => setPendingAction('deactivate'),
+      tone: 'danger',
+    })
+  }
+  if (!user.isActive) {
+    statusActions.push({
+      key: 'activate',
+      label: 'Активувати',
+      icon: <PersonOutlineOutlinedIcon fontSize="small" />,
+      onClick: () => void activate(),
+    })
+  }
+  if (statusActions.length > 0) {
+    headerMenuItems.push({ kind: 'divider', key: 'status-divider' }, ...statusActions)
+  }
+
   return (
     <Stack spacing={2.5}>
       <Stack
@@ -272,7 +331,7 @@ export default function UserDetailPage() {
           <IconButton onClick={() => navigate('/users')} sx={{ mt: -0.5 }}>
             <ArrowBackIcon />
           </IconButton>
-          <Box sx={{ minWidth: 0 }}>
+          <Box sx={{ minWidth: 0, flex: 1 }}>
             <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
               <Typography variant="h6" fontWeight={700} noWrap>
                 {user.fullName}
@@ -283,45 +342,13 @@ export default function UserDetailPage() {
               {appRoleLabel(user.role)} · {workerTypeDisplay(user)}
             </Typography>
           </Box>
-        </Stack>
-        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ flexShrink: 0 }}>
-          <Button variant="outlined" color="primary" onClick={openEdit}>
-            Редагувати
-          </Button>
-          <Button
-            variant="outlined"
-            color="primary"
-            onClick={() => {
-              setNewPassword('')
-              setResetOpen(true)
-            }}
-          >
-            Скинути пароль
-          </Button>
-          {user.isBlocked && (
-            <Button
-              color="warning"
-              variant="contained"
-              onClick={() => setPendingAction('unblock')}
-            >
-              Розблокувати
-            </Button>
-          )}
-          {user.isActive && user.role === 'Worker' && (
-            <Button
-              color="error"
-              variant="outlined"
-              onClick={() => setPendingAction('deactivate')}
-            >
-              Деактивувати
-            </Button>
-          )}
-          {!user.isActive && (
-            <Button color="success" variant="contained" onClick={() => void activate()}>
-              Активувати
-            </Button>
+          {isMobile && (
+            <RowActionsMenu trigger="icon" size="medium" items={headerMenuItems} />
           )}
         </Stack>
+        {!isMobile && (
+          <RowActionsMenu trigger="button" size="medium" items={headerMenuItems} />
+        )}
       </Stack>
 
       {error && (
