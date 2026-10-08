@@ -20,20 +20,28 @@ import {
   TextField,
   Tooltip,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import DeleteIcon from '@mui/icons-material/Delete'
+import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined'
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
+import AddBoxOutlinedIcon from '@mui/icons-material/AddBoxOutlined'
 import { warehouseApi } from '../api'
 import type { WarehouseItemDetail, WarehouseStockLot } from '../api/types'
 import { formatDateTime, formatNumber, inventoryLabels } from '../utils/labels'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { DetailField, DetailFieldGrid, DetailPanel } from '../components/DetailPanel'
+import RowActionsMenu, { type RowActionItem } from '../components/RowActionsMenu'
 import { ProjectStatusChip } from '../components/StatusChips'
 
 export default function WarehouseDetailPage() {
   const { id } = useParams()
   const itemId = Number(id)
   const navigate = useNavigate()
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const [item, setItem] = useState<WarehouseItemDetail | null>(null)
   const [categories, setCategories] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -199,6 +207,29 @@ export default function WarehouseDetailPage() {
   }
   if (!item) return <Alert severity="error">{error}</Alert>
 
+  const headerMenuItems: RowActionItem[] = [
+    {
+      key: 'receive',
+      label: inventoryLabels.receive,
+      icon: <AddBoxOutlinedIcon fontSize="small" />,
+      onClick: openReceive,
+    },
+    {
+      key: 'edit',
+      label: 'Редагувати',
+      icon: <EditOutlinedIcon fontSize="small" />,
+      onClick: () => void openEdit(),
+    },
+    { kind: 'divider', key: 'danger-divider' },
+    {
+      key: 'delete',
+      label: 'Видалити',
+      icon: <DeleteOutlinedIcon fontSize="small" />,
+      onClick: () => setItemDeleteOpen(true),
+      tone: 'danger',
+    },
+  ]
+
   return (
     <Stack spacing={2.5}>
       <Stack
@@ -211,7 +242,7 @@ export default function WarehouseDetailPage() {
           <IconButton onClick={() => navigate('/warehouse')} sx={{ mt: -0.5 }}>
             <ArrowBackIcon />
           </IconButton>
-          <Box sx={{ minWidth: 0 }}>
+          <Box sx={{ minWidth: 0, flex: 1 }}>
             <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
               <Typography variant="h6" fontWeight={700} noWrap>
                 {item.name}
@@ -222,18 +253,13 @@ export default function WarehouseDetailPage() {
               {item.category}
             </Typography>
           </Box>
+          {isMobile && (
+            <RowActionsMenu trigger="icon" size="medium" items={headerMenuItems} />
+          )}
         </Stack>
-        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ flexShrink: 0 }}>
-          <Button variant="contained" color="primary" onClick={openReceive}>
-            {inventoryLabels.receive}
-          </Button>
-          <Button variant="outlined" color="primary" onClick={openEdit}>
-            Редагувати
-          </Button>
-          <Button color="error" variant="outlined" onClick={() => setItemDeleteOpen(true)}>
-            Видалити
-          </Button>
-        </Stack>
+        {!isMobile && (
+          <RowActionsMenu trigger="button" size="medium" items={headerMenuItems} />
+        )}
       </Stack>
 
       {error && (
