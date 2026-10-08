@@ -706,7 +706,7 @@ export default function ProjectDetailPage() {
           <IconButton onClick={() => navigate('/projects')} sx={{ mt: -0.5 }}>
             <ArrowBackIcon />
           </IconButton>
-          <Box sx={{ minWidth: 0 }}>
+          <Box sx={{ minWidth: 0, flex: 1 }}>
             <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
               <Typography variant="h6" fontWeight={700} sx={{ wordBreak: 'break-word' }}>
                 {project.name}
@@ -717,16 +717,13 @@ export default function ProjectDetailPage() {
               {project.address}
             </Typography>
           </Box>
+          {isMobile && (
+            <RowActionsMenu trigger="icon" size="medium" items={headerMenuItems} />
+          )}
         </Stack>
-        <Stack
-          direction="row"
-          spacing={1}
-          alignItems="center"
-          justifyContent={{ xs: 'flex-end', sm: 'flex-start' }}
-          sx={{ flexShrink: 0, width: { xs: '100%', sm: 'auto' }, pl: { xs: 5, sm: 0 } }}
-        >
-          <RowActionsMenu items={headerMenuItems} />
-        </Stack>
+        {!isMobile && (
+          <RowActionsMenu trigger="button" size="medium" items={headerMenuItems} />
+        )}
       </Stack>
 
       {error && (
