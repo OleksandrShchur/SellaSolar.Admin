@@ -5,6 +5,7 @@ import {
   BottomNavigation,
   BottomNavigationAction,
   Box,
+  Divider,
   Drawer,
   IconButton,
   List,
@@ -27,6 +28,8 @@ import WarehouseIcon from '@mui/icons-material/Warehouse'
 import GroupsIcon from '@mui/icons-material/Groups'
 import AssignmentIndIcon from '@mui/icons-material/AssignmentInd'
 import AccountCircleIcon from '@mui/icons-material/AccountCircle'
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined'
+import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined'
 import { brandColors } from '../theme'
 import { useAuth } from '../auth/AuthContext'
 import ChangePasswordDialog from '../components/ChangePasswordDialog'
@@ -219,28 +222,59 @@ export default function AppLayout() {
             anchorEl={accountAnchor}
             open={Boolean(accountAnchor)}
             onClose={() => setAccountAnchor(null)}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+            slotProps={{
+              paper: {
+                elevation: 2,
+                sx: {
+                  minWidth: 240,
+                  mt: 0.75,
+                  py: 0.5,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                },
+              },
+            }}
           >
-            <MenuItem disabled sx={{ opacity: 1, fontWeight: 600 }}>
-              {user?.fullName}
-            </MenuItem>
-            <MenuItem disabled sx={{ opacity: 0.7, fontSize: '0.85rem' }}>
-              {user?.username}
-            </MenuItem>
+            <Box sx={{ px: 2, py: 1.25 }}>
+              <Typography variant="subtitle2" fontWeight={700} noWrap>
+                {user?.fullName}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.25 }}>
+                {user?.username}
+              </Typography>
+            </Box>
+            <Divider sx={{ my: 0.5 }} />
             <MenuItem
               onClick={() => {
                 setAccountAnchor(null)
                 setPasswordOpen(true)
               }}
+              sx={{ py: 1.1, mx: 0.5, borderRadius: 1.5 }}
             >
-              Змінити пароль
+              <ListItemIcon sx={{ minWidth: 36, color: 'text.secondary' }}>
+                <LockOutlinedIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText
+                primary="Змінити пароль"
+                primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }}
+              />
             </MenuItem>
             <MenuItem
               onClick={() => {
                 setAccountAnchor(null)
                 void logout().then(() => navigate('/login', { replace: true }))
               }}
+              sx={{ py: 1.1, mx: 0.5, borderRadius: 1.5, color: 'error.main' }}
             >
-              Вийти
+              <ListItemIcon sx={{ minWidth: 36, color: 'inherit' }}>
+                <LogoutOutlinedIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText
+                primary="Вийти"
+                primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }}
+              />
             </MenuItem>
           </Menu>
           <ChangePasswordDialog open={passwordOpen} onClose={() => setPasswordOpen(false)} />
