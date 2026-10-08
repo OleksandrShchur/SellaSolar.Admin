@@ -28,6 +28,7 @@ import {
   useTheme,
 } from '@mui/material'
 import DeleteIcon from '@mui/icons-material/Delete'
+import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import DownloadIcon from '@mui/icons-material/Download'
@@ -49,7 +50,7 @@ import type {
   WarehouseStockLot,
   UserListItem,
 } from '../api/types'
-import { formatDate, formatDateTime, formatMoney, formatNumber, formatPhone, inventoryLabels, toTelHref, workerTypeLabel } from '../utils/labels'
+import { formatDate, formatDateTime, formatMoney, formatNumber, formatPhone, inventoryLabels, projectLabels, toTelHref, workerTypeLabel } from '../utils/labels'
 import { useAuth } from '../auth/AuthContext'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { DetailField, DetailFieldGrid, DetailPanel, DetailSection, panelPad } from '../components/DetailPanel'
@@ -126,6 +127,9 @@ export default function ProjectDetailPage() {
   const [editItemSaving, setEditItemSaving] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [projectDeleteOpen, setProjectDeleteOpen] = useState(false)
+  const [projectDeleteBlockedOpen, setProjectDeleteBlockedOpen] = useState(false)
+  const [deletingProject, setDeletingProject] = useState(false)
   const [pendingStatus, setPendingStatus] = useState<ProjectStatus | null>(null)
   const [confirmingStatus, setConfirmingStatus] = useState(false)
 
@@ -436,6 +440,35 @@ export default function ProjectDetailPage() {
     }
   }
 
+  const requestDeleteProject = () => {
+    if (!project) return
+    if (project.items.length > 0) {
+      setProjectDeleteBlockedOpen(true)
+      return
+    }
+    setProjectDeleteOpen(true)
+  }
+
+  const confirmDeleteProject = async () => {
+    setDeletingProject(true)
+    setError(null)
+    try {
+      await projectsApi.remove(projectId)
+      setProjectDeleteOpen(false)
+      navigate('/projects')
+    } catch (err) {
+      setProjectDeleteOpen(false)
+      const message = err instanceof Error ? err.message : 'Не вдалося видалити проект'
+      if (message.includes('матеріали')) {
+        setProjectDeleteBlockedOpen(true)
+      } else {
+        setError(message)
+      }
+    } finally {
+      setDeletingProject(false)
+    }
+  }
+
   const pendingDeleteCopy =
     pendingDelete?.kind === 'item'
       ? {
@@ -692,6 +725,18 @@ export default function ProjectDetailPage() {
     },
     { kind: 'divider', key: 'status-divider' },
     ...statusActions,
+    ...(project.status === 'Awaiting'
+      ? ([
+          { kind: 'divider', key: 'danger-divider' },
+          {
+            key: 'delete',
+            label: projectLabels.delete,
+            icon: <DeleteOutlinedIcon fontSize="small" />,
+            onClick: requestDeleteProject,
+            tone: 'danger',
+          },
+        ] as RowActionItem[])
+      : []),
   ]
 
   return (
@@ -1689,6 +1734,40 @@ export default function ProjectDetailPage() {
         onCancel={() => setPendingDelete(null)}
         onConfirm={() => void confirmPendingDelete()}
       />
+
+      <ConfirmDialog
+        open={projectDeleteOpen}
+        title={projectLabels.deleteConfirmTitle}
+        message={project ? projectLabels.deleteConfirmMessage(project.name) : null}
+        confirming={deletingProject}
+        onCancel={() => {
+          if (!deletingProject) setProjectDeleteOpen(false)
+        }}
+        onConfirm={() => void confirmDeleteProject()}
+      />
+
+      <Dialog
+        open={projectDeleteBlockedOpen}
+        onClose={() => setProjectDeleteBlockedOpen(false)}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>{projectLabels.deleteBlockedTitle}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary">
+            {projectLabels.deleteBlockedHint}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => setProjectDeleteBlockedOpen(false)}
+          >
+            {projectLabels.deleteClose}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <ConfirmDialog
         open={Boolean(pendingStatus)}

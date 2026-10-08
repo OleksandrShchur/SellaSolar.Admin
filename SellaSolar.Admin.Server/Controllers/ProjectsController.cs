@@ -114,11 +114,24 @@ public class ProjectsController : ControllerBase
         try
         {
             await _projects.DeleteAsync(id, ct);
+
+            var uploadsRoot = Path.Combine(
+                _env.WebRootPath ?? Path.Combine(_env.ContentRootPath, "wwwroot"),
+                "uploads",
+                "projects",
+                id.ToString());
+            if (Directory.Exists(uploadsRoot))
+                Directory.Delete(uploadsRoot, recursive: true);
+
             return NoContent();
         }
         catch (NotFoundException)
         {
             return NotFound();
+        }
+        catch (ConflictException ex)
+        {
+            return Conflict(new { message = ex.Message });
         }
     }
 
