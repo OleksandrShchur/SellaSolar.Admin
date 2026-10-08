@@ -48,7 +48,7 @@ const PURCHASE_REQUESTS_EXPANDED_KEY = 'warehouse.purchaseRequests.expanded'
 const stockFilterLabel: Record<StockFilter, string> = {
   all: 'Усі',
   low: 'Низький',
-  order: inventoryLabels.needsOrder,
+  order: inventoryLabels.toOrder,
 }
 
 const toggleButtonSx = {
@@ -387,7 +387,7 @@ export default function WarehousePage() {
                       Низький
                     </ToggleButton>
                     <ToggleButton value="order" sx={{ flex: 1 }}>
-                      {inventoryLabels.needsOrder}
+                      {inventoryLabels.toOrder}
                     </ToggleButton>
                   </ToggleButtonGroup>
                 </Stack>
@@ -422,7 +422,7 @@ export default function WarehousePage() {
               >
                 <ToggleButton value="all">Усі</ToggleButton>
                 <ToggleButton value="low">Низький</ToggleButton>
-                <ToggleButton value="order">{inventoryLabels.needsOrder}</ToggleButton>
+                <ToggleButton value="order">{inventoryLabels.toOrder}</ToggleButton>
               </ToggleButtonGroup>
             </>
           )}
