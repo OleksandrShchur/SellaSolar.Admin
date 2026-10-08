@@ -33,10 +33,10 @@ import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined'
 import { brandColors } from '../theme'
 import { useAuth } from '../auth/AuthContext'
 import ChangePasswordDialog from '../components/ChangePasswordDialog'
+import { BOTTOM_NAV_HEIGHT, BOTTOM_NAV_OFFSET, bottomNavClearance } from './bottomNav'
 
 const DRAWER_WIDTH = 260
 const DRAWER_WIDTH_COLLAPSED = 72
-const BOTTOM_NAV_HEIGHT = 64
 
 function sectionTitle(pathname: string): string {
   if (pathname.startsWith('/users')) return 'Співробітники'
@@ -349,7 +349,7 @@ export default function AppLayout() {
           px: { xs: 1.5, sm: 2, md: 3 },
           py: { xs: 1.5, sm: 2, md: 3 },
           pb: {
-            xs: `calc(${BOTTOM_NAV_HEIGHT}px + env(safe-area-inset-bottom, 0px) + 12px)`,
+            xs: bottomNavClearance(12),
             md: 3,
           },
           maxWidth: '100%',
@@ -363,35 +363,43 @@ export default function AppLayout() {
         <Outlet />
       </Box>
 
-      {/* Mobile: bottom nav for the 3 primary sections */}
+      {/* Mobile: floating liquid-glass bottom nav pill */}
       {isMobile && (
         <BottomNavigation
           value={activeIndex === -1 ? false : activeIndex}
           showLabels
           sx={{
             position: 'fixed',
-            left: 0,
-            right: 0,
-            bottom: 0,
-            height: `calc(${BOTTOM_NAV_HEIGHT}px + env(safe-area-inset-bottom, 0px))`,
-            pb: 'env(safe-area-inset-bottom, 0px)',
+            left: { xs: 16, sm: 20 },
+            right: { xs: 16, sm: 20 },
+            bottom: `calc(${BOTTOM_NAV_OFFSET}px + env(safe-area-inset-bottom, 0px))`,
+            height: BOTTOM_NAV_HEIGHT,
             zIndex: (t) => t.zIndex.appBar,
-            borderTop: '1px solid',
-            borderColor: 'divider',
-            backgroundColor: brandColors.cream,
+            borderRadius: 999,
+            px: 0.5,
+            border: '1px solid rgba(255, 255, 255, 0.55)',
+            backgroundColor: 'rgba(248, 242, 230, 0.72)',
+            backdropFilter: 'blur(24px) saturate(1.4)',
+            WebkitBackdropFilter: 'blur(24px) saturate(1.4)',
+            boxShadow: `0 8px 28px ${brandColors.softShadow}, inset 0 1px 0 rgba(255, 255, 255, 0.65)`,
             '& .MuiBottomNavigationAction-root': {
               minWidth: 0,
-              minHeight: 48,
-              py: 1,
+              minHeight: BOTTOM_NAV_HEIGHT - 8,
+              my: 0.5,
+              py: 0.75,
+              borderRadius: 999,
               color: 'text.secondary',
+              transition: 'background-color 0.2s ease, color 0.2s ease',
               '&.Mui-selected': {
                 color: 'primary.dark',
+                backgroundColor: 'rgba(240, 166, 31, 0.18)',
               },
             },
             '& .MuiBottomNavigationAction-label': {
-              fontSize: '0.75rem',
+              fontSize: '0.7rem',
+              fontWeight: 600,
               '&.Mui-selected': {
-                fontSize: '0.75rem',
+                fontSize: '0.7rem',
               },
             },
           }}

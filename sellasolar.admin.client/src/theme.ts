@@ -520,8 +520,10 @@ const theme = createTheme({
     },
     MuiBottomNavigation: {
       styleOverrides: {
+        // Glass pill styles live on the mobile dock in AppLayout;
+        // keep theme root transparent so overrides do not fight blur.
         root: {
-          backgroundColor: brandColors.cream,
+          backgroundColor: 'transparent',
         },
       },
     },
