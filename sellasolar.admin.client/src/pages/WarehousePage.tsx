@@ -45,6 +45,12 @@ type StockFilter = 'all' | 'low' | 'order'
 
 const PURCHASE_REQUESTS_EXPANDED_KEY = 'warehouse.purchaseRequests.expanded'
 
+const stockFilterLabel: Record<StockFilter, string> = {
+  all: 'Усі',
+  low: 'Низький',
+  order: inventoryLabels.toOrder,
+}
+
 const toggleButtonSx = {
   flexShrink: 0,
   '& .MuiToggleButton-root': {
@@ -88,6 +94,7 @@ export default function WarehousePage() {
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('')
   const [stockFilter, setStockFilter] = useState<StockFilter>('all')
+  const [filtersExpanded, setFiltersExpanded] = useState(false)
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
@@ -316,35 +323,109 @@ export default function WarehousePage() {
             }}
           />
 
-          <FormControl size="small" sx={{ minWidth: 180, flexShrink: 0 }}>
-            <InputLabel>Категорія</InputLabel>
-            <Select
-              label="Категорія"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-            >
-              <MenuItem value="">Усі</MenuItem>
-              {categories.map((c) => (
-                <MenuItem key={c} value={c}>
-                  {c}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          {isMobile ? (
+            <Box sx={{ width: '100%' }}>
+              <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={() => setFiltersExpanded((v) => !v)}
+                  aria-expanded={filtersExpanded}
+                  aria-label={filtersExpanded ? 'Сховати фільтри' : 'Показати фільтри'}
+                  endIcon={
+                    <ExpandMoreIcon
+                      sx={{
+                        transform: filtersExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                        transition: 'transform 0.2s ease',
+                      }}
+                    />
+                  }
+                  sx={{ textTransform: 'none', fontWeight: 600, flexShrink: 0 }}
+                >
+                  Фільтри
+                </Button>
+                {!filtersExpanded && (
+                  <Chip
+                    size="small"
+                    label={`${category || 'Усі'} · ${stockFilterLabel[stockFilter]}`}
+                    onClick={() => setFiltersExpanded(true)}
+                    sx={{ fontWeight: 600 }}
+                  />
+                )}
+              </Stack>
+              <Collapse in={filtersExpanded}>
+                <Stack spacing={1.5} sx={{ pt: 1.5 }}>
+                  <FormControl size="small" fullWidth>
+                    <InputLabel>Категорія</InputLabel>
+                    <Select
+                      label="Категорія"
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value)}
+                    >
+                      <MenuItem value="">Усі</MenuItem>
+                      {categories.map((c) => (
+                        <MenuItem key={c} value={c}>
+                          {c}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
 
-          <ToggleButtonGroup
-            exclusive
-            size="small"
-            value={stockFilter}
-            onChange={(_, v) => {
-              if (v !== null) setStockFilter(v as StockFilter)
-            }}
-            sx={toggleButtonSx}
-          >
-            <ToggleButton value="all">Усі</ToggleButton>
-            <ToggleButton value="low">Низький</ToggleButton>
-            <ToggleButton value="order">{inventoryLabels.needsOrder}</ToggleButton>
-          </ToggleButtonGroup>
+                  <ToggleButtonGroup
+                    exclusive
+                    size="small"
+                    value={stockFilter}
+                    onChange={(_, v) => {
+                      if (v !== null) setStockFilter(v as StockFilter)
+                    }}
+                    sx={{ ...toggleButtonSx, width: '100%' }}
+                  >
+                    <ToggleButton value="all" sx={{ flex: 1 }}>
+                      Усі
+                    </ToggleButton>
+                    <ToggleButton value="low" sx={{ flex: 1 }}>
+                      Низький
+                    </ToggleButton>
+                    <ToggleButton value="order" sx={{ flex: 1 }}>
+                      {inventoryLabels.toOrder}
+                    </ToggleButton>
+                  </ToggleButtonGroup>
+                </Stack>
+              </Collapse>
+            </Box>
+          ) : (
+            <>
+              <FormControl size="small" sx={{ minWidth: 180, flexShrink: 0 }}>
+                <InputLabel>Категорія</InputLabel>
+                <Select
+                  label="Категорія"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                >
+                  <MenuItem value="">Усі</MenuItem>
+                  {categories.map((c) => (
+                    <MenuItem key={c} value={c}>
+                      {c}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              <ToggleButtonGroup
+                exclusive
+                size="small"
+                value={stockFilter}
+                onChange={(_, v) => {
+                  if (v !== null) setStockFilter(v as StockFilter)
+                }}
+                sx={toggleButtonSx}
+              >
+                <ToggleButton value="all">Усі</ToggleButton>
+                <ToggleButton value="low">Низький</ToggleButton>
+                <ToggleButton value="order">{inventoryLabels.toOrder}</ToggleButton>
+              </ToggleButtonGroup>
+            </>
+          )}
         </Stack>
       </Box>
 

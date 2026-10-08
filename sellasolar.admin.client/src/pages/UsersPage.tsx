@@ -509,7 +509,7 @@ export default function UsersPage() {
           />
 
           {isMobile ? (
-            <>
+            <Box sx={{ width: '100%' }}>
               <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
                 <Button
                   size="small"
@@ -538,8 +538,8 @@ export default function UsersPage() {
                   />
                 )}
               </Stack>
-              <Collapse in={filtersExpanded} sx={{ width: '100%' }}>
-                <Stack spacing={1.5} sx={{ pt: 0.5 }}>
+              <Collapse in={filtersExpanded}>
+                <Stack spacing={1.5} sx={{ pt: 1.5 }}>
                   <ToggleButtonGroup
                     exclusive
                     size="small"
@@ -581,7 +581,7 @@ export default function UsersPage() {
                   </ToggleButtonGroup>
                 </Stack>
               </Collapse>
-            </>
+            </Box>
           ) : (
             <>
               <ToggleButtonGroup
