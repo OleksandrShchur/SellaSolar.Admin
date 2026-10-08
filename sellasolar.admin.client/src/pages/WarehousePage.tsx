@@ -324,7 +324,7 @@ export default function WarehousePage() {
           />
 
           {isMobile ? (
-            <>
+            <Box sx={{ width: '100%' }}>
               <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
                 <Button
                   size="small"
@@ -353,8 +353,8 @@ export default function WarehousePage() {
                   />
                 )}
               </Stack>
-              <Collapse in={filtersExpanded} sx={{ width: '100%' }}>
-                <Stack spacing={1.5} sx={{ pt: 0.5 }}>
+              <Collapse in={filtersExpanded}>
+                <Stack spacing={1.5} sx={{ pt: 1.5 }}>
                   <FormControl size="small" fullWidth>
                     <InputLabel>Категорія</InputLabel>
                     <Select
@@ -392,7 +392,7 @@ export default function WarehousePage() {
                   </ToggleButtonGroup>
                 </Stack>
               </Collapse>
-            </>
+            </Box>
           ) : (
             <>
               <FormControl size="small" sx={{ minWidth: 180, flexShrink: 0 }}>
