@@ -365,9 +365,7 @@ export default function AppLayout() {
 
       {/* Mobile: floating liquid-glass bottom nav pill */}
       {isMobile && (
-        <BottomNavigation
-          value={activeIndex === -1 ? false : activeIndex}
-          showLabels
+        <Box
           sx={{
             position: 'fixed',
             left: { xs: 16, sm: 20 },
@@ -376,44 +374,73 @@ export default function AppLayout() {
             height: BOTTOM_NAV_HEIGHT,
             zIndex: (t) => t.zIndex.appBar,
             borderRadius: 999,
-            px: 0.5,
+            p: 0.5,
             border: '1px solid rgba(255, 255, 255, 0.55)',
             backgroundColor: 'rgba(248, 242, 230, 0.72)',
             backdropFilter: 'blur(24px) saturate(1.4)',
             WebkitBackdropFilter: 'blur(24px) saturate(1.4)',
             boxShadow: `0 8px 28px ${brandColors.softShadow}, inset 0 1px 0 rgba(255, 255, 255, 0.65)`,
-            '& .MuiBottomNavigationAction-root': {
-              minWidth: 0,
-              minHeight: BOTTOM_NAV_HEIGHT - 8,
-              my: 0.5,
-              py: 0.75,
-              borderRadius: 999,
-              color: 'text.secondary',
-              transition: 'background-color 0.2s ease, color 0.2s ease',
-              '&.Mui-selected': {
-                color: 'primary.dark',
-                backgroundColor: 'rgba(240, 166, 31, 0.18)',
-              },
-            },
-            '& .MuiBottomNavigationAction-label': {
-              fontSize: '0.7rem',
-              fontWeight: 600,
-              '&.Mui-selected': {
-                fontSize: '0.7rem',
-              },
-            },
+            overflow: 'hidden',
           }}
         >
-          {navItems.map((item) => (
-            <BottomNavigationAction
-              key={item.to}
-              label={item.label}
-              icon={item.icon}
-              component={RouterLink}
-              to={item.to}
+          {activeIndex >= 0 && navItems.length > 0 && (
+            <Box
+              aria-hidden
+              sx={{
+                position: 'absolute',
+                top: 4,
+                bottom: 4,
+                left: 4,
+                width: `calc((100% - 8px) / ${navItems.length})`,
+                borderRadius: 999,
+                backgroundColor: 'rgba(240, 166, 31, 0.18)',
+                transform: `translateX(${activeIndex * 100}%)`,
+                transition: 'transform 0.32s cubic-bezier(0.32, 0.72, 0, 1)',
+                pointerEvents: 'none',
+                zIndex: 0,
+              }}
             />
-          ))}
-        </BottomNavigation>
+          )}
+          <BottomNavigation
+            value={activeIndex === -1 ? false : activeIndex}
+            showLabels
+            sx={{
+              position: 'relative',
+              zIndex: 1,
+              height: '100%',
+              backgroundColor: 'transparent',
+              '& .MuiBottomNavigationAction-root': {
+                minWidth: 0,
+                minHeight: '100%',
+                py: 0.75,
+                borderRadius: 999,
+                color: 'text.secondary',
+                transition: 'color 0.28s ease',
+                '&.Mui-selected': {
+                  color: 'primary.dark',
+                },
+              },
+              '& .MuiBottomNavigationAction-label': {
+                fontSize: '0.7rem',
+                fontWeight: 600,
+                transition: 'color 0.28s ease',
+                '&.Mui-selected': {
+                  fontSize: '0.7rem',
+                },
+              },
+            }}
+          >
+            {navItems.map((item) => (
+              <BottomNavigationAction
+                key={item.to}
+                label={item.label}
+                icon={item.icon}
+                component={RouterLink}
+                to={item.to}
+              />
+            ))}
+          </BottomNavigation>
+        </Box>
       )}
     </Box>
   )
