@@ -46,6 +46,7 @@ import {
   isCardNumberValid,
   normalizeCardDigits,
 } from '../utils/labels'
+import AddFab from '../components/AddFab'
 import ConfirmDialog from '../components/ConfirmDialog'
 import RowActionsMenu, { type RowActionItem } from '../components/RowActionsMenu'
 import { RoleChip, UserStatusChip, workerTypeDisplay } from '../components/StatusChips'
@@ -453,11 +454,13 @@ export default function UsersPage() {
           color="primary"
           startIcon={<AddIcon />}
           onClick={() => setCreateOpen(true)}
-          sx={{ flexShrink: 0 }}
+          sx={{ flexShrink: 0, display: { xs: 'none', lg: 'inline-flex' } }}
         >
           Новий співробітник
         </Button>
       </Stack>
+
+      <AddFab label="Новий співробітник" onClick={() => setCreateOpen(true)} />
 
       {error && (
         <Alert severity="error" onClose={() => setError(null)}>

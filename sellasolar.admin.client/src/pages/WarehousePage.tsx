@@ -38,6 +38,7 @@ import SearchIcon from '@mui/icons-material/Search'
 import { warehouseApi } from '../api'
 import type { NonCatalogPurchaseRequest, WarehouseItemList } from '../api/types'
 import { formatNumber, inventoryLabels, statusLabel } from '../utils/labels'
+import AddFab from '../components/AddFab'
 import { surfaceSx, panelPad, dataGridSx } from '../components/DetailPanel'
 import RowActionsMenu, { type RowActionItem } from '../components/RowActionsMenu'
 
@@ -262,11 +263,13 @@ export default function WarehousePage() {
           color="primary"
           startIcon={<AddIcon />}
           onClick={openCreate}
-          sx={{ flexShrink: 0 }}
+          sx={{ flexShrink: 0, display: { xs: 'none', lg: 'inline-flex' } }}
         >
           Додати позицію
         </Button>
       </Stack>
+
+      <AddFab label="Додати позицію" onClick={openCreate} />
 
       {error && (
         <Alert severity="error" onClose={() => setError(null)}>
