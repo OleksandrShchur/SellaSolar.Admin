@@ -45,12 +45,6 @@ type StockFilter = 'all' | 'low' | 'order'
 
 const PURCHASE_REQUESTS_EXPANDED_KEY = 'warehouse.purchaseRequests.expanded'
 
-const stockFilterLabel: Record<StockFilter, string> = {
-  all: 'Усі',
-  low: 'Низький',
-  order: inventoryLabels.toOrder,
-}
-
 const toggleButtonSx = {
   flexShrink: 0,
   '& .MuiToggleButton-root': {
@@ -344,14 +338,6 @@ export default function WarehousePage() {
                 >
                   Фільтри
                 </Button>
-                {!filtersExpanded && (
-                  <Chip
-                    size="small"
-                    label={`${category || 'Усі'} · ${stockFilterLabel[stockFilter]}`}
-                    onClick={() => setFiltersExpanded(true)}
-                    sx={{ fontWeight: 600 }}
-                  />
-                )}
               </Stack>
               <Collapse in={filtersExpanded}>
                 <Stack spacing={1.5} sx={{ pt: 1.5 }}>
