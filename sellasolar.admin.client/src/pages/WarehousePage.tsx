@@ -44,8 +44,6 @@ import RowActionsMenu, { type RowActionItem } from '../components/RowActionsMenu
 
 type StockFilter = 'all' | 'low' | 'order'
 
-const PURCHASE_REQUESTS_EXPANDED_KEY = 'warehouse.purchaseRequests.expanded'
-
 const toggleButtonSx = {
   flexShrink: 0,
   '& .MuiToggleButton-root': {
@@ -64,14 +62,6 @@ const emptyForm = {
   supplier: '',
   notes: '',
   lowStockThreshold: '',
-}
-
-function readPurchaseRequestsExpanded(): boolean {
-  try {
-    return sessionStorage.getItem(PURCHASE_REQUESTS_EXPANDED_KEY) === '1'
-  } catch {
-    return false
-  }
 }
 
 export default function WarehousePage() {
@@ -94,18 +84,10 @@ export default function WarehousePage() {
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
   const [promotingId, setPromotingId] = useState<number | null>(null)
-  const [purchaseRequestsExpanded, setPurchaseRequestsExpanded] = useState(readPurchaseRequestsExpanded)
+  const [purchaseRequestsExpanded, setPurchaseRequestsExpanded] = useState(false)
 
   const togglePurchaseRequests = () => {
-    setPurchaseRequestsExpanded((prev) => {
-      const next = !prev
-      try {
-        sessionStorage.setItem(PURCHASE_REQUESTS_EXPANDED_KEY, next ? '1' : '0')
-      } catch {
-        /* ignore */
-      }
-      return next
-    })
+    setPurchaseRequestsExpanded((prev) => !prev)
   }
 
   const load = async () => {
