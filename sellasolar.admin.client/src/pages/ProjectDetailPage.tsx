@@ -34,6 +34,9 @@ import DownloadIcon from '@mui/icons-material/Download'
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined'
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined'
 import UndoOutlinedIcon from '@mui/icons-material/UndoOutlined'
+import PlayArrowOutlinedIcon from '@mui/icons-material/PlayArrowOutlined'
+import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined'
+import ReplayOutlinedIcon from '@mui/icons-material/ReplayOutlined'
 import { projectsApi, warehouseApi, usersApi } from '../api'
 import type {
   ProjectDetail,
@@ -123,6 +126,8 @@ export default function ProjectDetailPage() {
   const [editItemSaving, setEditItemSaving] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [pendingStatus, setPendingStatus] = useState<ProjectStatus | null>(null)
+  const [confirmingStatus, setConfirmingStatus] = useState(false)
 
   const [allocOpen, setAllocOpen] = useState(false)
   const [allocItem, setAllocItem] = useState<ProjectItem | null>(null)
@@ -260,13 +265,18 @@ export default function ProjectDetailPage() {
     }
   }
 
-  const changeStatus = async (status: ProjectStatus) => {
+  const confirmStatusChange = async () => {
+    if (!pendingStatus) return
+    setConfirmingStatus(true)
     setError(null)
     try {
-      const updated = await projectsApi.updateStatus(projectId, status)
+      const updated = await projectsApi.updateStatus(projectId, pendingStatus)
       setProject(updated ?? null)
+      setPendingStatus(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Не вдалося змінити статус')
+    } finally {
+      setConfirmingStatus(false)
     }
   }
 
@@ -550,8 +560,41 @@ export default function ProjectDetailPage() {
       setError(inventoryLabels.cannotCompleteIncompleteAllocations)
       return
     }
-    void changeStatus('Completed')
+    setPendingStatus('Completed')
   }
+
+  const statusConfirmCopy =
+    pendingStatus === 'Completed'
+      ? {
+          title: 'Завершити проект?',
+          message: `Завершити проект «${project.name}»?`,
+          confirmLabel: 'Завершити',
+          confirmingLabel: 'Завершення…',
+          confirmColor: 'primary' as const,
+        }
+      : pendingStatus === 'Awaiting'
+        ? {
+            title: 'Повернути в очікування?',
+            message: `Повернути проект «${project.name}» у статус «Очікує»?`,
+            confirmLabel: 'Повернути',
+            confirmingLabel: 'Оновлення…',
+            confirmColor: 'warning' as const,
+          }
+        : pendingStatus === 'InProgress' && project.status === 'Completed'
+          ? {
+              title: 'Повернути в роботу?',
+              message: `Повернути проект «${project.name}» у статус «В роботі»?`,
+              confirmLabel: 'Повернути в роботу',
+              confirmingLabel: 'Оновлення…',
+              confirmColor: 'primary' as const,
+            }
+          : {
+              title: 'Почати роботу?',
+              message: `Перевести проект «${project.name}» у статус «В роботі»?`,
+              confirmLabel: 'Почати роботу',
+              confirmingLabel: 'Оновлення…',
+              confirmColor: 'primary' as const,
+            }
 
   const closeReportPreview = () => {
     setReportPreviewOpen(false)
@@ -594,24 +637,38 @@ export default function ProjectDetailPage() {
     anchor.click()
   }
 
-  const primaryStatusButton =
-    project.status === 'Awaiting' ? (
-      <Button variant="contained" color="primary" onClick={() => void changeStatus('InProgress')}>
-        Почати роботу
-      </Button>
-    ) : project.status === 'InProgress' ? (
-      <Button variant="contained" color="success" onClick={tryComplete}>
-        Завершити
-      </Button>
-    ) : (
-      <Button
-        variant="outlined"
-        color="primary"
-        onClick={() => void changeStatus('InProgress')}
-      >
-        Повернути в роботу
-      </Button>
+  const statusActions: RowActionItem[] = []
+  if (project.status === 'Awaiting') {
+    statusActions.push({
+      key: 'start-work',
+      label: 'Почати роботу',
+      icon: <PlayArrowOutlinedIcon fontSize="small" />,
+      onClick: () => setPendingStatus('InProgress'),
+    })
+  } else if (project.status === 'InProgress') {
+    statusActions.push(
+      {
+        key: 'complete',
+        label: 'Завершити',
+        icon: <CheckCircleOutlinedIcon fontSize="small" />,
+        onClick: tryComplete,
+      },
+      {
+        key: 'revert-awaiting',
+        label: 'Повернути в очікування',
+        icon: <UndoOutlinedIcon fontSize="small" />,
+        onClick: () => setPendingStatus('Awaiting'),
+        tone: 'warning',
+      },
     )
+  } else {
+    statusActions.push({
+      key: 'return-to-work',
+      label: 'Повернути в роботу',
+      icon: <ReplayOutlinedIcon fontSize="small" />,
+      onClick: () => setPendingStatus('InProgress'),
+    })
+  }
 
   const headerMenuItems: RowActionItem[] = [
     {
@@ -633,18 +690,8 @@ export default function ProjectDetailPage() {
       onClick: () => void handleGenerateReport(),
       disabled: reportGenerating,
     },
-    ...(project.status === 'InProgress'
-      ? ([
-          { kind: 'divider', key: 'status-divider' } as const,
-          {
-            key: 'revert-awaiting',
-            label: 'Повернути в очікування',
-            icon: <UndoOutlinedIcon fontSize="small" />,
-            onClick: () => void changeStatus('Awaiting'),
-            tone: 'warning' as const,
-          },
-        ] satisfies RowActionItem[])
-      : []),
+    { kind: 'divider', key: 'status-divider' },
+    ...statusActions,
   ]
 
   return (
@@ -678,7 +725,6 @@ export default function ProjectDetailPage() {
           justifyContent={{ xs: 'flex-end', sm: 'flex-start' }}
           sx={{ flexShrink: 0, width: { xs: '100%', sm: 'auto' }, pl: { xs: 5, sm: 0 } }}
         >
-          {primaryStatusButton}
           <RowActionsMenu items={headerMenuItems} />
         </Stack>
       </Stack>
@@ -1645,6 +1691,20 @@ export default function ProjectDetailPage() {
         confirming={deleting}
         onCancel={() => setPendingDelete(null)}
         onConfirm={() => void confirmPendingDelete()}
+      />
+
+      <ConfirmDialog
+        open={Boolean(pendingStatus)}
+        title={statusConfirmCopy.title}
+        message={statusConfirmCopy.message}
+        confirmLabel={statusConfirmCopy.confirmLabel}
+        confirmingLabel={statusConfirmCopy.confirmingLabel}
+        confirmColor={statusConfirmCopy.confirmColor}
+        confirming={confirmingStatus}
+        onCancel={() => {
+          if (!confirmingStatus) setPendingStatus(null)
+        }}
+        onConfirm={() => void confirmStatusChange()}
       />
 
       {uploadFiles && (
