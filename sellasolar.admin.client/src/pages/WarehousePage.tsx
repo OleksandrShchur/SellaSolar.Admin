@@ -38,12 +38,11 @@ import SearchIcon from '@mui/icons-material/Search'
 import { warehouseApi } from '../api'
 import type { NonCatalogPurchaseRequest, WarehouseItemList } from '../api/types'
 import { formatNumber, inventoryLabels, statusLabel } from '../utils/labels'
+import AddFab from '../components/AddFab'
 import { surfaceSx, panelPad, dataGridSx } from '../components/DetailPanel'
 import RowActionsMenu, { type RowActionItem } from '../components/RowActionsMenu'
 
 type StockFilter = 'all' | 'low' | 'order'
-
-const PURCHASE_REQUESTS_EXPANDED_KEY = 'warehouse.purchaseRequests.expanded'
 
 const toggleButtonSx = {
   flexShrink: 0,
@@ -63,14 +62,6 @@ const emptyForm = {
   supplier: '',
   notes: '',
   lowStockThreshold: '',
-}
-
-function readPurchaseRequestsExpanded(): boolean {
-  try {
-    return sessionStorage.getItem(PURCHASE_REQUESTS_EXPANDED_KEY) === '1'
-  } catch {
-    return false
-  }
 }
 
 export default function WarehousePage() {
@@ -93,18 +84,10 @@ export default function WarehousePage() {
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
   const [promotingId, setPromotingId] = useState<number | null>(null)
-  const [purchaseRequestsExpanded, setPurchaseRequestsExpanded] = useState(readPurchaseRequestsExpanded)
+  const [purchaseRequestsExpanded, setPurchaseRequestsExpanded] = useState(false)
 
   const togglePurchaseRequests = () => {
-    setPurchaseRequestsExpanded((prev) => {
-      const next = !prev
-      try {
-        sessionStorage.setItem(PURCHASE_REQUESTS_EXPANDED_KEY, next ? '1' : '0')
-      } catch {
-        /* ignore */
-      }
-      return next
-    })
+    setPurchaseRequestsExpanded((prev) => !prev)
   }
 
   const load = async () => {
@@ -262,11 +245,13 @@ export default function WarehousePage() {
           color="primary"
           startIcon={<AddIcon />}
           onClick={openCreate}
-          sx={{ flexShrink: 0 }}
+          sx={{ flexShrink: 0, display: { xs: 'none', lg: 'inline-flex' } }}
         >
           Додати позицію
         </Button>
       </Stack>
+
+      <AddFab label="Додати позицію" onClick={openCreate} />
 
       {error && (
         <Alert severity="error" onClose={() => setError(null)}>

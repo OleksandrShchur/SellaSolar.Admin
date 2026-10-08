@@ -34,6 +34,7 @@ import { projectsApi } from '../api'
 import type { ProjectListItem, ProjectStatus } from '../api/types'
 import { formatDate } from '../utils/labels'
 import { ProjectStatusChip } from '../components/StatusChips'
+import AddFab from '../components/AddFab'
 import { surfaceSx, panelPad, dataGridSx } from '../components/DetailPanel'
 
 type StatusFilter = '' | ProjectStatus
@@ -183,11 +184,13 @@ export default function ProjectsPage() {
           color="primary"
           startIcon={<AddIcon />}
           onClick={() => setOpen(true)}
-          sx={{ flexShrink: 0 }}
+          sx={{ flexShrink: 0, display: { xs: 'none', lg: 'inline-flex' } }}
         >
           Новий проект
         </Button>
       </Stack>
+
+      <AddFab label="Новий проект" onClick={() => setOpen(true)} />
 
       {error && (
         <Alert severity="error" onClose={() => setError(null)}>
