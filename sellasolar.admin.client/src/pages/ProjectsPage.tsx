@@ -245,12 +245,24 @@ export default function ProjectsPage() {
             onChange={(_, v) => {
               if (v !== null) setStatusFilter(v as StatusFilter)
             }}
-            sx={toggleButtonSx}
+            sx={{
+              ...toggleButtonSx,
+              width: { xs: '100%', lg: 'auto' },
+              ml: { lg: 'auto' },
+            }}
           >
-            <ToggleButton value="">Усі</ToggleButton>
-            <ToggleButton value="Awaiting">Очікує</ToggleButton>
-            <ToggleButton value="InProgress">У роботі</ToggleButton>
-            <ToggleButton value="Completed">Завершено</ToggleButton>
+            <ToggleButton value="" sx={{ flex: { xs: 1, lg: 'initial' } }}>
+              Усі
+            </ToggleButton>
+            <ToggleButton value="Awaiting" sx={{ flex: { xs: 1, lg: 'initial' } }}>
+              Очікує
+            </ToggleButton>
+            <ToggleButton value="InProgress" sx={{ flex: { xs: 1, lg: 'initial' } }}>
+              У роботі
+            </ToggleButton>
+            <ToggleButton value="Completed" sx={{ flex: { xs: 1, lg: 'initial' } }}>
+              Завершено
+            </ToggleButton>
           </ToggleButtonGroup>
         </Stack>
       </Box>

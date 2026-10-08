@@ -9,6 +9,8 @@ body,
 html {
   /* Prevent rubber-band horizontal scroll from nested overflow */
   overflow-x: hidden;
+  /* Keep scrollbar space reserved so Modal/Dialog scroll-lock doesn't shift layout */
+  scrollbar-gutter: stable;
 }
 
 body {

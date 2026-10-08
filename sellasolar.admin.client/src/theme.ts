@@ -153,6 +153,18 @@ const theme = createTheme({
         },
       },
     },
+    // Menus/popovers don't need body scroll lock; locking adds padding-right and
+    // shifts fixed layout (AppBar, bottom nav) a few pixels on mobile/tablet.
+    MuiMenu: {
+      defaultProps: {
+        disableScrollLock: true,
+      },
+    },
+    MuiPopover: {
+      defaultProps: {
+        disableScrollLock: true,
+      },
+    },
     MuiButton: {
       defaultProps: { variant: 'contained', disableElevation: false },
       styleOverrides: {
