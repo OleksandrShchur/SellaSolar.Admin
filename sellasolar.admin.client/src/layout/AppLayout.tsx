@@ -152,7 +152,8 @@ export default function AppLayout() {
         display: 'flex',
         flexDirection: 'column',
         minHeight: '100dvh',
-        maxWidth: '100vw',
+        // Prefer 100% over 100vw — vw includes the scrollbar and can cause a 1-scrollbar-width jump
+        maxWidth: '100%',
         overflowX: 'hidden',
       }}
     >
