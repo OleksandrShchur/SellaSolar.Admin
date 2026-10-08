@@ -319,7 +319,14 @@ export default function WarehousePage() {
 
           {isMobile ? (
             <Box sx={{ width: '100%' }}>
-              <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+              <Stack
+                direction="row"
+                spacing={1}
+                alignItems="center"
+                justifyContent="flex-end"
+                flexWrap="wrap"
+                useFlexGap
+              >
                 <Button
                   size="small"
                   variant="outlined"

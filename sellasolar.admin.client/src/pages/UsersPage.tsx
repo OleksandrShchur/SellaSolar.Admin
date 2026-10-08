@@ -510,7 +510,22 @@ export default function UsersPage() {
 
           {isMobile ? (
             <Box sx={{ width: '100%' }}>
-              <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+              <Stack
+                direction="row"
+                spacing={1}
+                alignItems="center"
+                justifyContent="flex-end"
+                flexWrap="wrap"
+                useFlexGap
+              >
+                {!filtersExpanded && (
+                  <Chip
+                    size="small"
+                    label={`${roleFilterLabel[roleFilter]} · ${statusFilterLabel[statusFilter]}`}
+                    onClick={() => setFiltersExpanded(true)}
+                    sx={{ fontWeight: 600, mr: 'auto' }}
+                  />
+                )}
                 <Button
                   size="small"
                   variant="outlined"
@@ -529,14 +544,6 @@ export default function UsersPage() {
                 >
                   Фільтри
                 </Button>
-                {!filtersExpanded && (
-                  <Chip
-                    size="small"
-                    label={`${roleFilterLabel[roleFilter]} · ${statusFilterLabel[statusFilter]}`}
-                    onClick={() => setFiltersExpanded(true)}
-                    sx={{ fontWeight: 600 }}
-                  />
-                )}
               </Stack>
               <Collapse in={filtersExpanded}>
                 <Stack spacing={1.5} sx={{ pt: 1.5 }}>
