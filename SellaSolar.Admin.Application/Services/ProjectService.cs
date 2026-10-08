@@ -227,15 +227,18 @@ public class ProjectService
     public async Task DeleteAsync(int id, CancellationToken ct = default)
     {
         var project = await _db.Projects
-            .Include(p => p.ProjectItems).ThenInclude(i => i.WarehouseItem)
-            .Include(p => p.ProjectItems).ThenInclude(i => i.ProjectItemLotAllocations)
-                .ThenInclude(a => a.WarehouseStockLot)
-            .Include(p => p.ProjectPhotos)
+            .Include(p => p.ProjectItems)
             .FirstOrDefaultAsync(p => p.Id == id, ct)
             ?? throw new NotFoundException($"Project {id} was not found.");
 
-        ProjectMaterialsService.RestoreStockIfConsumed(project);
+        if (project.Status != ProjectStatuses.Awaiting)
+            throw new ConflictException("Проект можна видалити лише зі статусу «Очікує».");
 
+        if (project.ProjectItems.Count > 0)
+            throw new ConflictException(
+                "Неможливо видалити проект, до якого призначені матеріали. Спочатку приберіть усі матеріали.");
+
+        // Cascade removes photos, workers, expenses, custom data. Photo files are cleaned in the controller.
         _db.Projects.Remove(project);
         await _db.SaveChangesAsync(ct);
     }

@@ -190,3 +190,14 @@ export const inventoryLabels = {
   deleteLotInUseHint:
     'Ця партія використовується в відкритих проектах. Спочатку зніміть розподіл.',
 } as const
+
+export const projectLabels = {
+  delete: 'Видалити',
+  deleteConfirmTitle: 'Видалити проект?',
+  deleteConfirmMessage: (name: string) =>
+    `Видалити «${name}»? Фото буде видалено, працівників буде знято з проекту.`,
+  deleteBlockedTitle: 'Проект неможливо видалити',
+  deleteBlockedHint:
+    'До проекту призначені матеріали. Спочатку приберіть усі матеріали зі вкладки «Матеріали».',
+  deleteClose: 'Зрозуміло',
+} as const
