@@ -33,6 +33,7 @@ import type { WarehouseItemDetail, WarehouseStockLot } from '../api/types'
 import { formatDateTime, formatNumber, inventoryLabels } from '../utils/labels'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { DetailField, DetailFieldGrid, DetailPanel } from '../components/DetailPanel'
+import { DetailPageSkeleton } from '../components/PageSkeletons'
 import RowActionsMenu, { type RowActionItem } from '../components/RowActionsMenu'
 import { ProjectStatusChip } from '../components/StatusChips'
 
@@ -78,7 +79,9 @@ export default function WarehouseDetailPage() {
   }
 
   useEffect(() => {
-    if (Number.isFinite(itemId)) void load()
+    if (!Number.isFinite(itemId)) return
+    setItem(null)
+    void load()
   }, [itemId])
 
   const openEdit = async () => {
@@ -198,14 +201,10 @@ export default function WarehouseDetailPage() {
     }
   }
 
-  if (!item && !error) {
-    return (
-      <Stack spacing={2.5}>
-        <Typography color="text.secondary">Завантаження…</Typography>
-      </Stack>
-    )
+  if (!item) {
+    if (error) return <Alert severity="error">{error}</Alert>
+    return <DetailPageSkeleton panels={3} fieldsPerPanel={4} />
   }
-  if (!item) return <Alert severity="error">{error}</Alert>
 
   const headerMenuItems: RowActionItem[] = [
     {

@@ -54,6 +54,7 @@ import { formatDate, formatDateTime, formatMoney, formatNumber, formatPhone, inv
 import { useAuth } from '../auth/AuthContext'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { DetailField, DetailFieldGrid, DetailPanel, DetailSection, panelPad } from '../components/DetailPanel'
+import { DetailPageSkeleton } from '../components/PageSkeletons'
 import PhotoUploadDialog from '../components/PhotoUploadDialog'
 import RowActionsMenu, { type RowActionItem } from '../components/RowActionsMenu'
 import ScrollableTabs from '../components/ScrollableTabs'
@@ -96,8 +97,6 @@ export default function ProjectDetailPage() {
   const [project, setProject] = useState<ProjectDetail | null>(null)
   const [tab, setTab] = useState(0)
   const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-
   const [editOpen, setEditOpen] = useState(false)
   const [editForm, setEditForm] = useState({
     name: '',
@@ -166,20 +165,18 @@ export default function ProjectDetailPage() {
   const [reportGenerating, setReportGenerating] = useState(false)
 
   const load = async () => {
-    setLoading(true)
     setError(null)
     try {
       const data = await projectsApi.get(projectId)
       setProject(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Не вдалося завантажити проект')
-    } finally {
-      setLoading(false)
     }
   }
 
   useEffect(() => {
     if (!Number.isFinite(projectId)) return
+    setProject(null)
     void load()
   }, [projectId])
 
@@ -576,14 +573,10 @@ export default function ProjectDetailPage() {
     }
   }
 
-  if (loading) {
-    return (
-      <Stack spacing={2.5}>
-        <Typography color="text.secondary">Завантаження…</Typography>
-      </Stack>
-    )
+  if (!project) {
+    if (error) return <Alert severity="error">{error}</Alert>
+    return <DetailPageSkeleton variant="tabbed" />
   }
-  if (!project) return <Alert severity="error">{error ?? 'Проект не знайдено'}</Alert>
 
   const tryComplete = () => {
     const incomplete = project.items.some(

@@ -42,6 +42,7 @@ import {
 } from '../utils/labels'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { DetailField, DetailFieldGrid, DetailPanel } from '../components/DetailPanel'
+import { DetailPageSkeleton } from '../components/PageSkeletons'
 import RowActionsMenu, { type RowActionItem } from '../components/RowActionsMenu'
 import { UserStatusChip, workerTypeDisplay } from '../components/StatusChips'
 import { brandColors } from '../theme'
@@ -178,7 +179,9 @@ export default function UserDetailPage() {
   }
 
   useEffect(() => {
-    if (id) void load()
+    if (!id) return
+    setUser(null)
+    void load()
   }, [id])
 
   const openEdit = () => {
@@ -261,14 +264,10 @@ export default function UserDetailPage() {
     }
   }
 
-  if (!user && !error) {
-    return (
-      <Stack spacing={2.5}>
-        <Typography color="text.secondary">Завантаження…</Typography>
-      </Stack>
-    )
+  if (!user) {
+    if (error) return <Alert severity="error">{error}</Alert>
+    return <DetailPageSkeleton panels={1} fieldsPerPanel={5} />
   }
-  if (!user) return <Alert severity="error">{error}</Alert>
 
   const headerMenuItems: RowActionItem[] = [
     {

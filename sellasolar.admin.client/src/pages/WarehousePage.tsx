@@ -40,6 +40,7 @@ import type { NonCatalogPurchaseRequest, WarehouseItemList } from '../api/types'
 import { formatNumber, inventoryLabels, statusLabel } from '../utils/labels'
 import AddFab from '../components/AddFab'
 import { surfaceSx, panelPad, dataGridSx } from '../components/DetailPanel'
+import { CardListSkeleton } from '../components/PageSkeletons'
 import RowActionsMenu, { type RowActionItem } from '../components/RowActionsMenu'
 
 type StockFilter = 'all' | 'low' | 'order'
@@ -407,7 +408,7 @@ export default function WarehousePage() {
         </Stack>
       </Box>
 
-      {showPurchaseRequests && (
+      {showPurchaseRequests && !loading && (
         <Box
           sx={{
             ...surfaceSx,
@@ -546,49 +547,52 @@ export default function WarehousePage() {
       )}
 
       {isMobile ? (
-        <Stack spacing={1.5}>
-          {loading && <Typography color="text.secondary">Завантаження…</Typography>}
-          {!loading && rows.length === 0 && !purchaseRequests.length && (
-            <Typography color="text.secondary">Позицій не знайдено</Typography>
-          )}
-          {rows.map((row) => (
-            <Card
-              key={row.id}
-              variant="outlined"
-              sx={{
-                '&:hover': { boxShadow: 1 },
-                ...(row.quantityToOrder > 0
-                  ? { borderColor: 'error.light', bgcolor: 'rgba(211, 47, 47, 0.03)' }
-                  : {}),
-              }}
-            >
-              <CardActionArea onClick={() => navigate(`/warehouse/${row.id}`)}>
-                <CardContent sx={{ '&:last-child': { pb: 2 } }}>
-                  <Typography fontWeight={700} noWrap>
-                    {row.name}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" mt={0.5}>
-                    {row.category} · {inventoryLabels.onHand}: {formatNumber(row.quantityInStock)}{' '}
-                    {row.unit} · {inventoryLabels.available}: {formatNumber(row.quantityAvailable)}{' '}
-                    {row.unit}
-                    {row.quantityToOrder > 0
-                      ? ` · ${inventoryLabels.toOrder}: ${formatNumber(row.quantityToOrder)}`
-                      : ''}
-                  </Typography>
-                  <Stack direction="row" spacing={1} mt={1.25} flexWrap="wrap" useFlexGap>
-                    {row.quantityToOrder > 0 ? (
-                      <Chip size="small" color="error" label={inventoryLabels.needsOrder} />
-                    ) : row.isLowStock ? (
-                      <Chip size="small" color="warning" label="Низький" />
-                    ) : (
-                      <Chip size="small" color="success" variant="outlined" label="OK" />
-                    )}
-                  </Stack>
-                </CardContent>
-              </CardActionArea>
-            </Card>
-          ))}
-        </Stack>
+        loading ? (
+          <CardListSkeleton lines={1} />
+        ) : (
+          <Stack spacing={1.5}>
+            {rows.length === 0 && !purchaseRequests.length && (
+              <Typography color="text.secondary">Позицій не знайдено</Typography>
+            )}
+            {rows.map((row) => (
+              <Card
+                key={row.id}
+                variant="outlined"
+                sx={{
+                  '&:hover': { boxShadow: 1 },
+                  ...(row.quantityToOrder > 0
+                    ? { borderColor: 'error.light', bgcolor: 'rgba(211, 47, 47, 0.03)' }
+                    : {}),
+                }}
+              >
+                <CardActionArea onClick={() => navigate(`/warehouse/${row.id}`)}>
+                  <CardContent sx={{ '&:last-child': { pb: 2 } }}>
+                    <Typography fontWeight={700} noWrap>
+                      {row.name}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" mt={0.5}>
+                      {row.category} · {inventoryLabels.onHand}: {formatNumber(row.quantityInStock)}{' '}
+                      {row.unit} · {inventoryLabels.available}: {formatNumber(row.quantityAvailable)}{' '}
+                      {row.unit}
+                      {row.quantityToOrder > 0
+                        ? ` · ${inventoryLabels.toOrder}: ${formatNumber(row.quantityToOrder)}`
+                        : ''}
+                    </Typography>
+                    <Stack direction="row" spacing={1} mt={1.25} flexWrap="wrap" useFlexGap>
+                      {row.quantityToOrder > 0 ? (
+                        <Chip size="small" color="error" label={inventoryLabels.needsOrder} />
+                      ) : row.isLowStock ? (
+                        <Chip size="small" color="warning" label="Низький" />
+                      ) : (
+                        <Chip size="small" color="success" variant="outlined" label="OK" />
+                      )}
+                    </Stack>
+                  </CardContent>
+                </CardActionArea>
+              </Card>
+            ))}
+          </Stack>
+        )
       ) : (
         <Box
           sx={{
