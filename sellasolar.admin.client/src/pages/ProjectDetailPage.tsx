@@ -446,6 +446,17 @@ export default function ProjectDetailPage() {
     setProjectDeleteOpen(true)
   }
 
+  const goBack = () => {
+    // React Router stores a stack index on history.state; use it so deep links
+    // still fall back to the projects list instead of leaving the app.
+    const idx = (window.history.state as { idx?: number } | null)?.idx
+    if (typeof idx === 'number' && idx > 0) {
+      navigate(-1)
+    } else {
+      navigate('/projects')
+    }
+  }
+
   const confirmDeleteProject = async () => {
     setDeletingProject(true)
     setError(null)
@@ -741,7 +752,7 @@ export default function ProjectDetailPage() {
         justifyContent="space-between"
       >
         <Stack direction="row" spacing={1} alignItems="flex-start" sx={{ minWidth: 0, flex: 1 }}>
-          <IconButton onClick={() => navigate('/projects')} sx={{ mt: -0.5 }}>
+          <IconButton onClick={goBack} sx={{ mt: -0.5 }}>
             <ArrowBackIcon />
           </IconButton>
           <Box sx={{ minWidth: 0, flex: 1 }}>
