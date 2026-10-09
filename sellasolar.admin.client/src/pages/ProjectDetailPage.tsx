@@ -1924,23 +1924,24 @@ export default function ProjectDetailPage() {
           </Button>
           {canShareReport ? (
             <Button
-              variant="outlined"
+              variant="contained"
               color="primary"
               startIcon={<IosShareIcon />}
               onClick={() => void shareReport()}
             >
               {inventoryLabels.generateReportShare}
             </Button>
-          ) : null}
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<DownloadIcon />}
-            onClick={downloadReport}
-            disabled={!reportPreviewUrl}
-          >
-            {inventoryLabels.generateReportDownload}
-          </Button>
+          ) : (
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<DownloadIcon />}
+              onClick={downloadReport}
+              disabled={!reportPreviewUrl}
+            >
+              {inventoryLabels.generateReportDownload}
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
 
