@@ -8,6 +8,7 @@ import {
   CardActionArea,
   CardContent,
   Chip,
+  Collapse,
   Dialog,
   DialogActions,
   DialogContent,
@@ -29,6 +30,7 @@ import {
 import { DataGrid, type GridColDef } from '@mui/x-data-grid'
 import AddIcon from '@mui/icons-material/Add'
 import ClearIcon from '@mui/icons-material/Clear'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import SearchIcon from '@mui/icons-material/Search'
 import { projectsApi } from '../api'
 import type { ProjectListItem, ProjectStatus } from '../api/types'
@@ -74,6 +76,7 @@ export default function ProjectsPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('')
   const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
+  const [filtersExpanded, setFiltersExpanded] = useState(false)
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
@@ -169,6 +172,38 @@ export default function ProjectsPage() {
     }
   }
 
+  const searchField = (sx: object) => (
+    <TextField
+      placeholder="Назва, адреса або клієнт"
+      size="small"
+      value={searchInput}
+      onChange={(e) => setSearchInput(e.target.value)}
+      sx={sx}
+      InputProps={{
+        startAdornment: (
+          <InputAdornment position="start">
+            <SearchIcon fontSize="small" color="action" />
+          </InputAdornment>
+        ),
+        endAdornment: searchInput ? (
+          <InputAdornment position="end">
+            <IconButton
+              size="small"
+              aria-label="Очистити пошук"
+              onClick={() => {
+                setSearchInput('')
+                setSearch('')
+              }}
+              edge="end"
+            >
+              <ClearIcon fontSize="small" />
+            </IconButton>
+          </InputAdornment>
+        ) : undefined,
+      }}
+    />
+  )
+
   return (
     <>
       <AddFab label="Новий проект" onClick={() => setOpen(true)} />
@@ -192,69 +227,87 @@ export default function ProjectsPage() {
           flexWrap="wrap"
           useFlexGap
         >
-          <TextField
-            placeholder="Назва, адреса або клієнт"
-            size="small"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            sx={{ width: { xs: '100%', sm: 300 }, flexShrink: 0 }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon fontSize="small" color="action" />
-                </InputAdornment>
-              ),
-              endAdornment: searchInput ? (
-                <InputAdornment position="end">
-                  <IconButton
+          {isMobile ? (
+            <Box sx={{ width: '100%' }}>
+              <Stack direction="row" spacing={1} alignItems="center">
+                {searchField({ flex: 1, minWidth: 0 })}
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={() => setFiltersExpanded((v) => !v)}
+                  aria-expanded={filtersExpanded}
+                  aria-label={filtersExpanded ? 'Сховати фільтри' : 'Показати фільтри'}
+                  endIcon={
+                    <ExpandMoreIcon
+                      sx={{
+                        transform: filtersExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                        transition: 'transform 0.2s ease',
+                      }}
+                    />
+                  }
+                  sx={{ textTransform: 'none', fontWeight: 600, flexShrink: 0 }}
+                >
+                  Фільтри
+                </Button>
+              </Stack>
+              <Collapse in={filtersExpanded}>
+                <Stack spacing={1.5} sx={{ pt: 1.5 }}>
+                  <ToggleButtonGroup
+                    exclusive
                     size="small"
-                    aria-label="Очистити пошук"
-                    onClick={() => {
-                      setSearchInput('')
-                      setSearch('')
+                    value={statusFilter}
+                    onChange={(_, v) => {
+                      if (v !== null) setStatusFilter(v as StatusFilter)
                     }}
-                    edge="end"
+                    sx={{ ...toggleButtonSx, width: '100%' }}
                   >
-                    <ClearIcon fontSize="small" />
-                  </IconButton>
-                </InputAdornment>
-              ) : undefined,
-            }}
-          />
+                    <ToggleButton value="" sx={{ flex: 1 }}>
+                      Усі
+                    </ToggleButton>
+                    <ToggleButton value="Awaiting" sx={{ flex: 1 }}>
+                      Очікує
+                    </ToggleButton>
+                    <ToggleButton value="InProgress" sx={{ flex: 1 }}>
+                      У роботі
+                    </ToggleButton>
+                    <ToggleButton value="Completed" sx={{ flex: 1 }}>
+                      Завершено
+                    </ToggleButton>
+                  </ToggleButtonGroup>
+                </Stack>
+              </Collapse>
+            </Box>
+          ) : (
+            <>
+              {searchField({ width: 300, flexShrink: 0 })}
 
-          <ToggleButtonGroup
-            exclusive
-            size="small"
-            value={statusFilter}
-            onChange={(_, v) => {
-              if (v !== null) setStatusFilter(v as StatusFilter)
-            }}
-            sx={{
-              ...toggleButtonSx,
-              width: { xs: '100%', lg: 'auto' },
-              ml: { lg: 'auto' },
-            }}
-          >
-            <ToggleButton value="" sx={{ flex: { xs: 1, lg: 'initial' } }}>
-              Усі
-            </ToggleButton>
-            <ToggleButton value="Awaiting" sx={{ flex: { xs: 1, lg: 'initial' } }}>
-              Очікує
-            </ToggleButton>
-            <ToggleButton value="InProgress" sx={{ flex: { xs: 1, lg: 'initial' } }}>
-              У роботі
-            </ToggleButton>
-            <ToggleButton value="Completed" sx={{ flex: { xs: 1, lg: 'initial' } }}>
-              Завершено
-            </ToggleButton>
-          </ToggleButtonGroup>
+              <ToggleButtonGroup
+                exclusive
+                size="small"
+                value={statusFilter}
+                onChange={(_, v) => {
+                  if (v !== null) setStatusFilter(v as StatusFilter)
+                }}
+                sx={toggleButtonSx}
+              >
+                <ToggleButton value="">Усі</ToggleButton>
+                <ToggleButton value="Awaiting">Очікує</ToggleButton>
+                <ToggleButton value="InProgress">У роботі</ToggleButton>
+                <ToggleButton value="Completed">Завершено</ToggleButton>
+              </ToggleButtonGroup>
+            </>
+          )}
 
           <Button
             variant="contained"
             color="primary"
             startIcon={<AddIcon />}
             onClick={() => setOpen(true)}
-            sx={{ display: { xs: 'none', lg: 'inline-flex' }, flexShrink: 0 }}
+            sx={{
+              display: { xs: 'none', lg: 'inline-flex' },
+              flexShrink: 0,
+              ml: { lg: 'auto' },
+            }}
           >
             Новий проект
           </Button>
