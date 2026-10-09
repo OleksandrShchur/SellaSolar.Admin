@@ -40,10 +40,6 @@ export default function MyJobsPage() {
 
   return (
     <Stack spacing={2.5}>
-      <Typography variant="body2" color="text.secondary">
-        Проекти, на які вас призначено
-      </Typography>
-
       {error && (
         <Alert severity="error" onClose={() => setError(null)}>
           {error}

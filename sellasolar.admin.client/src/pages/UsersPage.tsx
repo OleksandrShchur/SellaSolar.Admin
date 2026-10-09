@@ -440,29 +440,9 @@ export default function UsersPage() {
   )
 
   return (
-    <Stack spacing={2.5}>
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        justifyContent="space-between"
-        alignItems={{ sm: 'center' }}
-        gap={1.5}
-      >
-        <Typography variant="body2" color="text.secondary">
-          Облікові записи адміністраторів і виконавців
-        </Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<AddIcon />}
-          onClick={() => setCreateOpen(true)}
-          sx={{ flexShrink: 0, display: { xs: 'none', lg: 'inline-flex' } }}
-        >
-          Новий співробітник
-        </Button>
-      </Stack>
-
+    <>
       <AddFab label="Новий співробітник" onClick={() => setCreateOpen(true)} />
-
+      <Stack spacing={2.5}>
       {error && (
         <Alert severity="error" onClose={() => setError(null)}>
           {error}
@@ -624,6 +604,20 @@ export default function UsersPage() {
               </ToggleButtonGroup>
             </>
           )}
+
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<AddIcon />}
+            onClick={() => setCreateOpen(true)}
+            sx={{
+              display: { xs: 'none', lg: 'inline-flex' },
+              flexShrink: 0,
+              ml: { lg: 'auto' },
+            }}
+          >
+            Новий співробітник
+          </Button>
         </Stack>
       </Box>
 
@@ -856,6 +850,7 @@ export default function UsersPage() {
         onCancel={() => setPendingAction(null)}
         onConfirm={() => void confirmPendingAction()}
       />
-    </Stack>
+      </Stack>
+    </>
   )
 }
