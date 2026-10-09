@@ -442,20 +442,15 @@ export default function UsersPage() {
   return (
     <Stack spacing={2.5}>
       <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        justifyContent="space-between"
-        alignItems={{ sm: 'center' }}
-        gap={1.5}
+        direction="row"
+        justifyContent="flex-end"
+        sx={{ display: { xs: 'none', lg: 'flex' } }}
       >
-        <Typography variant="body2" color="text.secondary">
-          Облікові записи адміністраторів і виконавців
-        </Typography>
         <Button
           variant="contained"
           color="primary"
           startIcon={<AddIcon />}
           onClick={() => setCreateOpen(true)}
-          sx={{ flexShrink: 0, display: { xs: 'none', lg: 'inline-flex' } }}
         >
           Новий співробітник
         </Button>

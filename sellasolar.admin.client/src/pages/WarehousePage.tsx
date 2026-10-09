@@ -233,20 +233,15 @@ export default function WarehousePage() {
   return (
     <Stack spacing={2.5}>
       <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        justifyContent="space-between"
-        alignItems={{ sm: 'center' }}
-        gap={1.5}
+        direction="row"
+        justifyContent="flex-end"
+        sx={{ display: { xs: 'none', lg: 'flex' } }}
       >
-        <Typography variant="body2" color="text.secondary">
-          Матеріали, залишки та постачальники
-        </Typography>
         <Button
           variant="contained"
           color="primary"
           startIcon={<AddIcon />}
           onClick={openCreate}
-          sx={{ flexShrink: 0, display: { xs: 'none', lg: 'inline-flex' } }}
         >
           Додати позицію
         </Button>
