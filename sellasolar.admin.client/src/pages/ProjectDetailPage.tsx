@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom'
 import {
   Alert,
@@ -59,6 +59,8 @@ import PhotoUploadDialog from '../components/PhotoUploadDialog'
 import RowActionsMenu, { type RowActionItem } from '../components/RowActionsMenu'
 import ScrollableTabs from '../components/ScrollableTabs'
 import { ProjectStatusChip } from '../components/StatusChips'
+
+const PdfPreview = lazy(() => import('../components/PdfPreview'))
 
 type PendingDelete =
   | { kind: 'item'; item: ProjectItem }
@@ -655,7 +657,10 @@ export default function ProjectDetailPage() {
 
       const { blob, fileName } = await projectsApi.generateReport(projectId)
       if (reportPreviewUrl) URL.revokeObjectURL(reportPreviewUrl)
-      const url = URL.createObjectURL(blob)
+      // Ensure MIME type so PDF.js accepts the blob on all browsers.
+      const pdfBlob =
+        blob.type === 'application/pdf' ? blob : new Blob([blob], { type: 'application/pdf' })
+      const url = URL.createObjectURL(pdfBlob)
       setReportPreviewUrl(url)
       setReportFileName(fileName ?? `nakladna-project-${projectId}.pdf`)
       setReportPreviewOpen(true)
@@ -1835,38 +1840,51 @@ export default function ProjectDetailPage() {
         open={reportPreviewOpen}
         onClose={closeReportPreview}
         fullWidth
-        maxWidth={isMobile ? 'sm' : 'md'}
+        fullScreen={isMobile}
+        maxWidth="md"
+        PaperProps={{
+          sx: {
+            display: 'flex',
+            flexDirection: 'column',
+            ...(isMobile ? { height: '100%' } : null),
+            overflow: 'hidden',
+          },
+        }}
       >
-        <DialogTitle>{inventoryLabels.generateReportTitle}</DialogTitle>
-        <DialogContent sx={{ pt: 1 }}>
-          {isMobile ? (
-            <Alert severity="info">
-              {inventoryLabels.generateReportPreviewUnavailable}
-            </Alert>
-          ) : (
-            <>
-              <Typography variant="body2" color="text.secondary" mb={1.5}>
-                {inventoryLabels.generateReportPreview}
-              </Typography>
-              {reportPreviewUrl ? (
-                <Box
-                  component="iframe"
-                  title={inventoryLabels.generateReportPreview}
-                  src={reportPreviewUrl}
-                  sx={{
-                    width: '100%',
-                    height: 640,
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    borderRadius: 1,
-                    bgcolor: 'background.paper',
-                  }}
-                />
-              ) : null}
-            </>
-          )}
+        <DialogTitle sx={{ flexShrink: 0 }}>{inventoryLabels.generateReportTitle}</DialogTitle>
+        <DialogContent
+          sx={{
+            pt: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            flex: 1,
+            minHeight: 0,
+            overflow: 'hidden',
+          }}
+        >
+          <Typography variant="body2" color="text.secondary" mb={1.5}>
+            {inventoryLabels.generateReportPreview}
+          </Typography>
+          {reportPreviewUrl ? (
+            <Suspense
+              fallback={
+                <Stack alignItems="center" justifyContent="center" sx={{ minHeight: isMobile ? 280 : 640, py: 4 }}>
+                  <CircularProgress size={28} />
+                </Stack>
+              }
+            >
+              <PdfPreview
+                file={reportPreviewUrl}
+                title={inventoryLabels.generateReportPreview}
+                errorMessage={inventoryLabels.generateReportPreviewError}
+                loadingLabel={inventoryLabels.generateReportPreviewLoading}
+                minHeight={isMobile ? 280 : 640}
+                fill={isMobile}
+              />
+            </Suspense>
+          ) : null}
         </DialogContent>
-        <DialogActions sx={{ px: 2, pb: 2, gap: 1 }}>
+        <DialogActions sx={{ px: 2, pb: 2, gap: 1, flexShrink: 0 }}>
           <Button variant="text" color="primary" onClick={closeReportPreview}>
             {inventoryLabels.generateReportClose}
           </Button>
