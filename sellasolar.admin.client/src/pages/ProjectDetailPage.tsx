@@ -701,10 +701,8 @@ export default function ProjectDetailPage() {
   const shareReport = async () => {
     if (!reportFile || !canShareReport) return
     try {
-      await navigator.share({
-        files: [reportFile],
-        title: reportFileName,
-      })
+      // Files only — title/text often become a second Telegram message.
+      await navigator.share({ files: [reportFile] })
     } catch (err) {
       // User cancelled the system share sheet — no toast.
       if (err instanceof DOMException && err.name === 'AbortError') return
