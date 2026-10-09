@@ -440,24 +440,9 @@ export default function UsersPage() {
   )
 
   return (
-    <Stack spacing={2.5}>
-      <Stack
-        direction="row"
-        justifyContent="flex-end"
-        sx={{ display: { xs: 'none', lg: 'flex' } }}
-      >
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<AddIcon />}
-          onClick={() => setCreateOpen(true)}
-        >
-          Новий співробітник
-        </Button>
-      </Stack>
-
+    <>
       <AddFab label="Новий співробітник" onClick={() => setCreateOpen(true)} />
-
+      <Stack spacing={2.5}>
       {error && (
         <Alert severity="error" onClose={() => setError(null)}>
           {error}
@@ -619,6 +604,20 @@ export default function UsersPage() {
               </ToggleButtonGroup>
             </>
           )}
+
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<AddIcon />}
+            onClick={() => setCreateOpen(true)}
+            sx={{
+              display: { xs: 'none', lg: 'inline-flex' },
+              flexShrink: 0,
+              ml: { lg: 'auto' },
+            }}
+          >
+            Новий співробітник
+          </Button>
         </Stack>
       </Box>
 
@@ -851,6 +850,7 @@ export default function UsersPage() {
         onCancel={() => setPendingAction(null)}
         onConfirm={() => void confirmPendingAction()}
       />
-    </Stack>
+      </Stack>
+    </>
   )
 }

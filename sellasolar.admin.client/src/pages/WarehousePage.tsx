@@ -231,24 +231,9 @@ export default function WarehousePage() {
   const showPurchaseRequests = stockFilter !== 'low' && purchaseRequests.length > 0
 
   return (
-    <Stack spacing={2.5}>
-      <Stack
-        direction="row"
-        justifyContent="flex-end"
-        sx={{ display: { xs: 'none', lg: 'flex' } }}
-      >
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<AddIcon />}
-          onClick={openCreate}
-        >
-          Додати позицію
-        </Button>
-      </Stack>
-
+    <>
       <AddFab label="Додати позицію" onClick={openCreate} />
-
+      <Stack spacing={2.5}>
       {error && (
         <Alert severity="error" onClose={() => setError(null)}>
           {error}
@@ -400,6 +385,20 @@ export default function WarehousePage() {
               </ToggleButtonGroup>
             </>
           )}
+
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<AddIcon />}
+            onClick={openCreate}
+            sx={{
+              display: { xs: 'none', lg: 'inline-flex' },
+              flexShrink: 0,
+              ml: { lg: 'auto' },
+            }}
+          >
+            Додати позицію
+          </Button>
         </Stack>
       </Box>
 
@@ -714,6 +713,7 @@ export default function WarehousePage() {
           </Button>
         </DialogActions>
       </Dialog>
-    </Stack>
+      </Stack>
+    </>
   )
 }

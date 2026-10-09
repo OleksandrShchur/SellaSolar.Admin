@@ -347,7 +347,8 @@ export default function AppLayout() {
           ml: { md: `${drawerWidth}px` },
           mt: { xs: '56px', sm: '64px' },
           px: { xs: 1.5, sm: 2, md: 3 },
-          py: { xs: 1.5, sm: 2, md: 3 },
+          // Match horizontal padding so the gap under the app bar equals the side gutters.
+          pt: { xs: 1.5, sm: 2, md: 3 },
           pb: {
             xs: bottomNavClearance(12),
             md: 3,
