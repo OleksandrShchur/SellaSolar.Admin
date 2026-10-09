@@ -230,6 +230,38 @@ export default function WarehousePage() {
   const showOrderMode = stockFilter === 'order'
   const showPurchaseRequests = stockFilter !== 'low' && purchaseRequests.length > 0
 
+  const searchField = (sx: object) => (
+    <TextField
+      placeholder="Назва або постачальник"
+      size="small"
+      value={searchInput}
+      onChange={(e) => setSearchInput(e.target.value)}
+      sx={sx}
+      InputProps={{
+        startAdornment: (
+          <InputAdornment position="start">
+            <SearchIcon fontSize="small" color="action" />
+          </InputAdornment>
+        ),
+        endAdornment: searchInput ? (
+          <InputAdornment position="end">
+            <IconButton
+              size="small"
+              aria-label="Очистити пошук"
+              onClick={() => {
+                setSearchInput('')
+                setSearch('')
+              }}
+              edge="end"
+            >
+              <ClearIcon fontSize="small" />
+            </IconButton>
+          </InputAdornment>
+        ) : undefined,
+      }}
+    />
+  )
+
   return (
     <>
       <AddFab label="Додати позицію" onClick={openCreate} />
@@ -253,46 +285,10 @@ export default function WarehousePage() {
           flexWrap="wrap"
           useFlexGap
         >
-          <TextField
-            placeholder="Назва або постачальник"
-            size="small"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            sx={{ width: { xs: '100%', sm: 300 }, flexShrink: 0 }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon fontSize="small" color="action" />
-                </InputAdornment>
-              ),
-              endAdornment: searchInput ? (
-                <InputAdornment position="end">
-                  <IconButton
-                    size="small"
-                    aria-label="Очистити пошук"
-                    onClick={() => {
-                      setSearchInput('')
-                      setSearch('')
-                    }}
-                    edge="end"
-                  >
-                    <ClearIcon fontSize="small" />
-                  </IconButton>
-                </InputAdornment>
-              ) : undefined,
-            }}
-          />
-
           {isMobile ? (
             <Box sx={{ width: '100%' }}>
-              <Stack
-                direction="row"
-                spacing={1}
-                alignItems="center"
-                justifyContent="flex-end"
-                flexWrap="wrap"
-                useFlexGap
-              >
+              <Stack direction="row" spacing={1} alignItems="center">
+                {searchField({ flex: 1, minWidth: 0 })}
                 <Button
                   size="small"
                   variant="outlined"
@@ -354,6 +350,8 @@ export default function WarehousePage() {
             </Box>
           ) : (
             <>
+              {searchField({ width: 300, flexShrink: 0 })}
+
               <FormControl size="small" sx={{ minWidth: 180, flexShrink: 0 }}>
                 <InputLabel>Категорія</InputLabel>
                 <Select
