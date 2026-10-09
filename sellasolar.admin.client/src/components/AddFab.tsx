@@ -1,9 +1,7 @@
 import { Fab, Tooltip, Zoom, useMediaQuery, useTheme } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import { brandColors } from '../theme'
-
-/** Matches AppLayout bottom nav height. */
-const BOTTOM_NAV_HEIGHT = 64
+import { bottomNavClearance } from '../layout/bottomNav'
 
 type AddFabProps = {
   label: string
@@ -30,9 +28,9 @@ export default function AddFab({ label, onClick }: AddFabProps) {
           sx={{
             position: 'fixed',
             right: { xs: 16, sm: 20 },
-            // Clear bottom nav on phone; sit above content padding on tablet.
+            // Clear floating bottom nav on phone; sit above content padding on tablet.
             bottom: {
-              xs: `calc(${BOTTOM_NAV_HEIGHT}px + env(safe-area-inset-bottom, 0px) + 16px)`,
+              xs: bottomNavClearance(16),
               md: 24,
             },
             zIndex: (t) => t.zIndex.speedDial,
