@@ -19,6 +19,7 @@ import {
   ListItemText,
   MenuItem,
   Select,
+  Snackbar,
   Stack,
   TextField,
   ToggleButton,
@@ -32,6 +33,7 @@ import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import DownloadIcon from '@mui/icons-material/Download'
+import IosShareIcon from '@mui/icons-material/IosShare'
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined'
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined'
 import UndoOutlinedIcon from '@mui/icons-material/UndoOutlined'
@@ -163,8 +165,10 @@ export default function ProjectDetailPage() {
   const [reportBlockedItems, setReportBlockedItems] = useState<string[]>([])
   const [reportPreviewOpen, setReportPreviewOpen] = useState(false)
   const [reportPreviewUrl, setReportPreviewUrl] = useState<string | null>(null)
+  const [reportFile, setReportFile] = useState<File | null>(null)
   const [reportFileName, setReportFileName] = useState('nakladna.pdf')
   const [reportGenerating, setReportGenerating] = useState(false)
+  const [shareError, setShareError] = useState<string | null>(null)
 
   const load = async () => {
     setError(null)
@@ -187,6 +191,17 @@ export default function ProjectDetailPage() {
       if (reportPreviewUrl) URL.revokeObjectURL(reportPreviewUrl)
     }
   }, [reportPreviewUrl])
+
+  const canShareReport = useMemo(() => {
+    if (!reportFile) return false
+    if (typeof navigator === 'undefined' || typeof navigator.share !== 'function') return false
+    if (typeof navigator.canShare !== 'function') return false
+    try {
+      return navigator.canShare({ files: [reportFile] })
+    } catch {
+      return false
+    }
+  }, [reportFile])
 
   const availableWorkers = useMemo(() => {
     if (!project) return []
@@ -637,6 +652,7 @@ export default function ProjectDetailPage() {
 
   const closeReportPreview = () => {
     setReportPreviewOpen(false)
+    setReportFile(null)
     if (reportPreviewUrl) {
       URL.revokeObjectURL(reportPreviewUrl)
       setReportPreviewUrl(null)
@@ -660,9 +676,12 @@ export default function ProjectDetailPage() {
       // Ensure MIME type so PDF.js accepts the blob on all browsers.
       const pdfBlob =
         blob.type === 'application/pdf' ? blob : new Blob([blob], { type: 'application/pdf' })
-      const url = URL.createObjectURL(pdfBlob)
+      const resolvedName = fileName ?? `nakladna-project-${projectId}.pdf`
+      const file = new File([pdfBlob], resolvedName, { type: 'application/pdf' })
+      const url = URL.createObjectURL(file)
+      setReportFile(file)
       setReportPreviewUrl(url)
-      setReportFileName(fileName ?? `nakladna-project-${projectId}.pdf`)
+      setReportFileName(resolvedName)
       setReportPreviewOpen(true)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Не вдалося згенерувати накладну')
@@ -677,6 +696,21 @@ export default function ProjectDetailPage() {
     anchor.href = reportPreviewUrl
     anchor.download = reportFileName
     anchor.click()
+  }
+
+  const shareReport = async () => {
+    if (!reportFile || !canShareReport) return
+    try {
+      await navigator.share({
+        files: [reportFile],
+        title: reportFileName,
+      })
+    } catch (err) {
+      // User cancelled the system share sheet — no toast.
+      if (err instanceof DOMException && err.name === 'AbortError') return
+      if (err instanceof Error && err.name === 'AbortError') return
+      setShareError(inventoryLabels.generateReportShareError)
+    }
   }
 
   const statusActions: RowActionItem[] = []
@@ -1884,10 +1918,20 @@ export default function ProjectDetailPage() {
             </Suspense>
           ) : null}
         </DialogContent>
-        <DialogActions sx={{ px: 2, pb: 2, gap: 1, flexShrink: 0 }}>
+        <DialogActions sx={{ px: 2, pb: 2, gap: 1, flexShrink: 0, flexWrap: 'wrap' }}>
           <Button variant="text" color="primary" onClick={closeReportPreview}>
             {inventoryLabels.generateReportClose}
           </Button>
+          {canShareReport ? (
+            <Button
+              variant="outlined"
+              color="primary"
+              startIcon={<IosShareIcon />}
+              onClick={() => void shareReport()}
+            >
+              {inventoryLabels.generateReportShare}
+            </Button>
+          ) : null}
           <Button
             variant="contained"
             color="primary"
@@ -1899,6 +1943,17 @@ export default function ProjectDetailPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar
+        open={Boolean(shareError)}
+        autoHideDuration={4000}
+        onClose={() => setShareError(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity="error" onClose={() => setShareError(null)} variant="filled">
+          {shareError}
+        </Alert>
+      </Snackbar>
     </Stack>
   )
 }
