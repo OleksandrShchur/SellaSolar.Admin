@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link as RouterLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   AppBar,
@@ -37,6 +37,16 @@ import { BOTTOM_NAV_HEIGHT, BOTTOM_NAV_OFFSET, bottomNavClearance } from './bott
 
 const DRAWER_WIDTH = 260
 const DRAWER_WIDTH_COLLAPSED = 72
+/** Inner padding of the floating nav track (matches `p: 0.5` ≈ 4px). */
+const MOBILE_NAV_PAD = 4
+const LIQUID_PILL_MS = 350
+const LIQUID_PILL_EASE = 'cubic-bezier(0.32, 0.72, 0, 1)'
+
+function measureNavTab(trackWidth: number, tabCount: number, index: number) {
+  const inner = Math.max(0, trackWidth - MOBILE_NAV_PAD * 2)
+  const width = tabCount > 0 ? inner / tabCount : 0
+  return { left: MOBILE_NAV_PAD + index * width, width }
+}
 
 function sectionTitle(pathname: string): string {
   if (pathname.startsWith('/users')) return 'Співробітники'
@@ -76,6 +86,68 @@ export default function AppLayout() {
   const drawerWidth = desktopCollapsed ? DRAWER_WIDTH_COLLAPSED : DRAWER_WIDTH
   const title = useMemo(() => sectionTitle(location.pathname), [location.pathname])
   const activeIndex = navItems.findIndex((item) => location.pathname.startsWith(item.to))
+
+  const mobileNavRef = useRef<HTMLDivElement>(null)
+  const prevNavIndexRef = useRef(-1)
+  const liquidAnimRef = useRef(0)
+  const activeIndexRef = useRef(activeIndex)
+  const tabCountRef = useRef(navItems.length)
+  activeIndexRef.current = activeIndex
+  tabCountRef.current = navItems.length
+  const [liquidPill, setLiquidPill] = useState({ left: MOBILE_NAV_PAD, width: 0, visible: false })
+  const [liquidTransition, setLiquidTransition] = useState('none')
+
+  useLayoutEffect(() => {
+    if (!isMobile || activeIndex < 0 || navItems.length === 0) {
+      prevNavIndexRef.current = -1
+      setLiquidPill((prev) => (prev.visible ? { ...prev, visible: false } : prev))
+      setLiquidTransition('none')
+      return
+    }
+
+    const track = mobileNavRef.current
+    if (!track) return
+
+    const target = measureNavTab(track.clientWidth, navItems.length, activeIndex)
+    const prevIndex = prevNavIndexRef.current
+    liquidAnimRef.current += 1
+
+    const shouldAnimate = prevIndex >= 0 && prevIndex !== activeIndex
+    setLiquidTransition(
+      shouldAnimate ? `left ${LIQUID_PILL_MS}ms ${LIQUID_PILL_EASE}, width ${LIQUID_PILL_MS}ms ${LIQUID_PILL_EASE}` : 'none',
+    )
+    setLiquidPill({ ...target, visible: true })
+    prevNavIndexRef.current = activeIndex
+  }, [activeIndex, isMobile, navItems.length])
+
+  // Realign only when the track width actually changes (rotate / breakpoint),
+  // not on every tab navigation — that would cancel the liquid morph.
+  useEffect(() => {
+    if (!isMobile) return
+    const track = mobileNavRef.current
+    if (!track) return
+
+    let lastWidth = track.clientWidth
+
+    const observer = new ResizeObserver(() => {
+      const width = track.clientWidth
+      if (Math.abs(width - lastWidth) < 1) return
+      lastWidth = width
+
+      const index = activeIndexRef.current
+      const count = tabCountRef.current
+      if (index < 0 || count === 0) return
+
+      liquidAnimRef.current += 1
+      const target = measureNavTab(width, count, index)
+      setLiquidTransition('none')
+      setLiquidPill({ ...target, visible: true })
+      prevNavIndexRef.current = index
+    })
+
+    observer.observe(track)
+    return () => observer.disconnect()
+  }, [isMobile])
 
   const brandBlock = (
     <Toolbar
@@ -367,6 +439,7 @@ export default function AppLayout() {
       {/* Mobile: floating liquid-glass bottom nav pill */}
       {isMobile && (
         <Box
+          ref={mobileNavRef}
           sx={{
             position: 'fixed',
             left: { xs: 16, sm: 20 },
@@ -384,21 +457,21 @@ export default function AppLayout() {
             overflow: 'hidden',
           }}
         >
-          {activeIndex >= 0 && navItems.length > 0 && (
+          {liquidPill.visible && (
             <Box
               aria-hidden
               sx={{
                 position: 'absolute',
-                top: 4,
-                bottom: 4,
-                left: 4,
-                width: `calc((100% - 8px) / ${navItems.length})`,
+                top: MOBILE_NAV_PAD,
+                bottom: MOBILE_NAV_PAD,
+                left: liquidPill.left,
+                width: liquidPill.width,
                 borderRadius: 999,
-                backgroundColor: 'rgba(240, 166, 31, 0.18)',
-                transform: `translateX(${activeIndex * 100}%)`,
-                transition: 'transform 0.32s cubic-bezier(0.32, 0.72, 0, 1)',
+                backgroundColor: 'rgba(240, 166, 31, 0.22)',
+                transition: liquidTransition,
                 pointerEvents: 'none',
                 zIndex: 0,
+                willChange: 'left, width',
               }}
             />
           )}
@@ -416,7 +489,6 @@ export default function AppLayout() {
                 py: 0.75,
                 borderRadius: 999,
                 color: 'text.secondary',
-                transition: 'color 0.28s ease',
                 '&.Mui-selected': {
                   color: 'primary.dark',
                 },
@@ -424,7 +496,6 @@ export default function AppLayout() {
               '& .MuiBottomNavigationAction-label': {
                 fontSize: '0.7rem',
                 fontWeight: 600,
-                transition: 'color 0.28s ease',
                 '&.Mui-selected': {
                   fontSize: '0.7rem',
                 },

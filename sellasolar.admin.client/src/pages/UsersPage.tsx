@@ -69,18 +69,6 @@ type PendingUserAction =
 
 const roles: AppRole[] = ['Admin', 'Worker']
 
-const roleFilterLabel: Record<RoleFilter, string> = {
-  '': 'Усі',
-  Admin: 'Адміни',
-  Worker: 'Працівники',
-}
-
-const statusFilterLabel: Record<StatusFilter, string> = {
-  active: 'Активні',
-  blocked: 'Заблоковані',
-  inactive: 'Деактивовані',
-}
-
 const toggleButtonSx = {
   flexShrink: 0,
   '& .MuiToggleButton-root': {
@@ -450,6 +438,38 @@ export default function UsersPage() {
     </>
   )
 
+  const searchField = (sx: object) => (
+    <TextField
+      placeholder="ПІБ або телефон"
+      size="small"
+      value={searchInput}
+      onChange={(e) => setSearchInput(e.target.value)}
+      sx={sx}
+      InputProps={{
+        startAdornment: (
+          <InputAdornment position="start">
+            <SearchIcon fontSize="small" color="action" />
+          </InputAdornment>
+        ),
+        endAdornment: searchInput ? (
+          <InputAdornment position="end">
+            <IconButton
+              size="small"
+              aria-label="Очистити пошук"
+              onClick={() => {
+                setSearchInput('')
+                setSearch('')
+              }}
+              edge="end"
+            >
+              <ClearIcon fontSize="small" />
+            </IconButton>
+          </InputAdornment>
+        ) : undefined,
+      }}
+    />
+  )
+
   return (
     <>
       <AddFab label="Новий співробітник" onClick={() => setCreateOpen(true)} />
@@ -473,54 +493,10 @@ export default function UsersPage() {
           flexWrap="wrap"
           useFlexGap
         >
-          <TextField
-            placeholder="ПІБ або телефон"
-            size="small"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            sx={{ width: { xs: '100%', sm: 300 }, flexShrink: 0 }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon fontSize="small" color="action" />
-                </InputAdornment>
-              ),
-              endAdornment: searchInput ? (
-                <InputAdornment position="end">
-                  <IconButton
-                    size="small"
-                    aria-label="Очистити пошук"
-                    onClick={() => {
-                      setSearchInput('')
-                      setSearch('')
-                    }}
-                    edge="end"
-                  >
-                    <ClearIcon fontSize="small" />
-                  </IconButton>
-                </InputAdornment>
-              ) : undefined,
-            }}
-          />
-
           {isMobile ? (
             <Box sx={{ width: '100%' }}>
-              <Stack
-                direction="row"
-                spacing={1}
-                alignItems="center"
-                justifyContent="flex-end"
-                flexWrap="wrap"
-                useFlexGap
-              >
-                {!filtersExpanded && (
-                  <Chip
-                    size="small"
-                    label={`${roleFilterLabel[roleFilter]} · ${statusFilterLabel[statusFilter]}`}
-                    onClick={() => setFiltersExpanded(true)}
-                    sx={{ fontWeight: 600, mr: 'auto' }}
-                  />
-                )}
+              <Stack direction="row" spacing={1} alignItems="center">
+                {searchField({ flex: 1, minWidth: 0 })}
                 <Button
                   size="small"
                   variant="outlined"
@@ -586,6 +562,8 @@ export default function UsersPage() {
             </Box>
           ) : (
             <>
+              {searchField({ width: 300, flexShrink: 0 })}
+
               <ToggleButtonGroup
                 exclusive
                 size="small"
