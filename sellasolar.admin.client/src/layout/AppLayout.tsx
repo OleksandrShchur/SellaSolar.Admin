@@ -39,7 +39,7 @@ const DRAWER_WIDTH = 260
 const DRAWER_WIDTH_COLLAPSED = 72
 /** Inner padding of the floating nav track (matches `p: 0.5` ≈ 4px). */
 const MOBILE_NAV_PAD = 4
-const LIQUID_PILL_MS = 150
+const LIQUID_PILL_MS = 350
 const LIQUID_PILL_EASE = 'cubic-bezier(0.32, 0.72, 0, 1)'
 
 function measureNavTab(trackWidth: number, tabCount: number, index: number) {
@@ -108,41 +108,16 @@ export default function AppLayout() {
     const track = mobileNavRef.current
     if (!track) return
 
-    const tabCount = navItems.length
-    const target = measureNavTab(track.clientWidth, tabCount, activeIndex)
+    const target = measureNavTab(track.clientWidth, navItems.length, activeIndex)
     const prevIndex = prevNavIndexRef.current
-    const animId = ++liquidAnimRef.current
+    liquidAnimRef.current += 1
 
-    // First paint / same tab: snap without animating.
-    if (prevIndex < 0 || prevIndex === activeIndex) {
-      setLiquidTransition('none')
-      setLiquidPill({ ...target, visible: true })
-      prevNavIndexRef.current = activeIndex
-      return
-    }
-
-    const from = measureNavTab(track.clientWidth, tabCount, prevIndex)
-    const spanLeft = Math.min(from.left, target.left)
-    const spanWidth = Math.max(from.left + from.width, target.left + target.width) - spanLeft
-    const stretchMs = Math.round(LIQUID_PILL_MS * 0.48)
-    const settleMs = LIQUID_PILL_MS - stretchMs
-
+    const shouldAnimate = prevIndex >= 0 && prevIndex !== activeIndex
+    setLiquidTransition(
+      shouldAnimate ? `left ${LIQUID_PILL_MS}ms ${LIQUID_PILL_EASE}, width ${LIQUID_PILL_MS}ms ${LIQUID_PILL_EASE}` : 'none',
+    )
+    setLiquidPill({ ...target, visible: true })
     prevNavIndexRef.current = activeIndex
-
-    // Phase 1 — elongate across both tabs.
-    setLiquidTransition(`left ${stretchMs}ms ${LIQUID_PILL_EASE}, width ${stretchMs}ms ${LIQUID_PILL_EASE}`)
-    setLiquidPill({ left: spanLeft, width: spanWidth, visible: true })
-
-    const settleTimer = window.setTimeout(() => {
-      if (liquidAnimRef.current !== animId) return
-      // Phase 2 — settle onto the destination tab.
-      setLiquidTransition(`left ${settleMs}ms ${LIQUID_PILL_EASE}, width ${settleMs}ms ${LIQUID_PILL_EASE}`)
-      setLiquidPill({ ...target, visible: true })
-    }, stretchMs)
-
-    return () => {
-      window.clearTimeout(settleTimer)
-    }
   }, [activeIndex, isMobile, navItems.length])
 
   // Realign only when the track width actually changes (rotate / breakpoint),
