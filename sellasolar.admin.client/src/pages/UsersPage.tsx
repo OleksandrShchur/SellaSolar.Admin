@@ -48,6 +48,7 @@ import {
 } from '../utils/labels'
 import AddFab from '../components/AddFab'
 import ConfirmDialog from '../components/ConfirmDialog'
+import { CardListSkeleton } from '../components/PageSkeletons'
 import RowActionsMenu, { type RowActionItem } from '../components/RowActionsMenu'
 import { RoleChip, UserStatusChip, workerTypeDisplay } from '../components/StatusChips'
 import { surfaceSx, panelPad, dataGridSx } from '../components/DetailPanel'
@@ -627,33 +628,36 @@ export default function UsersPage() {
       </Box>
 
       {isMobile ? (
-        <Stack spacing={1.5}>
-          {loading && <Typography color="text.secondary">Завантаження…</Typography>}
-          {!loading && rows.length === 0 && (
-            <Typography color="text.secondary">Співробітників не знайдено</Typography>
-          )}
-          {rows.map((row) => (
-            <Card key={row.id} variant="outlined" sx={{ '&:hover': { boxShadow: 1 }, position: 'relative' }}>
-              <Box sx={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}>
-                <RowActionsMenu items={rowActions(row)} />
-              </Box>
-              <CardActionArea onClick={() => navigate(`/users/${row.id}`)}>
-                <CardContent sx={{ '&:last-child': { pb: 2 }, pr: 6 }}>
-                  <Typography fontWeight={700} noWrap>
-                    {row.fullName}
-                  </Typography>
-                  <Stack direction="row" spacing={1} mt={1.25} flexWrap="wrap" useFlexGap>
-                    <RoleChip role={row.role} />
-                    {workerTypeDisplay(row) !== '—' && row.role !== 'Admin' && (
-                      <Chip size="small" variant="outlined" label={workerTypeDisplay(row)} />
-                    )}
-                    <UserStatusChip user={row} />
-                  </Stack>
-                </CardContent>
-              </CardActionArea>
-            </Card>
-          ))}
-        </Stack>
+        loading ? (
+          <CardListSkeleton lines={0} />
+        ) : (
+          <Stack spacing={1.5}>
+            {rows.length === 0 && (
+              <Typography color="text.secondary">Співробітників не знайдено</Typography>
+            )}
+            {rows.map((row) => (
+              <Card key={row.id} variant="outlined" sx={{ '&:hover': { boxShadow: 1 }, position: 'relative' }}>
+                <Box sx={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}>
+                  <RowActionsMenu items={rowActions(row)} />
+                </Box>
+                <CardActionArea onClick={() => navigate(`/users/${row.id}`)}>
+                  <CardContent sx={{ '&:last-child': { pb: 2 }, pr: 6 }}>
+                    <Typography fontWeight={700} noWrap>
+                      {row.fullName}
+                    </Typography>
+                    <Stack direction="row" spacing={1} mt={1.25} flexWrap="wrap" useFlexGap>
+                      <RoleChip role={row.role} />
+                      {workerTypeDisplay(row) !== '—' && row.role !== 'Admin' && (
+                        <Chip size="small" variant="outlined" label={workerTypeDisplay(row)} />
+                      )}
+                      <UserStatusChip user={row} />
+                    </Stack>
+                  </CardContent>
+                </CardActionArea>
+              </Card>
+            ))}
+          </Stack>
+        )
       ) : (
         <Box
           sx={{

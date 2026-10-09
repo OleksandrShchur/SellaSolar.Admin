@@ -36,6 +36,7 @@ import { formatDate } from '../utils/labels'
 import { ProjectStatusChip } from '../components/StatusChips'
 import AddFab from '../components/AddFab'
 import { surfaceSx, panelPad, dataGridSx } from '../components/DetailPanel'
+import { CardListSkeleton } from '../components/PageSkeletons'
 
 type StatusFilter = '' | ProjectStatus
 
@@ -271,37 +272,40 @@ export default function ProjectsPage() {
       </Box>
 
       {isMobile ? (
-        <Stack spacing={1.5}>
-          {loading && <Typography color="text.secondary">Завантаження…</Typography>}
-          {!loading && rows.length === 0 && (
-            <Typography color="text.secondary">Проектів не знайдено</Typography>
-          )}
-          {rows.map((row) => (
-            <Card key={row.id} variant="outlined" sx={{ '&:hover': { boxShadow: 1 } }}>
-              <CardActionArea onClick={() => navigate(`/projects/${row.id}`)}>
-                <CardContent sx={{ '&:last-child': { pb: 2 } }}>
-                  <Typography fontWeight={700} noWrap>
-                    {row.name}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" noWrap mt={0.5}>
-                    {row.address}
-                  </Typography>
-                  <Stack direction="row" spacing={1} mt={1.25} flexWrap="wrap" useFlexGap>
-                    {statusChip(row.status)}
-                    {row.hasPurchaseNeeds && (
-                      <Chip size="small" color="warning" label="Потрібно закупіти" />
-                    )}
-                    <Chip
-                      size="small"
-                      variant="outlined"
-                      label={row.customerName || '—'}
-                    />
-                  </Stack>
-                </CardContent>
-              </CardActionArea>
-            </Card>
-          ))}
-        </Stack>
+        loading ? (
+          <CardListSkeleton />
+        ) : (
+          <Stack spacing={1.5}>
+            {rows.length === 0 && (
+              <Typography color="text.secondary">Проектів не знайдено</Typography>
+            )}
+            {rows.map((row) => (
+              <Card key={row.id} variant="outlined" sx={{ '&:hover': { boxShadow: 1 } }}>
+                <CardActionArea onClick={() => navigate(`/projects/${row.id}`)}>
+                  <CardContent sx={{ '&:last-child': { pb: 2 } }}>
+                    <Typography fontWeight={700} noWrap>
+                      {row.name}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" noWrap mt={0.5}>
+                      {row.address}
+                    </Typography>
+                    <Stack direction="row" spacing={1} mt={1.25} flexWrap="wrap" useFlexGap>
+                      {statusChip(row.status)}
+                      {row.hasPurchaseNeeds && (
+                        <Chip size="small" color="warning" label="Потрібно закупіти" />
+                      )}
+                      <Chip
+                        size="small"
+                        variant="outlined"
+                        label={row.customerName || '—'}
+                      />
+                    </Stack>
+                  </CardContent>
+                </CardActionArea>
+              </Card>
+            ))}
+          </Stack>
+        )
       ) : (
         <Box
           sx={{

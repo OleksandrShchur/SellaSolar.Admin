@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import {
   Alert,
   Box,
-  CircularProgress,
   List,
   ListItemButton,
   ListItemText,
@@ -15,6 +14,7 @@ import type { ProjectListItem } from '../api/types'
 import { formatDate } from '../utils/labels'
 import { ProjectStatusChip } from '../components/StatusChips'
 import { surfaceSx, panelPad } from '../components/DetailPanel'
+import { JobListSkeleton } from '../components/PageSkeletons'
 import { useAuth } from '../auth/AuthContext'
 
 export default function MyJobsPage() {
@@ -51,9 +51,7 @@ export default function MyJobsPage() {
       )}
 
       {loading ? (
-        <Box display="flex" justifyContent="center" py={4}>
-          <CircularProgress />
-        </Box>
+        <JobListSkeleton />
       ) : rows.length === 0 ? (
         <Box
           sx={{
