@@ -71,8 +71,16 @@ export const formatNumber = (value?: number | null) => {
   return new Intl.NumberFormat('uk-UA', { maximumFractionDigits: 2 }).format(value)
 }
 
+/** Digits only (e.g. before sending phone/card to the API). */
+export const digitsOnly = (value: string) => value.replace(/\D/g, '')
+
+/** True when the value contains anything other than digits or spaces. */
+export const hasInvalidNumericChars = (value: string) => /[^\d\s]/.test(value)
+
+export const invalidNumericCharMessage = 'Введено недопустимий символ'
+
 /** Keeps up to 16 digits for bank card input. */
-export const normalizeCardDigits = (value: string) => value.replace(/\D/g, '').slice(0, 16)
+export const normalizeCardDigits = (value: string) => digitsOnly(value).slice(0, 16)
 
 const formatCardDigitsGrouped = (digits: string) => {
   const parts: string[] = []
@@ -96,18 +104,57 @@ export const formatCardNumberInput = (value?: string | null) => {
   return formatCardDigitsGrouped(digits)
 }
 
+/**
+ * Card field onChange: format digit groups, or keep raw text when invalid chars are present
+ * so the user sees them and can get an error message.
+ */
+export const applyCardInputChange = (raw: string) => {
+  if (hasInvalidNumericChars(raw)) return raw
+  return formatCardNumberInput(raw)
+}
+
 export const isCardNumberValid = (value: string) => {
+  if (hasInvalidNumericChars(value)) return false
   const digits = normalizeCardDigits(value)
   return digits.length === 0 || digits.length === 16
+}
+
+export const cardInputHelperText = (value: string) => {
+  if (hasInvalidNumericChars(value)) return invalidNumericCharMessage
+  if (!isCardNumberValid(value)) return 'Введіть усі 16 цифр або залиште порожнім'
+  return 'Необовʼязково · 16 цифр'
+}
+
+/** Formats UA mobile digits as `0XX XXX XX XX` for form inputs. */
+export const formatPhoneInput = (value?: string | null) => {
+  const digits = digitsOnly(value ?? '').slice(0, 10)
+  if (!digits) return ''
+  const parts = [digits.slice(0, 3), digits.slice(3, 6), digits.slice(6, 8), digits.slice(8, 10)]
+  return parts.filter((p) => p.length > 0).join(' ')
+}
+
+/**
+ * Phone field onChange: format while typing, or keep raw text when invalid chars are present.
+ */
+export const applyPhoneInputChange = (raw: string) => {
+  if (hasInvalidNumericChars(raw)) return raw
+  return formatPhoneInput(raw)
+}
+
+export const isPhoneInputValid = (value: string) => !hasInvalidNumericChars(value)
+
+export const phoneInputHelperText = (value: string) => {
+  if (hasInvalidNumericChars(value)) return invalidNumericCharMessage
+  return 'Формат: 0XX XXX XX XX'
 }
 
 /** Formats UA mobile as `0XX XXX XX XX` (digits only in storage). */
 export const formatPhone = (value?: string | null) => {
   if (!value) return '—'
-  const digits = value.replace(/\D/g, '')
+  const digits = digitsOnly(value)
   const local = toLocalUaPhone(digits)
   if (local.length === 10 && local.startsWith('0')) {
-    return `${local.slice(0, 3)} ${local.slice(3, 6)} ${local.slice(6, 8)} ${local.slice(8)}`
+    return formatPhoneInput(local)
   }
   return value
 }

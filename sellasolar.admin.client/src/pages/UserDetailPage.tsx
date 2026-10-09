@@ -33,11 +33,19 @@ import { usersApi } from '../api'
 import type { AppRole, UserListItem, WorkerType } from '../api/types'
 import {
   appRoleLabel,
+  applyCardInputChange,
+  applyPhoneInputChange,
+  cardInputHelperText,
+  digitsOnly,
   formatCardNumber,
   formatCardNumberInput,
   formatPhone,
+  formatPhoneInput,
+  hasInvalidNumericChars,
   isCardNumberValid,
+  isPhoneInputValid,
   normalizeCardDigits,
+  phoneInputHelperText,
   toTelHref,
 } from '../utils/labels'
 import ConfirmDialog from '../components/ConfirmDialog'
@@ -189,9 +197,9 @@ export default function UserDetailPage() {
     setEditForm({
       fullName: user.fullName,
       role: user.role,
-      phone: user.phone ?? '',
+      phone: formatPhoneInput(user.phone),
       workerType: (user.workerType as WorkerType) || 'Installer',
-      cardNumber: user.cardNumber ?? '',
+      cardNumber: formatCardNumberInput(user.cardNumber),
     })
     setEditOpen(true)
   }
@@ -204,7 +212,7 @@ export default function UserDetailPage() {
       const updated = await usersApi.update(user.id, {
         fullName: editForm.fullName,
         role: editForm.role,
-        phone: editForm.phone,
+        phone: digitsOnly(editForm.phone),
         workerType: editForm.role === 'Worker' ? editForm.workerType : null,
         cardNumber:
           editForm.role === 'Worker'
@@ -407,13 +415,17 @@ export default function UserDetailPage() {
               onChange={(e) =>
                 setEditForm((f) => ({
                   ...f,
-                  phone: e.target.value.replace(/\D/g, '').slice(0, 10),
+                  phone: applyPhoneInputChange(e.target.value),
                 }))
               }
+              type="tel"
               inputMode="numeric"
-              placeholder="0982441170"
-              helperText="Формат: 0XXXXXXXXX"
+              autoComplete="tel"
+              placeholder="098 244 11 70"
+              helperText={phoneInputHelperText(editForm.phone)}
+              error={hasInvalidNumericChars(editForm.phone)}
               fullWidth
+              inputProps={{ pattern: '[0-9 ]*' }}
             />
             {editForm.role === 'Worker' ? (
               <>
@@ -432,23 +444,22 @@ export default function UserDetailPage() {
                 </FormControl>
                 <TextField
                   label="Номер картки"
-                  value={formatCardNumberInput(editForm.cardNumber)}
+                  value={editForm.cardNumber}
                   onChange={(e) =>
                     setEditForm((f) => ({
                       ...f,
-                      cardNumber: normalizeCardDigits(e.target.value),
+                      cardNumber: applyCardInputChange(e.target.value),
                     }))
                   }
+                  type="tel"
                   inputMode="numeric"
+                  autoComplete="cc-number"
                   placeholder="5375 4141 4141 4141"
-                  helperText={
-                    isCardNumberValid(editForm.cardNumber)
-                      ? 'Необовʼязково · 16 цифр'
-                      : 'Введіть усі 16 цифр або залиште порожнім'
-                  }
+                  helperText={cardInputHelperText(editForm.cardNumber)}
                   error={!isCardNumberValid(editForm.cardNumber)}
                   fullWidth
                   inputProps={{
+                    pattern: '[0-9 ]*',
                     style: {
                       fontFamily:
                         'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
@@ -469,7 +480,11 @@ export default function UserDetailPage() {
             variant="contained"
             color="primary"
             onClick={() => void saveEdit()}
-            disabled={saving || !isCardNumberValid(editForm.cardNumber)}
+            disabled={
+              saving ||
+              !isPhoneInputValid(editForm.phone) ||
+              !isCardNumberValid(editForm.cardNumber)
+            }
           >
             Зберегти
           </Button>
