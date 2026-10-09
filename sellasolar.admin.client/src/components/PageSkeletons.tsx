@@ -100,11 +100,20 @@ export function DetailPageSkeleton({
       <Stack direction="row" spacing={1} alignItems="flex-start">
         <Skeleton variant="circular" width={40} height={40} sx={{ flexShrink: 0 }} />
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
-            <Skeleton variant="text" width="38%" height={32} sx={{ minWidth: 120 }} />
-            <Skeleton variant="rounded" width={72} height={24} />
-          </Stack>
-          <Skeleton variant="text" width="52%" sx={{ mt: 0.5, minWidth: 140 }} />
+          {variant === 'tabbed' ? (
+            <>
+              <Skeleton variant="text" width="38%" height={32} sx={{ minWidth: 120 }} />
+              <Skeleton variant="rounded" width={72} height={24} sx={{ mt: 0.5 }} />
+            </>
+          ) : (
+            <>
+              <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+                <Skeleton variant="text" width="38%" height={32} sx={{ minWidth: 120 }} />
+                <Skeleton variant="rounded" width={72} height={24} />
+              </Stack>
+              <Skeleton variant="text" width="52%" sx={{ mt: 0.5, minWidth: 140 }} />
+            </>
+          )}
         </Box>
         <Skeleton
           variant="rounded"

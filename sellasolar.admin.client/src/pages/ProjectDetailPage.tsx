@@ -745,15 +745,12 @@ export default function ProjectDetailPage() {
             <ArrowBackIcon />
           </IconButton>
           <Box sx={{ minWidth: 0, flex: 1 }}>
-            <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
-              <Typography variant="h6" fontWeight={700} sx={{ wordBreak: 'break-word' }}>
-                {project.name}
-              </Typography>
-              <ProjectStatusChip status={project.status} />
-            </Stack>
-            <Typography variant="body2" color="text.secondary" mt={0.5} fontWeight={600}>
-              {project.address}
+            <Typography variant="h6" fontWeight={700} sx={{ wordBreak: 'break-word' }}>
+              {project.name}
             </Typography>
+            <Box sx={{ mt: 0.5 }}>
+              <ProjectStatusChip status={project.status} />
+            </Box>
           </Box>
           {isMobile && (
             <RowActionsMenu trigger="icon" size="medium" items={headerMenuItems} />
@@ -784,6 +781,7 @@ export default function ProjectDetailPage() {
           <TabPanel value={tab} index={0}>
             <Stack spacing={3}>
               <DetailFieldGrid columns={{ xs: 1, sm: 2 }}>
+                <DetailField fullWidth label="Адреса" value={project.address || '—'} />
                 <DetailField fullWidth label="Опис" value={project.description || '—'} />
                 <DetailField label="Клієнт" value={project.customerName || '—'} />
                 <DetailField label="Контакти">
