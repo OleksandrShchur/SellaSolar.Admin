@@ -48,6 +48,10 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  optimizeDeps: {
+    // Avoid Vite pre-bundling turning the PDF.js worker into a broken "fake worker".
+    exclude: ['pdfjs-dist'],
+  },
   server: {
     proxy: {
       '^/api': {
