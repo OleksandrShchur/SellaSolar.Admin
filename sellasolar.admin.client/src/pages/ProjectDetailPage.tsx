@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
-import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom'
+import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   Alert,
   Box,
@@ -88,10 +88,19 @@ function materialCoverage(item: ProjectItem) {
   return { toOrder, unallocated }
 }
 
+const PROJECT_TABS = ['info', 'materials', 'expenses', 'workers', 'photos'] as const
+
+function tabIndexFromParam(param: string | null): number {
+  if (!param) return 0
+  const idx = (PROJECT_TABS as readonly string[]).indexOf(param)
+  return idx >= 0 ? idx : 0
+}
+
 export default function ProjectDetailPage() {
   const { id } = useParams()
   const projectId = Number(id)
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { hasRole } = useAuth()
   const canManageUsers = hasRole('Admin')
   const theme = useTheme()
@@ -99,7 +108,19 @@ export default function ProjectDetailPage() {
   const isSmUp = useMediaQuery(theme.breakpoints.up('sm'))
 
   const [project, setProject] = useState<ProjectDetail | null>(null)
-  const [tab, setTab] = useState(0)
+  const tab = tabIndexFromParam(searchParams.get('tab'))
+  const setTab = (index: number) => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        const key = PROJECT_TABS[index]
+        if (!key || index === 0) next.delete('tab')
+        else next.set('tab', key)
+        return next
+      },
+      { replace: true },
+    )
+  }
   const [error, setError] = useState<string | null>(null)
   const [editOpen, setEditOpen] = useState(false)
   const [editForm, setEditForm] = useState({
@@ -1187,12 +1208,22 @@ export default function ProjectDetailPage() {
               {project.workers.map((worker) => (
                 <Box
                   key={worker.id}
+                  role="link"
+                  tabIndex={0}
+                  onClick={() => navigate(`/users/${worker.userId}`)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      navigate(`/users/${worker.userId}`)
+                    }
+                  }}
                   sx={{
                     p: { xs: 1.5, sm: 2 },
                     borderRadius: 2,
                     border: '1.5px solid',
                     borderColor: 'divider',
                     bgcolor: 'rgba(243, 235, 220, 0.45)',
+                    cursor: 'pointer',
                     '&:hover': { boxShadow: 1, borderColor: 'primary.dark' },
                   }}
                 >
@@ -1204,7 +1235,12 @@ export default function ProjectDetailPage() {
                       </Typography>
                       <Typography variant="body2">
                         {worker.phone && toTelHref(worker.phone) ? (
-                          <Link href={toTelHref(worker.phone)!} underline="hover" color="inherit">
+                          <Link
+                            href={toTelHref(worker.phone)!}
+                            underline="hover"
+                            color="inherit"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             {formatPhone(worker.phone)}
                           </Link>
                         ) : (
