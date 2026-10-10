@@ -232,11 +232,12 @@ export default function WarehousePage() {
 
   const searchField = (sx: object) => (
     <TextField
-      placeholder="Назва або постачальник"
+      label="Назва або постачальник"
       size="small"
       value={searchInput}
       onChange={(e) => setSearchInput(e.target.value)}
       sx={sx}
+      InputLabelProps={{ shrink: true }}
       InputProps={{
         startAdornment: (
           <InputAdornment position="start">

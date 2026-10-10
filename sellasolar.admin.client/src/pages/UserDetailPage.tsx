@@ -335,7 +335,17 @@ export default function UserDetailPage() {
         justifyContent="space-between"
       >
         <Stack direction="row" spacing={1} alignItems="flex-start" sx={{ minWidth: 0, flex: 1 }}>
-          <IconButton onClick={() => navigate('/users')} sx={{ mt: -0.5 }}>
+          <IconButton
+            onClick={() => {
+              const idx = (window.history.state as { idx?: number } | null)?.idx
+              if (typeof idx === 'number' && idx > 0) {
+                navigate(-1)
+              } else {
+                navigate('/users')
+              }
+            }}
+            sx={{ mt: -0.5 }}
+          >
             <ArrowBackIcon />
           </IconButton>
           <Box sx={{ minWidth: 0, flex: 1 }}>

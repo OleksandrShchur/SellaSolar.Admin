@@ -440,11 +440,12 @@ export default function UsersPage() {
 
   const searchField = (sx: object) => (
     <TextField
-      placeholder="ПІБ або телефон"
+      label="ПІБ або телефон"
       size="small"
       value={searchInput}
       onChange={(e) => setSearchInput(e.target.value)}
       sx={sx}
+      InputLabelProps={{ shrink: true }}
       InputProps={{
         startAdornment: (
           <InputAdornment position="start">
