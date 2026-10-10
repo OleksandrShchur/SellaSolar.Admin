@@ -174,11 +174,12 @@ export default function ProjectsPage() {
 
   const searchField = (sx: object) => (
     <TextField
-      placeholder="Назва, адреса або клієнт"
+      label="Назва, адреса або клієнт"
       size="small"
       value={searchInput}
       onChange={(e) => setSearchInput(e.target.value)}
       sx={sx}
+      InputLabelProps={{ shrink: true }}
       InputProps={{
         startAdornment: (
           <InputAdornment position="start">
