@@ -1,10 +1,8 @@
 import { Navigate } from 'react-router-dom'
 import { useAuth } from './AuthContext'
+import { defaultHomePath } from './routeAccess'
 
 export default function HomeRedirect() {
-  const { hasRole } = useAuth()
-  if (hasRole('Worker') && !hasRole('Admin')) {
-    return <Navigate to="/my-jobs" replace />
-  }
-  return <Navigate to="/projects" replace />
+  const { user } = useAuth()
+  return <Navigate to={defaultHomePath(user?.roles ?? [])} replace />
 }

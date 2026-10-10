@@ -33,6 +33,7 @@ import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined'
 import { brandColors } from '../theme'
 import { useAuth } from '../auth/AuthContext'
 import ChangePasswordDialog from '../components/ChangePasswordDialog'
+import { formatPhone } from '../utils/labels'
 import { BOTTOM_NAV_HEIGHT, BOTTOM_NAV_OFFSET, bottomNavClearance } from './bottomNav'
 
 const DRAWER_WIDTH = 260
@@ -314,7 +315,7 @@ export default function AppLayout() {
                 {user?.fullName}
               </Typography>
               <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.25 }}>
-                {user?.username}
+                {formatPhone(user?.username)}
               </Typography>
             </Box>
             <Divider sx={{ my: 0.5 }} />
@@ -336,7 +337,7 @@ export default function AppLayout() {
             <MenuItem
               onClick={() => {
                 setAccountAnchor(null)
-                void logout().then(() => navigate('/login', { replace: true }))
+                void logout().then(() => navigate('/login', { replace: true, state: null }))
               }}
               sx={{ py: 1.1, mx: 0.5, borderRadius: 1.5, color: 'error.main' }}
             >

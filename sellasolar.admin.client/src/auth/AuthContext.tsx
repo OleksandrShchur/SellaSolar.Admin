@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
@@ -21,8 +22,10 @@ import type { AppRole, CurrentUser } from '../api/types'
 type AuthState = {
   user: CurrentUser | null
   loading: boolean
-  login: (phone: string, password: string) => Promise<void>
+  login: (phone: string, password: string) => Promise<CurrentUser>
   logout: () => Promise<void>
+  /** True while an intentional logout is clearing the session (skip return-URL). */
+  isLoggingOut: boolean
   refresh: () => Promise<void>
   hasRole: (...roles: AppRole[]) => boolean
   isAdmin: boolean
@@ -33,6 +36,8 @@ const AuthContext = createContext<AuthState | null>(null)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<CurrentUser | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const loggingOutRef = useRef(false)
 
   const refresh = useCallback(async () => {
     try {
@@ -57,19 +62,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refresh])
 
   const login = useCallback(async (phone: string, password: string) => {
+    loggingOutRef.current = false
+    setIsLoggingOut(false)
     await ensureCsrfToken()
     const response = await apiLogin<CurrentUser>('/api/auth/login', { phone, password })
     // Antiforgery tokens include the user identity — refresh after auth changes.
     await refreshCsrfToken()
-    setUser({
+    const currentUser: CurrentUser = {
       userId: response.userId,
       username: response.username,
       fullName: response.fullName,
       roles: response.roles,
-    })
+    }
+    setUser(currentUser)
+    return currentUser
   }, [])
 
   const logout = useCallback(async () => {
+    // Mark before clearing user so ProtectedRoute does not stash the current path as return URL.
+    loggingOutRef.current = true
+    setIsLoggingOut(true)
     try {
       await apiSend('/api/auth/logout', 'POST')
     } finally {
@@ -89,11 +101,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       login,
       logout,
+      isLoggingOut: isLoggingOut || loggingOutRef.current,
       refresh,
       hasRole,
       isAdmin: hasRole('Admin'),
     }),
-    [user, loading, login, logout, refresh, hasRole],
+    [user, loading, login, logout, isLoggingOut, refresh, hasRole],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
