@@ -8,7 +8,7 @@ type Props = {
 }
 
 export default function ProtectedRoute({ roles }: Props) {
-  const { user, loading, hasRole } = useAuth()
+  const { user, loading, hasRole, isLoggingOut } = useAuth()
   const location = useLocation()
 
   if (loading) {
@@ -20,7 +20,14 @@ export default function ProtectedRoute({ roles }: Props) {
   }
 
   if (!user) {
-    return <Navigate to="/login" replace state={{ from: location.pathname }} />
+    // Intentional logout must not resume the previous page after the next login.
+    return (
+      <Navigate
+        to="/login"
+        replace
+        state={isLoggingOut ? null : { from: location.pathname }}
+      />
+    )
   }
 
   if (roles && roles.length > 0 && !roles.some((r) => hasRole(r))) {

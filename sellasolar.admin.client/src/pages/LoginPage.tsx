@@ -17,6 +17,7 @@ import SolarPowerIcon from '@mui/icons-material/SolarPower'
 import VisibilityIcon from '@mui/icons-material/Visibility'
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff'
 import { useAuth } from '../auth/AuthContext'
+import { resolvePostLoginPath } from '../auth/routeAccess'
 import { brandColors } from '../theme'
 import { ensureCsrfToken } from '../api/client'
 
@@ -24,7 +25,7 @@ export default function LoginPage() {
   const { user, login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const from = (location.state as { from?: string } | null)?.from ?? '/projects'
+  const requestedFrom = (location.state as { from?: string } | null)?.from
 
   const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
@@ -39,7 +40,7 @@ export default function LoginPage() {
   }, [])
 
   if (user) {
-    return <Navigate to={from} replace />
+    return <Navigate to={resolvePostLoginPath(requestedFrom, user.roles)} replace />
   }
 
   const submit = async (e: FormEvent) => {
@@ -47,8 +48,8 @@ export default function LoginPage() {
     setLoading(true)
     setError(null)
     try {
-      await login(phone.trim(), password)
-      navigate(from, { replace: true })
+      const currentUser = await login(phone.trim(), password)
+      navigate(resolvePostLoginPath(requestedFrom, currentUser.roles), { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Не вдалося увійти')
     } finally {

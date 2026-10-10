@@ -336,7 +336,7 @@ export default function AppLayout() {
             <MenuItem
               onClick={() => {
                 setAccountAnchor(null)
-                void logout().then(() => navigate('/login', { replace: true }))
+                void logout().then(() => navigate('/login', { replace: true, state: null }))
               }}
               sx={{ py: 1.1, mx: 0.5, borderRadius: 1.5, color: 'error.main' }}
             >
