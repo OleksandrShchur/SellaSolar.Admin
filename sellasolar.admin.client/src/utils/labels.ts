@@ -230,6 +230,8 @@ export const inventoryLabels = {
   generateReportPreviewError:
     'Не вдалося відкрити попередній перегляд. Натисніть «Завантажити PDF», щоб відкрити накладну.',
   generateReportDownload: 'Завантажити PDF',
+  generateReportShare: 'Поділитися',
+  generateReportShareError: 'Не вдалося поділитися накладною. Спробуйте ще раз або завантажте PDF.',
   generateReportGenerating: 'Генерація…',
   generateReportClose: 'Закрити',
   deleteLot: 'Видалити партію',
