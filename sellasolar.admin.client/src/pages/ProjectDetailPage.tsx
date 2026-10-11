@@ -886,21 +886,16 @@ export default function ProjectDetailPage() {
                 <DetailField fullWidth label="Адреса" value={project.address || '—'} />
                 <DetailField fullWidth label="Опис" value={project.description || '—'} />
                 <DetailField label="Клієнт" value={project.customerName || '—'} />
-                <DetailField label="Контакти">
-                  {project.customerPhone || project.customerEmail ? (
-                    <Box component="span">
-                      {project.customerPhone && toTelHref(project.customerPhone) ? (
-                        <Link href={toTelHref(project.customerPhone)!} underline="hover" color="inherit">
-                          {formatPhone(project.customerPhone)}
-                        </Link>
-                      ) : null}
-                      {project.customerPhone && project.customerEmail ? ' · ' : null}
-                      {project.customerEmail || null}
-                    </Box>
+                <DetailField label="Телефон">
+                  {project.customerPhone && toTelHref(project.customerPhone) ? (
+                    <Link href={toTelHref(project.customerPhone)!} underline="hover" color="inherit">
+                      {formatPhone(project.customerPhone)}
+                    </Link>
                   ) : (
                     '—'
                   )}
                 </DetailField>
+                <DetailField label="Email" value={project.customerEmail || '—'} />
                 <DetailField label="Початок" value={formatDate(project.startDate)} />
                 <DetailField label="Кінець" value={formatDate(project.endDate)} />
                 <DetailField label="Створено" value={formatDateTime(project.createdAt)} />
