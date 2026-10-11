@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Box, Tab, Tabs, type SxProps, type Theme } from '@mui/material'
+import { Box, Tab, Tabs, useMediaQuery, useTheme, type SxProps, type Theme } from '@mui/material'
 
 type Props = {
   value: number
@@ -25,8 +25,11 @@ function scrollerMask({ left, right }: FadeState): string | undefined {
 
 /**
  * Scrollable tab bar with auto chevrons + edge fade masks so overflow is obvious on tablet/mobile.
+ * Desktop hides scroll buttons — tabs usually fit, and MUI often shows a spurious chevron.
  */
 export default function ScrollableTabs({ value, onChange, labels, sx }: Props) {
+  const theme = useTheme()
+  const useScrollButtons = useMediaQuery(theme.breakpoints.down('md'))
   const rootRef = useRef<HTMLDivElement>(null)
   const [fade, setFade] = useState<FadeState>({ left: false, right: false })
 
@@ -75,7 +78,7 @@ export default function ScrollableTabs({ value, onChange, labels, sx }: Props) {
         value={value}
         onChange={onChange}
         variant="scrollable"
-        scrollButtons="auto"
+        scrollButtons={useScrollButtons ? 'auto' : false}
         allowScrollButtonsMobile
         textColor="inherit"
         sx={{
