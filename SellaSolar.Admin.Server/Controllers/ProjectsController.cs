@@ -290,6 +290,10 @@ public class ProjectsController : ControllerBase
         {
             return NotFound();
         }
+        catch (ValidationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     [HttpPost("{id:int}/photos")]

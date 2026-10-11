@@ -114,6 +114,54 @@ public class ProjectService
     }
 
     /// <summary>
+    /// Admin view: projects assigned to a user, filtered by scope.
+    /// <paramref name="scope"/>: <c>active</c> (Awaiting / InProgress) or <c>finished</c> (Completed).
+    /// </summary>
+    public async Task<IReadOnlyList<AssignedProjectListItemDto>> GetAssignedProjectsForUserAsync(
+        string userId,
+        string scope,
+        CancellationToken ct = default)
+    {
+        _ = await _userManager.FindByIdAsync(userId)
+            ?? throw new NotFoundException("Користувача не знайдено.");
+
+        var finished = string.Equals(scope, "finished", StringComparison.OrdinalIgnoreCase);
+        if (!finished && !string.Equals(scope, "active", StringComparison.OrdinalIgnoreCase))
+            throw new ValidationException("Scope must be active or finished.");
+
+        var query = _db.Projects
+            .AsNoTracking()
+            .Where(p => p.ProjectWorkers.Any(pw => pw.UserId == userId));
+
+        query = finished
+            ? query.Where(p => p.Status == ProjectStatuses.Completed)
+            : query.Where(p =>
+                p.Status == ProjectStatuses.Awaiting || p.Status == ProjectStatuses.InProgress);
+
+        return await query
+            .OrderByDescending(p => p.CreatedAt)
+            .Select(p => new AssignedProjectListItemDto(
+                p.Id,
+                p.Name,
+                p.Address,
+                p.Status,
+                p.CustomerName,
+                p.CustomerPhone,
+                p.StartDate,
+                p.EndDate,
+                p.CreatedAt,
+                p.ProjectWorkers
+                    .Where(pw => pw.UserId == userId)
+                    .Select(pw => pw.Id)
+                    .FirstOrDefault(),
+                p.ProjectWorkers
+                    .Where(pw => pw.UserId == userId)
+                    .Select(pw => pw.RoleOnProject)
+                    .FirstOrDefault()))
+            .ToListAsync(ct);
+    }
+
+    /// <summary>
     /// Read-only project detail for an assigned worker. Only open projects (Awaiting / InProgress).
     /// Strips costs, lot allocations, expenses, and co-workers.
     /// </summary>
@@ -348,6 +396,10 @@ public class ProjectService
             ?? throw new NotFoundException($"Project worker assignment {projectWorkerId} was not found.");
 
         var project = await _db.Projects.FirstAsync(p => p.Id == projectId, ct);
+        if (!ProjectStatuses.IsOpen(project.Status))
+            throw new ValidationException(
+                "Неможливо прибрати працівника з завершеного проекту. Спочатку поверніть проект у роботу.");
+
         project.UpdatedAt = DateTime.UtcNow;
 
         _db.ProjectWorkers.Remove(entity);
