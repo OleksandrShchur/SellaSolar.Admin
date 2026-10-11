@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom'
 import {
   Alert,
   Box,
   Button,
+  Chip,
   Dialog,
   DialogActions,
   DialogContent,
@@ -16,6 +17,8 @@ import {
   Select,
   Stack,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Tooltip,
   Typography,
   useMediaQuery,
@@ -30,7 +33,7 @@ import LockOpenOutlinedIcon from '@mui/icons-material/LockOpenOutlined'
 import PersonOffOutlinedIcon from '@mui/icons-material/PersonOffOutlined'
 import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined'
 import { usersApi } from '../api'
-import type { AppRole, UserListItem, WorkerType } from '../api/types'
+import type { AppRole, AssignedProjectListItem, UserListItem, WorkerType } from '../api/types'
 import {
   appRoleLabel,
   applyCardInputChange,
@@ -39,6 +42,7 @@ import {
   digitsOnly,
   formatCardNumber,
   formatCardNumberInput,
+  formatDate,
   formatPhone,
   formatPhoneInput,
   hasInvalidNumericChars,
@@ -50,14 +54,33 @@ import {
 } from '../utils/labels'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { DetailField, DetailFieldGrid, DetailPanel } from '../components/DetailPanel'
-import { DetailPageSkeleton } from '../components/PageSkeletons'
+import { CardListSkeleton, DetailPageSkeleton } from '../components/PageSkeletons'
 import RowActionsMenu, { type RowActionItem } from '../components/RowActionsMenu'
-import { UserStatusChip, workerTypeDisplay } from '../components/StatusChips'
+import { ProjectStatusChip, UserStatusChip, workerTypeDisplay } from '../components/StatusChips'
 import { brandColors } from '../theme'
 
 const roles: AppRole[] = ['Admin', 'Worker']
 
 type PendingUserAction = 'deactivate' | 'unblock'
+type ProjectScope = 'active' | 'finished'
+
+const toggleButtonSx = {
+  flexShrink: 0,
+  '& .MuiToggleButton-root': {
+    px: 1.75,
+    textTransform: 'none',
+    fontWeight: 600,
+  },
+} as const
+
+function projectDatesSecondary(row: AssignedProjectListItem) {
+  const start = formatDate(row.startDate)
+  const end = formatDate(row.endDate)
+  if (row.startDate && row.endDate) return `з ${start} · до ${end}`
+  if (row.startDate) return `з ${start}`
+  if (row.endDate) return `до ${end}`
+  return null
+}
 
 function PhoneLink({ phone }: { phone?: string | null }) {
   const href = toTelHref(phone)
@@ -161,6 +184,11 @@ export default function UserDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
+  const [projectScope, setProjectScope] = useState<ProjectScope>('active')
+  const [projects, setProjects] = useState<AssignedProjectListItem[]>([])
+  const [projectsLoading, setProjectsLoading] = useState(false)
+  const [projectsError, setProjectsError] = useState<string | null>(null)
+
   const [editOpen, setEditOpen] = useState(false)
   const [editForm, setEditForm] = useState({
     fullName: '',
@@ -186,11 +214,34 @@ export default function UserDetailPage() {
     }
   }
 
+  const loadProjects = async (userId: string, scope: ProjectScope) => {
+    setProjectsLoading(true)
+    setProjectsError(null)
+    try {
+      setProjects(await usersApi.assignedProjects(userId, scope))
+    } catch (err) {
+      setProjects([])
+      setProjectsError(
+        err instanceof Error ? err.message : 'Не вдалося завантажити проекти',
+      )
+    } finally {
+      setProjectsLoading(false)
+    }
+  }
+
   useEffect(() => {
     if (!id) return
     setUser(null)
+    setProjects([])
+    setProjectScope('active')
+    setProjectsError(null)
     void load()
   }, [id])
+
+  useEffect(() => {
+    if (!id || !user) return
+    void loadProjects(id, projectScope)
+  }, [id, user?.id, projectScope])
 
   const openEdit = () => {
     if (!user) return
@@ -392,6 +443,99 @@ export default function UserDetailPage() {
             </Box>
           </DetailField>
         </DetailFieldGrid>
+      </DetailPanel>
+
+      <DetailPanel>
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          spacing={1.5}
+          alignItems={{ sm: 'center' }}
+          justifyContent="space-between"
+          mb={1.75}
+        >
+          <Typography variant="subtitle1" fontWeight={800} sx={{ letterSpacing: '-0.01em' }}>
+            Призначені проекти
+          </Typography>
+          <ToggleButtonGroup
+            exclusive
+            size="small"
+            value={projectScope}
+            onChange={(_, v) => {
+              if (v !== null) setProjectScope(v as ProjectScope)
+            }}
+            sx={{ ...toggleButtonSx, width: { xs: '100%', sm: 'auto' } }}
+          >
+            <ToggleButton value="active" sx={{ flex: { xs: 1, sm: 'none' } }}>
+              Активні
+            </ToggleButton>
+            <ToggleButton value="finished" sx={{ flex: { xs: 1, sm: 'none' } }}>
+              Завершені
+            </ToggleButton>
+          </ToggleButtonGroup>
+        </Stack>
+
+        {projectsError && (
+          <Alert severity="error" onClose={() => setProjectsError(null)} sx={{ mb: 1.5 }}>
+            {projectsError}
+          </Alert>
+        )}
+
+        {projectsLoading ? (
+          <CardListSkeleton count={4} lines={2} showChips />
+        ) : projects.length === 0 ? (
+          <Typography color="text.secondary">
+            {projectScope === 'active'
+              ? 'Немає активних призначених проектів.'
+              : 'Немає завершених призначених проектів.'}
+          </Typography>
+        ) : (
+          <Stack spacing={1.25}>
+            {projects.map((row) => {
+              const dates = projectDatesSecondary(row)
+              const secondaryParts = [row.address, row.customerName, dates].filter(Boolean)
+              return (
+                <Box
+                  key={row.id}
+                  component={RouterLink}
+                  to={`/projects/${row.id}`}
+                  sx={{
+                    p: { xs: 1.5, sm: 2 },
+                    borderRadius: 2,
+                    border: '1.5px solid',
+                    borderColor: 'divider',
+                    bgcolor: 'rgba(243, 235, 220, 0.45)',
+                    textDecoration: 'none',
+                    color: 'inherit',
+                    '&:hover': { boxShadow: 1, borderColor: 'primary.dark' },
+                  }}
+                >
+                  <Stack direction="row" spacing={1} alignItems="flex-start">
+                    <Box flex={1} sx={{ minWidth: 0 }}>
+                      <Stack
+                        direction="row"
+                        spacing={1}
+                        alignItems="center"
+                        flexWrap="wrap"
+                        useFlexGap
+                      >
+                        <Typography fontWeight={700} sx={{ minWidth: 0 }} noWrap>
+                          {row.name}
+                        </Typography>
+                        {row.roleOnProject ? (
+                          <Chip size="small" variant="outlined" label={row.roleOnProject} />
+                        ) : null}
+                      </Stack>
+                      <Typography variant="body2" color="text.secondary" mt={0.35}>
+                        {secondaryParts.join(' · ')}
+                      </Typography>
+                    </Box>
+                    <ProjectStatusChip status={row.status} />
+                  </Stack>
+                </Box>
+              )
+            })}
+          </Stack>
+        )}
       </DetailPanel>
 
       <Dialog open={editOpen} onClose={() => setEditOpen(false)} fullWidth maxWidth="sm">

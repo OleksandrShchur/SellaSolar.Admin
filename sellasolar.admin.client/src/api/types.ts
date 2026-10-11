@@ -43,6 +43,20 @@ export interface ProjectListItem {
   hasPurchaseNeeds: boolean
 }
 
+/** Project assigned to a user (admin user-detail view). */
+export interface AssignedProjectListItem {
+  id: number
+  name: string
+  address: string
+  status: ProjectStatus
+  customerName: string
+  customerPhone: string
+  startDate?: string | null
+  endDate?: string | null
+  createdAt: string
+  roleOnProject?: string | null
+}
+
 export interface ProjectItemLotAllocation {
   lotId: number
   unitCost: number

@@ -12,10 +12,12 @@ namespace SellaSolar.Admin.Server.Controllers;
 public class UsersController : ControllerBase
 {
     private readonly UserManagementService _users;
+    private readonly ProjectService _projects;
 
-    public UsersController(UserManagementService users)
+    public UsersController(UserManagementService users, ProjectService projects)
     {
         _users = users;
+        _projects = projects;
     }
 
     [HttpGet]
@@ -56,6 +58,30 @@ public class UsersController : ControllerBase
         catch (NotFoundException)
         {
             return NotFound();
+        }
+    }
+
+    /// <summary>
+    /// Projects assigned to the user. Query <c>scope</c>: <c>active</c> (default) or <c>finished</c>.
+    /// </summary>
+    [HttpGet("{id}/projects")]
+    [Authorize(Policy = AppPolicies.CanManageUsers)]
+    public async Task<ActionResult<IReadOnlyList<AssignedProjectListItemDto>>> GetAssignedProjects(
+        string id,
+        [FromQuery] string? scope,
+        CancellationToken ct)
+    {
+        try
+        {
+            return Ok(await _projects.GetAssignedProjectsForUserAsync(id, scope ?? "active", ct));
+        }
+        catch (NotFoundException)
+        {
+            return NotFound();
+        }
+        catch (ValidationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
         }
     }
 

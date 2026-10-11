@@ -1,6 +1,7 @@
 import { apiGet, apiGetBlob, apiSend, apiUpload, type UploadProgress } from './client'
 import type {
   AppRole,
+  AssignedProjectListItem,
   CurrentUser,
   NonCatalogPurchaseRequest,
   ProjectDetail,
@@ -41,6 +42,8 @@ export const usersApi = {
     ),
   workersForAssignment: () => apiGet<UserListItem[]>('/api/users/workers'),
   get: (id: string) => apiGet<UserListItem>(`/api/users/${id}`),
+  assignedProjects: (id: string, scope: 'active' | 'finished' = 'active') =>
+    apiGet<AssignedProjectListItem[]>(`/api/users/${id}/projects${qs({ scope })}`),
   create: (body: {
     password: string
     fullName: string

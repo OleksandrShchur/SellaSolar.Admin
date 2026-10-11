@@ -15,6 +15,19 @@ public record ProjectListItemDto(
     int AssignedWorkerCount,
     bool HasPurchaseNeeds);
 
+/// <summary>Project assigned to a specific user (admin user-detail view).</summary>
+public record AssignedProjectListItemDto(
+    int Id,
+    string Name,
+    string Address,
+    string Status,
+    string CustomerName,
+    string CustomerPhone,
+    DateTime? StartDate,
+    DateTime? EndDate,
+    DateTime CreatedAt,
+    string? RoleOnProject);
+
 public record ProjectItemLotAllocationDto(
     int LotId,
     decimal UnitCost,
