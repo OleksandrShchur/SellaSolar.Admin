@@ -147,6 +147,9 @@ export default function PhotoLightbox({ open, photos, index, onClose, onIndexCha
   }
 
   const onPointerDown = (e: React.PointerEvent) => {
+    // Nav / chrome controls live inside the stage; don't capture their clicks.
+    if ((e.target as HTMLElement | null)?.closest?.('button')) return
+
     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
     const point = { x: e.clientX, y: e.clientY }
     pointersRef.current.set(e.pointerId, point)
@@ -370,13 +373,20 @@ export default function PhotoLightbox({ open, photos, index, onClose, onIndexCha
         {count > 1 && scale === 1 && (
           <>
             <IconButton
-              onClick={goPrev}
+              onClick={(e) => {
+                e.stopPropagation()
+                goPrev()
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+              onPointerUp={(e) => e.stopPropagation()}
+              onPointerCancel={(e) => e.stopPropagation()}
               aria-label="Попереднє фото"
               sx={{
                 position: 'absolute',
                 left: 4,
                 top: '50%',
                 transform: 'translateY(-50%)',
+                zIndex: 2,
                 color: '#F8F2E6',
                 bgcolor: 'rgba(21, 18, 14, 0.45)',
                 '&:hover': { bgcolor: 'rgba(21, 18, 14, 0.7)' },
@@ -385,13 +395,20 @@ export default function PhotoLightbox({ open, photos, index, onClose, onIndexCha
               <ChevronLeftIcon />
             </IconButton>
             <IconButton
-              onClick={goNext}
+              onClick={(e) => {
+                e.stopPropagation()
+                goNext()
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+              onPointerUp={(e) => e.stopPropagation()}
+              onPointerCancel={(e) => e.stopPropagation()}
               aria-label="Наступне фото"
               sx={{
                 position: 'absolute',
                 right: 4,
                 top: '50%',
                 transform: 'translateY(-50%)',
+                zIndex: 2,
                 color: '#F8F2E6',
                 bgcolor: 'rgba(21, 18, 14, 0.45)',
                 '&:hover': { bgcolor: 'rgba(21, 18, 14, 0.7)' },
