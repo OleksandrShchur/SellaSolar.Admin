@@ -526,7 +526,12 @@ export default function ProjectDetailPage() {
     }
   }
 
-  const pendingDeleteCopy =
+  const pendingDeleteCopy: {
+    title: string
+    message: string
+    confirmLabel?: string
+    confirmingLabel?: string
+  } | null =
     pendingDelete?.kind === 'item'
       ? {
           title: 'Видалити матеріал?',
@@ -541,6 +546,8 @@ export default function ProjectDetailPage() {
           ? {
               title: 'Прибрати працівника?',
               message: `Прибрати «${pendingDelete.worker.fullName}» з цього проекту?`,
+              confirmLabel: 'Прибрати',
+              confirmingLabel: 'Прибирання…',
             }
           : pendingDelete?.kind === 'photo'
             ? {
@@ -1239,9 +1246,11 @@ export default function ProjectDetailPage() {
                 <Typography variant="subtitle1" fontWeight={800} sx={{ letterSpacing: '-0.01em' }}>
                   Призначені працівники
                 </Typography>
-                <Button variant="contained" color="primary" onClick={() => void openAddWorker()}>
-                  Призначити
-                </Button>
+                {project.status !== 'Completed' && (
+                  <Button variant="contained" color="primary" onClick={() => void openAddWorker()}>
+                    Призначити
+                  </Button>
+                )}
               </Stack>
               <Stack spacing={1.25}>
                 {project.workers.map((worker) => (
@@ -1865,6 +1874,8 @@ export default function ProjectDetailPage() {
         open={Boolean(pendingDelete)}
         title={pendingDeleteCopy?.title ?? ''}
         message={pendingDeleteCopy?.message}
+        confirmLabel={pendingDeleteCopy?.confirmLabel}
+        confirmingLabel={pendingDeleteCopy?.confirmingLabel}
         confirming={deleting}
         onCancel={() => setPendingDelete(null)}
         onConfirm={() => void confirmPendingDelete()}

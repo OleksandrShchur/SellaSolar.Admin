@@ -298,6 +298,10 @@ public class ProjectService
         var project = await _db.Projects.FirstOrDefaultAsync(p => p.Id == projectId, ct)
             ?? throw new NotFoundException($"Project {projectId} was not found.");
 
+        if (!ProjectStatuses.IsOpen(project.Status))
+            throw new ValidationException(
+                "Неможливо призначити працівника на завершений проект. Спочатку поверніть проект у роботу.");
+
         if (string.IsNullOrWhiteSpace(request.UserId))
             throw new ValidationException("Працівника не вибрано.");
 
