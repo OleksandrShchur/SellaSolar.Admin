@@ -81,6 +81,7 @@ export const projectsApi = {
   list: (status?: string, search?: string) =>
     apiGet<ProjectListItem[]>(`/api/projects${qs({ status, search })}`),
   mine: () => apiGet<ProjectListItem[]>('/api/my-jobs'),
+  getMine: (id: number) => apiGet<ProjectDetail>(`/api/my-jobs/${id}`),
   get: (id: number) => apiGet<ProjectDetail>(`/api/projects/${id}`),
   create: (body: unknown) => apiSend<ProjectDetail>('/api/projects', 'POST', body),
   update: (id: number, body: unknown) => apiSend<ProjectDetail>(`/api/projects/${id}`, 'PUT', body),
