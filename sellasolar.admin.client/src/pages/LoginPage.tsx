@@ -13,7 +13,6 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
-import SolarPowerIcon from '@mui/icons-material/SolarPower'
 import VisibilityIcon from '@mui/icons-material/Visibility'
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff'
 import { useAuth } from '../auth/AuthContext'
@@ -80,7 +79,12 @@ export default function LoginPage() {
           <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
             <Stack spacing={3} component="form" onSubmit={submit}>
               <Stack spacing={1} alignItems="center" textAlign="center">
-                <SolarPowerIcon color="primary" sx={{ fontSize: 40 }} />
+                <Box
+                  component="img"
+                  src="/sella-solar-sticker.png"
+                  alt="Sella Solar"
+                  sx={{ height: 72, width: 'auto', display: 'block' }}
+                />
                 <Typography variant="h5" fontWeight={800} sx={{ fontFamily: '"Sora", system-ui, sans-serif' }}>
                   SellaSolar Admin
                 </Typography>

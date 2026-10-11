@@ -165,6 +165,20 @@ const theme = createTheme({
         disableScrollLock: true,
       },
     },
+    MuiDialogTitle: {
+      styleOverrides: {
+        root: {
+          borderBottom: `1px solid ${brandColors.border}`,
+        },
+      },
+    },
+    MuiDialogActions: {
+      styleOverrides: {
+        root: {
+          borderTop: `1px solid ${brandColors.border}`,
+        },
+      },
+    },
     MuiMenu: {
       defaultProps: {
         disableScrollLock: true,

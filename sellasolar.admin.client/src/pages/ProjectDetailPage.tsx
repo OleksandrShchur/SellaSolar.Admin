@@ -52,9 +52,29 @@ import type {
   WarehouseStockLot,
   UserListItem,
 } from '../api/types'
-import { formatDate, formatDateTime, formatMoney, formatNumber, formatPhone, inventoryLabels, projectLabels, toTelHref, workerTypeLabel } from '../utils/labels'
+import {
+  applyPhoneInputChange,
+  digitsOnly,
+  formatDate,
+  formatDateTime,
+  formatMoney,
+  formatNumber,
+  formatPhone,
+  formatPhoneInput,
+  hasInvalidNumericChars,
+  inventoryLabels,
+  phoneInputHelperText,
+  projectLabels,
+  toTelHref,
+  workerTypeLabel,
+} from '../utils/labels'
 import { useAuth } from '../auth/AuthContext'
 import ConfirmDialog from '../components/ConfirmDialog'
+import CustomDataEditor, {
+  isCustomDataValid,
+  normalizeCustomData,
+  type CustomDataRow,
+} from '../components/CustomDataEditor'
 import { DetailField, DetailFieldGrid, DetailPanel, DetailSection, panelPad } from '../components/DetailPanel'
 import { DetailPageSkeleton } from '../components/PageSkeletons'
 import PhotoLightbox from '../components/PhotoLightbox'
@@ -131,6 +151,7 @@ export default function ProjectDetailPage() {
   }
   const [error, setError] = useState<string | null>(null)
   const [editOpen, setEditOpen] = useState(false)
+  const [editCustomDataErrors, setEditCustomDataErrors] = useState(false)
   const [editForm, setEditForm] = useState({
     name: '',
     description: '',
@@ -141,7 +162,7 @@ export default function ProjectDetailPage() {
     customerEmail: '',
     startDate: '',
     endDate: '',
-    customDataText: '',
+    customData: [] as CustomDataRow[],
   })
 
   const [itemOpen, setItemOpen] = useState(false)
@@ -274,39 +295,35 @@ export default function ProjectDetailPage() {
       address: project.address,
       status: project.status,
       customerName: project.customerName,
-      customerPhone: project.customerPhone,
+      customerPhone: formatPhoneInput(project.customerPhone),
       customerEmail: project.customerEmail ?? '',
       startDate: project.startDate ? project.startDate.slice(0, 10) : '',
       endDate: project.endDate ? project.endDate.slice(0, 10) : '',
-      customDataText: project.customData.map((c) => `${c.key}=${c.value}`).join('\n'),
+      customData: project.customData.map((c) => ({ key: c.key, value: c.value })),
     })
+    setEditCustomDataErrors(false)
     setEditOpen(true)
   }
 
   const saveEdit = async () => {
     setError(null)
+    if (!isCustomDataValid(editForm.customData)) {
+      setEditCustomDataErrors(true)
+      return
+    }
+    setEditCustomDataErrors(false)
     try {
-      const customData = editForm.customDataText
-        .split('\n')
-        .map((line) => line.trim())
-        .filter(Boolean)
-        .map((line) => {
-          const idx = line.indexOf('=')
-          if (idx < 0) return { key: line, value: '' }
-          return { key: line.slice(0, idx).trim(), value: line.slice(idx + 1).trim() }
-        })
-
       const updated = await projectsApi.update(projectId, {
         name: editForm.name,
         description: editForm.description || null,
         address: editForm.address,
         status: editForm.status,
         customerName: editForm.customerName,
-        customerPhone: editForm.customerPhone,
+        customerPhone: digitsOnly(editForm.customerPhone),
         customerEmail: editForm.customerEmail || null,
         startDate: editForm.startDate || null,
         endDate: editForm.endDate || null,
-        customData,
+        customData: normalizeCustomData(editForm.customData),
       })
       setProject(updated ?? null)
       setEditOpen(false)
@@ -871,21 +888,16 @@ export default function ProjectDetailPage() {
                 <DetailField fullWidth label="Адреса" value={project.address || '—'} />
                 <DetailField fullWidth label="Опис" value={project.description || '—'} />
                 <DetailField label="Клієнт" value={project.customerName || '—'} />
-                <DetailField label="Контакти">
-                  {project.customerPhone || project.customerEmail ? (
-                    <Box component="span">
-                      {project.customerPhone && toTelHref(project.customerPhone) ? (
-                        <Link href={toTelHref(project.customerPhone)!} underline="hover" color="inherit">
-                          {formatPhone(project.customerPhone)}
-                        </Link>
-                      ) : null}
-                      {project.customerPhone && project.customerEmail ? ' · ' : null}
-                      {project.customerEmail || null}
-                    </Box>
+                <DetailField label="Телефон">
+                  {project.customerPhone && toTelHref(project.customerPhone) ? (
+                    <Link href={toTelHref(project.customerPhone)!} underline="hover" color="inherit">
+                      {formatPhone(project.customerPhone)}
+                    </Link>
                   ) : (
                     '—'
                   )}
                 </DetailField>
+                <DetailField label="Email" value={project.customerEmail || '—'} />
                 <DetailField label="Початок" value={formatDate(project.startDate)} />
                 <DetailField label="Кінець" value={formatDate(project.endDate)} />
                 <DetailField label="Створено" value={formatDateTime(project.createdAt)} />
@@ -1454,7 +1466,16 @@ export default function ProjectDetailPage() {
               label="Телефон"
               fullWidth
               value={editForm.customerPhone}
-              onChange={(e) => setEditForm({ ...editForm, customerPhone: e.target.value })}
+              onChange={(e) =>
+                setEditForm({ ...editForm, customerPhone: applyPhoneInputChange(e.target.value) })
+              }
+              type="tel"
+              inputMode="numeric"
+              autoComplete="tel"
+              placeholder="098 244 11 70"
+              helperText={phoneInputHelperText(editForm.customerPhone)}
+              error={hasInvalidNumericChars(editForm.customerPhone)}
+              inputProps={{ pattern: '[0-9 ]*' }}
             />
             <TextField
               label="Email"
@@ -1478,18 +1499,24 @@ export default function ProjectDetailPage() {
               value={editForm.endDate}
               onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })}
             />
-            <TextField
-              label="Додаткові дані (ключ=значення, по рядку)"
-              multiline
-              minRows={3}
-              fullWidth
-              value={editForm.customDataText}
-              onChange={(e) => setEditForm({ ...editForm, customDataText: e.target.value })}
+            <CustomDataEditor
+              rows={editForm.customData}
+              onChange={(customData) => {
+                setEditForm({ ...editForm, customData })
+                if (editCustomDataErrors) setEditCustomDataErrors(false)
+              }}
+              showErrors={editCustomDataErrors}
             />
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button variant="text" onClick={() => setEditOpen(false)}>
+          <Button
+            variant="text"
+            onClick={() => {
+              setEditOpen(false)
+              setEditCustomDataErrors(false)
+            }}
+          >
             Скасувати
           </Button>
           <Button variant="contained" color="primary" onClick={() => void saveEdit()}>
