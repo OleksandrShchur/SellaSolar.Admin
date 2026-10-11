@@ -1314,7 +1314,7 @@ export default function ProjectDetailPage() {
 
           <TabPanel value={tab} index={canManageProject ? 4 : 2}>
             {canManageProject && (
-              <Stack spacing={2} mb={2} alignItems="flex-start">
+              <Stack spacing={2} mb={2} alignItems="flex-end">
                 <Button variant="outlined" color="primary" component="label">
                   Завантажити фото
                   <input
