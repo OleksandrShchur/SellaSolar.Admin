@@ -49,6 +49,19 @@ function measureNavTab(trackWidth: number, tabCount: number, index: number) {
   return { left: MOBILE_NAV_PAD + index * width, width }
 }
 
+/** Prefer real action bounds so the liquid pill matches each tab slot. */
+function measureNavTabFromDom(track: HTMLElement, index: number, tabCount: number) {
+  const action = track.querySelectorAll<HTMLElement>('.MuiBottomNavigationAction-root')[index]
+  if (!action) return measureNavTab(track.clientWidth, tabCount, index)
+
+  const trackRect = track.getBoundingClientRect()
+  const actionRect = action.getBoundingClientRect()
+  return {
+    left: actionRect.left - trackRect.left,
+    width: actionRect.width,
+  }
+}
+
 function sectionTitle(pathname: string): string {
   if (pathname.startsWith('/users')) return 'Співробітники'
   if (pathname.startsWith('/my-jobs')) return 'Мої завдання'
@@ -118,7 +131,7 @@ export default function AppLayout() {
     const track = mobileNavRef.current
     if (!track) return
 
-    const target = measureNavTab(track.clientWidth, navItems.length, activeIndex)
+    const target = measureNavTabFromDom(track, activeIndex, navItems.length)
     const prevIndex = prevNavIndexRef.current
     liquidAnimRef.current += 1
 
@@ -149,7 +162,7 @@ export default function AppLayout() {
       if (index < 0 || count === 0) return
 
       liquidAnimRef.current += 1
-      const target = measureNavTab(width, count, index)
+      const target = measureNavTabFromDom(track, index, count)
       setLiquidTransition('none')
       setLiquidPill({ ...target, visible: true })
       prevNavIndexRef.current = index
@@ -491,14 +504,22 @@ export default function AppLayout() {
             sx={{
               position: 'relative',
               zIndex: 1,
+              width: '100%',
               height: '100%',
+              // MUI defaults to center; with maxWidth:168 that clusters tabs mid-bar.
+              justifyContent: 'space-between',
               backgroundColor: 'transparent',
               '& .MuiBottomNavigationAction-root': {
                 minWidth: 0,
+                maxWidth: 'none',
+                flex: 1,
                 minHeight: '100%',
+                px: 0.5,
                 py: 0.75,
                 borderRadius: 999,
                 color: 'text.secondary',
+                alignItems: 'center',
+                justifyContent: 'center',
                 '&.Mui-selected': {
                   color: 'primary.dark',
                 },
