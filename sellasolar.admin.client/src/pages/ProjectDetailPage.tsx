@@ -1246,9 +1246,11 @@ export default function ProjectDetailPage() {
                 <Typography variant="subtitle1" fontWeight={800} sx={{ letterSpacing: '-0.01em' }}>
                   Призначені працівники
                 </Typography>
-                <Button variant="contained" color="primary" onClick={() => void openAddWorker()}>
-                  Призначити
-                </Button>
+                {project.status !== 'Completed' && (
+                  <Button variant="contained" color="primary" onClick={() => void openAddWorker()}>
+                    Призначити
+                  </Button>
+                )}
               </Stack>
               <Stack spacing={1.25}>
                 {project.workers.map((worker) => (
