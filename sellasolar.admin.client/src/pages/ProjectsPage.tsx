@@ -43,6 +43,11 @@ import {
 } from '../utils/labels'
 import { ProjectStatusChip } from '../components/StatusChips'
 import AddFab from '../components/AddFab'
+import CustomDataEditor, {
+  isCustomDataValid,
+  normalizeCustomData,
+  type CustomDataRow,
+} from '../components/CustomDataEditor'
 import { surfaceSx, panelPad, dataGridSx } from '../components/DetailPanel'
 import { CardListSkeleton } from '../components/PageSkeletons'
 
@@ -65,6 +70,7 @@ const emptyForm = {
   customerName: '',
   customerPhone: '',
   customerEmail: '',
+  customData: [] as CustomDataRow[],
 }
 
 function statusChip(status: ProjectStatus) {
@@ -85,6 +91,7 @@ export default function ProjectsPage() {
   const [filtersExpanded, setFiltersExpanded] = useState(false)
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState(emptyForm)
+  const [customDataErrors, setCustomDataErrors] = useState(false)
   const [saving, setSaving] = useState(false)
 
   const load = async () => {
@@ -160,6 +167,11 @@ export default function ProjectsPage() {
   ]
 
   const handleCreate = async () => {
+    if (!isCustomDataValid(form.customData)) {
+      setCustomDataErrors(true)
+      return
+    }
+    setCustomDataErrors(false)
     setSaving(true)
     setError(null)
     try {
@@ -167,10 +179,11 @@ export default function ProjectsPage() {
         ...form,
         customerPhone: digitsOnly(form.customerPhone),
         customerEmail: form.customerEmail || null,
-        customData: [],
+        customData: normalizeCustomData(form.customData),
       })
       setOpen(false)
       setForm(emptyForm)
+      setCustomDataErrors(false)
       if (created) navigate(`/projects/${created.id}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Не вдалося створити проект')
@@ -388,7 +401,15 @@ export default function ProjectsPage() {
         </Box>
       )}
 
-      <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm">
+      <Dialog
+        open={open}
+        onClose={() => {
+          setOpen(false)
+          setCustomDataErrors(false)
+        }}
+        fullWidth
+        maxWidth="sm"
+      >
         <DialogTitle>Новий проект</DialogTitle>
         <DialogContent>
           <Stack spacing={2} mt={1}>
@@ -455,10 +476,25 @@ export default function ProjectsPage() {
               value={form.customerEmail}
               onChange={(e) => setForm({ ...form, customerEmail: e.target.value })}
             />
+            <CustomDataEditor
+              rows={form.customData}
+              onChange={(customData) => {
+                setForm({ ...form, customData })
+                if (customDataErrors) setCustomDataErrors(false)
+              }}
+              showErrors={customDataErrors}
+              disabled={saving}
+            />
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button variant="text" onClick={() => setOpen(false)}>
+          <Button
+            variant="text"
+            onClick={() => {
+              setOpen(false)
+              setCustomDataErrors(false)
+            }}
+          >
             Скасувати
           </Button>
           <Button
