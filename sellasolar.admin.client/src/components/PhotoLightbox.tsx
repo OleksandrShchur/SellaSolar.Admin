@@ -26,6 +26,7 @@ type Props = {
 const MIN_SCALE = 1
 const MAX_SCALE = 4
 const SWIPE_THRESHOLD_PX = 56
+const SLIDE_MS = 280
 
 type Point = { x: number; y: number }
 
@@ -66,19 +67,33 @@ async function downloadImage(url: string, fileName: string) {
   URL.revokeObjectURL(objectUrl)
 }
 
+function photoCaption(photo: ProjectPhoto) {
+  return photo.caption?.trim() || 'Без підпису'
+}
+
 export default function PhotoLightbox({ open, photos, index, onClose, onIndexChange }: Props) {
   const theme = useTheme()
   const fullScreen = useMediaQuery(theme.breakpoints.down('md'))
-  const photo = photos[index] ?? null
   const count = photos.length
+
+  // Local slide index so drag reset + photo swap happen in one paint (avoids one-frame glitch).
+  const [visualIndex, setVisualIndex] = useState(index)
+  const photo = photos[visualIndex] ?? null
+  const prevPhoto = count > 1 ? photos[(visualIndex - 1 + count) % count]! : null
+  const nextPhoto = count > 1 ? photos[(visualIndex + 1) % count]! : null
 
   const [scale, setScale] = useState(1)
   const [offset, setOffset] = useState<Point>({ x: 0, y: 0 })
+  const [dragX, setDragX] = useState(0)
+  const [slideTransition, setSlideTransition] = useState(false)
   const [downloading, setDownloading] = useState(false)
 
   const stageRef = useRef<HTMLDivElement | null>(null)
   const scaleRef = useRef(1)
   const offsetRef = useRef<Point>({ x: 0, y: 0 })
+  const dragXRef = useRef(0)
+  const slideLockedRef = useRef(false)
+  const visualIndexRef = useRef(index)
   const pointersRef = useRef<Map<number, Point>>(new Map())
   const pinchStartRef = useRef<{ distance: number; scale: number; mid: Point; offset: Point } | null>(
     null,
@@ -86,6 +101,11 @@ export default function PhotoLightbox({ open, photos, index, onClose, onIndexCha
   const panStartRef = useRef<{ point: Point; offset: Point } | null>(null)
   const swipeStartRef = useRef<Point | null>(null)
   const lastTapRef = useRef<{ time: number; x: number; y: number } | null>(null)
+
+  const setDrag = (x: number) => {
+    dragXRef.current = x
+    setDragX(x)
+  }
 
   const resetTransform = useCallback(() => {
     scaleRef.current = 1
@@ -95,22 +115,64 @@ export default function PhotoLightbox({ open, photos, index, onClose, onIndexCha
   }, [])
 
   useEffect(() => {
-    if (open) resetTransform()
+    if (!open) {
+      slideLockedRef.current = false
+      setSlideTransition(false)
+      setDrag(0)
+      return
+    }
+    if (slideLockedRef.current) return
+    visualIndexRef.current = index
+    setVisualIndex(index)
+    resetTransform()
+    setSlideTransition(false)
+    setDrag(0)
   }, [open, index, resetTransform])
 
-  const goPrev = useCallback(() => {
-    if (count <= 1) return
-    onIndexChange((index - 1 + count) % count)
-  }, [count, index, onIndexChange])
+  const commitSlide = useCallback(
+    (direction: 'prev' | 'next') => {
+      if (count <= 1 || slideLockedRef.current) return
+      const stageWidth = stageRef.current?.clientWidth ?? window.innerWidth
+      const target = direction === 'next' ? -stageWidth : stageWidth
+      const from = visualIndexRef.current
+      const nextIndex =
+        direction === 'next' ? (from + 1) % count : (from - 1 + count) % count
 
-  const goNext = useCallback(() => {
-    if (count <= 1) return
-    onIndexChange((index + 1) % count)
-  }, [count, index, onIndexChange])
+      slideLockedRef.current = true
+      setSlideTransition(true)
+      setDrag(target)
+
+      window.setTimeout(() => {
+        // Disable transition, recenter, and swap slides together — never leave
+        // the track at ±width with an already-updated index (that flashes the wrong photo).
+        setSlideTransition(false)
+        dragXRef.current = 0
+        setDragX(0)
+        visualIndexRef.current = nextIndex
+        setVisualIndex(nextIndex)
+        resetTransform()
+        slideLockedRef.current = false
+        onIndexChange(nextIndex)
+      }, SLIDE_MS)
+    },
+    [count, onIndexChange, resetTransform],
+  )
+
+  const goPrev = useCallback(() => commitSlide('prev'), [commitSlide])
+  const goNext = useCallback(() => commitSlide('next'), [commitSlide])
+
+  const snapBack = () => {
+    setSlideTransition(true)
+    setDrag(0)
+    window.setTimeout(() => {
+      setSlideTransition(false)
+    }, SLIDE_MS)
+  }
 
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
+      if (slideLockedRef.current) return
       if (e.key === 'ArrowLeft') {
         e.preventDefault()
         goPrev()
@@ -147,12 +209,13 @@ export default function PhotoLightbox({ open, photos, index, onClose, onIndexCha
   }
 
   const onPointerDown = (e: React.PointerEvent) => {
-    // Nav / chrome controls live inside the stage; don't capture their clicks.
     if ((e.target as HTMLElement | null)?.closest?.('button')) return
+    if (slideLockedRef.current) return
 
     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
     const point = { x: e.clientX, y: e.clientY }
     pointersRef.current.set(e.pointerId, point)
+    setSlideTransition(false)
 
     if (pointersRef.current.size === 1) {
       if (scaleRef.current > 1) {
@@ -174,6 +237,7 @@ export default function PhotoLightbox({ open, photos, index, onClose, onIndexCha
       }
       panStartRef.current = null
       swipeStartRef.current = null
+      setDrag(0)
     }
   }
 
@@ -201,6 +265,23 @@ export default function PhotoLightbox({ open, photos, index, onClose, onIndexCha
       const next = { x: start.offset.x + dx, y: start.offset.y + dy }
       offsetRef.current = next
       setOffset(next)
+      return
+    }
+
+    if (
+      pointersRef.current.size === 1 &&
+      swipeStartRef.current &&
+      scaleRef.current === 1 &&
+      count > 1
+    ) {
+      const dx = e.clientX - swipeStartRef.current.x
+      const dy = e.clientY - swipeStartRef.current.y
+      // Prefer horizontal intent before moving the card.
+      if (Math.abs(dx) > 8 || Math.abs(dragXRef.current) > 0) {
+        if (Math.abs(dx) >= Math.abs(dy) * 0.85) {
+          setDrag(dx)
+        }
+      }
     }
   }
 
@@ -213,18 +294,26 @@ export default function PhotoLightbox({ open, photos, index, onClose, onIndexCha
     if (pointersRef.current.size === 0) {
       panStartRef.current = null
 
-      if (wasSwipe && scaleRef.current === 1) {
-        const dx = point.x - wasSwipe.x
+      if (wasSwipe && scaleRef.current === 1 && count > 1 && !slideLockedRef.current) {
+        const dx = dragXRef.current || point.x - wasSwipe.x
         const dy = point.y - wasSwipe.y
-        if (Math.abs(dx) > SWIPE_THRESHOLD_PX && Math.abs(dx) > Math.abs(dy) * 1.2) {
-          if (dx < 0) goNext()
-          else goPrev()
-          swipeStartRef.current = null
+        swipeStartRef.current = null
+
+        if (Math.abs(dx) > SWIPE_THRESHOLD_PX && Math.abs(dx) > Math.abs(dy) * 1.05) {
+          if (dx < 0) commitSlide('next')
+          else commitSlide('prev')
           lastTapRef.current = null
           return
         }
+
+        if (Math.abs(dragXRef.current) > 0) {
+          snapBack()
+          lastTapRef.current = null
+          return
+        }
+      } else {
+        swipeStartRef.current = null
       }
-      swipeStartRef.current = null
 
       const now = Date.now()
       const last = lastTapRef.current
@@ -244,6 +333,7 @@ export default function PhotoLightbox({ open, photos, index, onClose, onIndexCha
 
   const onWheel = (e: React.WheelEvent) => {
     e.preventDefault()
+    if (slideLockedRef.current) return
     const delta = -e.deltaY
     const factor = delta > 0 ? 1.12 : 1 / 1.12
     applyScaleAt(scaleRef.current * factor, { x: e.clientX, y: e.clientY })
@@ -256,7 +346,6 @@ export default function PhotoLightbox({ open, photos, index, onClose, onIndexCha
       const name = fileNameFromUrl(photo.url, `photo-${photo.id}.jpg`)
       await downloadImage(photo.url, name)
     } catch {
-      // Fallback: open in a new tab if blob download fails (e.g. CORS edge cases).
       window.open(photo.url, '_blank', 'noopener,noreferrer')
     } finally {
       setDownloading(false)
@@ -265,8 +354,33 @@ export default function PhotoLightbox({ open, photos, index, onClose, onIndexCha
 
   if (!photo) return null
 
-  const caption = photo.caption?.trim() || 'Без підпису'
-  const counter = count > 1 ? `${index + 1} / ${count}` : null
+  const caption = photoCaption(photo)
+  const counter = count > 1 ? `${visualIndex + 1} / ${count}` : null
+  const showNav = count > 1 && scale === 1 && !slideLockedRef.current
+  const trackTransition = slideTransition
+    ? `transform ${SLIDE_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`
+    : 'none'
+
+  const slideSx = {
+    position: 'absolute' as const,
+    inset: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    px: { xs: 0.5, sm: 5 },
+  }
+
+  const imgSx = {
+    maxWidth: '100%',
+    maxHeight: '100%',
+    width: 'auto',
+    height: 'auto',
+    objectFit: 'contain' as const,
+    pointerEvents: 'none' as const,
+    userSelect: 'none' as const,
+    borderRadius: 1,
+    boxShadow: '0 12px 40px rgba(0,0,0,0.45)',
+  }
 
   return (
     <Dialog
@@ -281,7 +395,7 @@ export default function PhotoLightbox({ open, photos, index, onClose, onIndexCha
           color: '#F8F2E6',
           backgroundImage: 'none',
           ...(fullScreen
-            ? { m: 0, border: 'flex', flexDirection: 'column', height: '100%' }
+            ? { m: 0, display: 'flex', flexDirection: 'column', height: '100%' }
             : {
                 height: 'min(88vh, 900px)',
                 maxHeight: '88vh',
@@ -345,32 +459,72 @@ export default function PhotoLightbox({ open, photos, index, onClose, onIndexCha
           touchAction: 'none',
           userSelect: 'none',
           overflow: 'hidden',
-          cursor: scale > 1 ? 'grab' : 'default',
+          cursor: scale > 1 ? 'grab' : count > 1 ? 'grab' : 'default',
           bgcolor: '#0C0A08',
         }}
       >
-        <Box
-          component="img"
-          src={photo.url}
-          alt={caption}
-          draggable={false}
-          sx={{
-            position: 'absolute',
-            inset: 0,
-            m: 'auto',
-            maxWidth: '100%',
-            maxHeight: '100%',
-            width: 'auto',
-            height: 'auto',
-            objectFit: 'contain',
-            transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
-            transformOrigin: 'center center',
-            transition: pointersRef.current.size > 0 ? 'none' : 'transform 120ms ease-out',
-            pointerEvents: 'none',
-          }}
-        />
+        {scale > 1 ? (
+          <Box
+            component="img"
+            src={photo.url}
+            alt={caption}
+            draggable={false}
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              m: 'auto',
+              ...imgSx,
+              transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
+              transformOrigin: 'center center',
+              transition: pointersRef.current.size > 0 ? 'none' : 'transform 120ms ease-out',
+              boxShadow: 'none',
+            }}
+          />
+        ) : (
+          <Box
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              transform: `translate3d(${dragX}px, 0, 0)`,
+              transition: trackTransition,
+              willChange: 'transform',
+            }}
+          >
+            {prevPhoto && (
+              <Box sx={{ ...slideSx, transform: 'translate3d(-100%, 0, 0)' }}>
+                <Box
+                  component="img"
+                  src={prevPhoto.url}
+                  alt={photoCaption(prevPhoto)}
+                  draggable={false}
+                  sx={imgSx}
+                />
+              </Box>
+            )}
+            <Box sx={slideSx}>
+              <Box
+                component="img"
+                src={photo.url}
+                alt={caption}
+                draggable={false}
+                sx={imgSx}
+              />
+            </Box>
+            {nextPhoto && (
+              <Box sx={{ ...slideSx, transform: 'translate3d(100%, 0, 0)' }}>
+                <Box
+                  component="img"
+                  src={nextPhoto.url}
+                  alt={photoCaption(nextPhoto)}
+                  draggable={false}
+                  sx={imgSx}
+                />
+              </Box>
+            )}
+          </Box>
+        )}
 
-        {count > 1 && scale === 1 && (
+        {showNav && (
           <>
             <IconButton
               onClick={(e) => {
