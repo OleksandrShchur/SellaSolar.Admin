@@ -526,7 +526,12 @@ export default function ProjectDetailPage() {
     }
   }
 
-  const pendingDeleteCopy =
+  const pendingDeleteCopy: {
+    title: string
+    message: string
+    confirmLabel?: string
+    confirmingLabel?: string
+  } | null =
     pendingDelete?.kind === 'item'
       ? {
           title: 'Видалити матеріал?',
@@ -541,6 +546,8 @@ export default function ProjectDetailPage() {
           ? {
               title: 'Прибрати працівника?',
               message: `Прибрати «${pendingDelete.worker.fullName}» з цього проекту?`,
+              confirmLabel: 'Прибрати',
+              confirmingLabel: 'Прибирання…',
             }
           : pendingDelete?.kind === 'photo'
             ? {
@@ -1865,6 +1872,8 @@ export default function ProjectDetailPage() {
         open={Boolean(pendingDelete)}
         title={pendingDeleteCopy?.title ?? ''}
         message={pendingDeleteCopy?.message}
+        confirmLabel={pendingDeleteCopy?.confirmLabel}
+        confirmingLabel={pendingDeleteCopy?.confirmingLabel}
         confirming={deleting}
         onCancel={() => setPendingDelete(null)}
         onConfirm={() => void confirmPendingDelete()}
