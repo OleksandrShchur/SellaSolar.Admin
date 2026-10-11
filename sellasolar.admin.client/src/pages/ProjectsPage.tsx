@@ -34,7 +34,13 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import SearchIcon from '@mui/icons-material/Search'
 import { projectsApi } from '../api'
 import type { ProjectListItem, ProjectStatus } from '../api/types'
-import { formatDate } from '../utils/labels'
+import {
+  applyPhoneInputChange,
+  digitsOnly,
+  formatDate,
+  hasInvalidNumericChars,
+  phoneInputHelperText,
+} from '../utils/labels'
 import { ProjectStatusChip } from '../components/StatusChips'
 import AddFab from '../components/AddFab'
 import { surfaceSx, panelPad, dataGridSx } from '../components/DetailPanel'
@@ -159,6 +165,7 @@ export default function ProjectsPage() {
     try {
       const created = await projectsApi.create({
         ...form,
+        customerPhone: digitsOnly(form.customerPhone),
         customerEmail: form.customerEmail || null,
         customData: [],
       })
@@ -431,7 +438,16 @@ export default function ProjectsPage() {
               required
               fullWidth
               value={form.customerPhone}
-              onChange={(e) => setForm({ ...form, customerPhone: e.target.value })}
+              onChange={(e) =>
+                setForm({ ...form, customerPhone: applyPhoneInputChange(e.target.value) })
+              }
+              type="tel"
+              inputMode="numeric"
+              autoComplete="tel"
+              placeholder="098 244 11 70"
+              helperText={phoneInputHelperText(form.customerPhone)}
+              error={hasInvalidNumericChars(form.customerPhone)}
+              inputProps={{ pattern: '[0-9 ]*' }}
             />
             <TextField
               label="Email клієнта"

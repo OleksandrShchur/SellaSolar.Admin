@@ -52,7 +52,22 @@ import type {
   WarehouseStockLot,
   UserListItem,
 } from '../api/types'
-import { formatDate, formatDateTime, formatMoney, formatNumber, formatPhone, inventoryLabels, projectLabels, toTelHref, workerTypeLabel } from '../utils/labels'
+import {
+  applyPhoneInputChange,
+  digitsOnly,
+  formatDate,
+  formatDateTime,
+  formatMoney,
+  formatNumber,
+  formatPhone,
+  formatPhoneInput,
+  hasInvalidNumericChars,
+  inventoryLabels,
+  phoneInputHelperText,
+  projectLabels,
+  toTelHref,
+  workerTypeLabel,
+} from '../utils/labels'
 import { useAuth } from '../auth/AuthContext'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { DetailField, DetailFieldGrid, DetailPanel, DetailSection, panelPad } from '../components/DetailPanel'
@@ -274,7 +289,7 @@ export default function ProjectDetailPage() {
       address: project.address,
       status: project.status,
       customerName: project.customerName,
-      customerPhone: project.customerPhone,
+      customerPhone: formatPhoneInput(project.customerPhone),
       customerEmail: project.customerEmail ?? '',
       startDate: project.startDate ? project.startDate.slice(0, 10) : '',
       endDate: project.endDate ? project.endDate.slice(0, 10) : '',
@@ -302,7 +317,7 @@ export default function ProjectDetailPage() {
         address: editForm.address,
         status: editForm.status,
         customerName: editForm.customerName,
-        customerPhone: editForm.customerPhone,
+        customerPhone: digitsOnly(editForm.customerPhone),
         customerEmail: editForm.customerEmail || null,
         startDate: editForm.startDate || null,
         endDate: editForm.endDate || null,
@@ -1454,7 +1469,16 @@ export default function ProjectDetailPage() {
               label="Телефон"
               fullWidth
               value={editForm.customerPhone}
-              onChange={(e) => setEditForm({ ...editForm, customerPhone: e.target.value })}
+              onChange={(e) =>
+                setEditForm({ ...editForm, customerPhone: applyPhoneInputChange(e.target.value) })
+              }
+              type="tel"
+              inputMode="numeric"
+              autoComplete="tel"
+              placeholder="098 244 11 70"
+              helperText={phoneInputHelperText(editForm.customerPhone)}
+              error={hasInvalidNumericChars(editForm.customerPhone)}
+              inputProps={{ pattern: '[0-9 ]*' }}
             />
             <TextField
               label="Email"

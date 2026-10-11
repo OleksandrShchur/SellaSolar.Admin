@@ -22,7 +22,6 @@ import {
 } from '@mui/material'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
-import SolarPowerIcon from '@mui/icons-material/SolarPower'
 import FolderSpecialIcon from '@mui/icons-material/FolderSpecial'
 import WarehouseIcon from '@mui/icons-material/Warehouse'
 import GroupsIcon from '@mui/icons-material/Groups'
@@ -181,21 +180,16 @@ export default function AppLayout() {
         justifyContent: desktopCollapsed ? 'center' : 'flex-start',
       }}
     >
-      <SolarPowerIcon color="primary" sx={{ fontSize: 28, flexShrink: 0 }} />
+      <Box
+        component="img"
+        src="/sella-solar-sticker.png"
+        alt="Sella Solar"
+        sx={{ height: 38, width: 'auto', flexShrink: 0, display: 'block' }}
+      />
       {!desktopCollapsed && (
-        <Box sx={{ minWidth: 0 }}>
-          <Typography
-            variant="subtitle1"
-            fontWeight={800}
-            lineHeight={1.2}
-            sx={{ fontFamily: '"Sora", system-ui, sans-serif' }}
-          >
-            SellaSolar
-          </Typography>
-          <Typography variant="caption" color="text.secondary" noWrap>
-            Адмін-панель
-          </Typography>
-        </Box>
+        <Typography variant="caption" color="text.secondary" noWrap>
+          Адмін-панель
+        </Typography>
       )}
     </Toolbar>
   )
@@ -276,7 +270,12 @@ export default function AppLayout() {
           }}
         >
           {isMobile && (
-            <SolarPowerIcon color="primary" sx={{ fontSize: 26, flexShrink: 0 }} />
+            <Box
+              component="img"
+              src="/sella-solar-sticker.png"
+              alt="Sella Solar"
+              sx={{ height: 36, width: 'auto', flexShrink: 0, display: 'block' }}
+            />
           )}
           <Typography
             variant="h6"
@@ -290,19 +289,7 @@ export default function AppLayout() {
             }}
             noWrap
           >
-            {isMobile ? (
-              <>
-                <Box component="span" sx={{ fontFamily: '"Sora", system-ui, sans-serif', fontWeight: 800 }}>
-                  SellaSolar
-                </Box>
-                <Box component="span" sx={{ color: 'text.secondary', fontWeight: 500 }}>
-                  {' · '}
-                  {title}
-                </Box>
-              </>
-            ) : (
-              title
-            )}
+            {title}
           </Typography>
           <Tooltip title={user?.fullName ?? 'Обліковий запис'}>
             <IconButton
