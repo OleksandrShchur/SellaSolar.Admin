@@ -9,6 +9,7 @@ import {
 import AddIcon from '@mui/icons-material/Add'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import type { CustomData } from '../api/types'
+import { brandColors } from '../theme'
 
 export type CustomDataRow = CustomData
 
@@ -67,52 +68,63 @@ export default function CustomDataEditor({
             const rowInvalid = showErrors && (keyEmpty || valueEmpty)
 
             return (
-              <Stack
+              <Box
                 key={index}
-                direction={{ xs: 'column', sm: 'row' }}
-                spacing={1}
-                alignItems={{ xs: 'stretch', sm: 'flex-start' }}
+                sx={{
+                  p: 1.5,
+                  borderRadius: 2,
+                  bgcolor: brandColors.morningBg,
+                  border: `1px solid ${rowInvalid ? brandColors.secondary : brandColors.border}`,
+                }}
               >
-                <TextField
-                  label="Ключ"
-                  required
-                  fullWidth
-                  value={row.key}
-                  onChange={(e) => updateRow(index, { key: e.target.value })}
-                  disabled={disabled}
-                  error={showErrors && keyEmpty}
-                  helperText={showErrors && keyEmpty ? INVALID_ROW_MESSAGE : undefined}
-                />
-                <TextField
-                  label="Значення"
-                  required
-                  fullWidth
-                  value={row.value}
-                  onChange={(e) => updateRow(index, { value: e.target.value })}
-                  disabled={disabled}
-                  error={showErrors && valueEmpty}
-                  helperText={
-                    showErrors && valueEmpty && !keyEmpty ? INVALID_ROW_MESSAGE : undefined
-                  }
-                />
-                <Box
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    pt: { sm: rowInvalid ? 0.5 : 0.75 },
-                    alignSelf: { xs: 'flex-end', sm: 'flex-start' },
-                  }}
+                <Stack
+                  direction={{ xs: 'column', sm: 'row' }}
+                  spacing={1}
+                  alignItems={{ xs: 'stretch', sm: 'flex-start' }}
                 >
-                  <IconButton
-                    aria-label="Видалити рядок"
-                    onClick={() => removeRow(index)}
+                  <TextField
+                    label="Ключ"
+                    required
+                    fullWidth
+                    value={row.key}
+                    onChange={(e) => updateRow(index, { key: e.target.value })}
                     disabled={disabled}
-                    size="small"
+                    error={showErrors && keyEmpty}
+                    helperText={showErrors && keyEmpty ? INVALID_ROW_MESSAGE : undefined}
+                    sx={{ bgcolor: brandColors.cream }}
+                  />
+                  <TextField
+                    label="Значення"
+                    required
+                    fullWidth
+                    value={row.value}
+                    onChange={(e) => updateRow(index, { value: e.target.value })}
+                    disabled={disabled}
+                    error={showErrors && valueEmpty}
+                    helperText={
+                      showErrors && valueEmpty && !keyEmpty ? INVALID_ROW_MESSAGE : undefined
+                    }
+                    sx={{ bgcolor: brandColors.cream }}
+                  />
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      pt: { sm: rowInvalid ? 0.5 : 0.75 },
+                      alignSelf: { xs: 'flex-end', sm: 'flex-start' },
+                    }}
                   >
-                    <DeleteOutlineIcon />
-                  </IconButton>
-                </Box>
-              </Stack>
+                    <IconButton
+                      aria-label="Видалити рядок"
+                      onClick={() => removeRow(index)}
+                      disabled={disabled}
+                      size="small"
+                    >
+                      <DeleteOutlineIcon />
+                    </IconButton>
+                  </Box>
+                </Stack>
+              </Box>
             )
           })}
         </Stack>
