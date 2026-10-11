@@ -26,6 +26,7 @@ public record AssignedProjectListItemDto(
     DateTime? StartDate,
     DateTime? EndDate,
     DateTime CreatedAt,
+    int AssignmentId,
     string? RoleOnProject);
 
 public record ProjectItemLotAllocationDto(

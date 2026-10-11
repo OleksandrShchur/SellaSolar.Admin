@@ -54,6 +54,7 @@ export interface AssignedProjectListItem {
   startDate?: string | null
   endDate?: string | null
   createdAt: string
+  assignmentId: number
   roleOnProject?: string | null
 }
 

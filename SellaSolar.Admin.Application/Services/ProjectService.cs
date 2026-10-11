@@ -152,6 +152,10 @@ public class ProjectService
                 p.CreatedAt,
                 p.ProjectWorkers
                     .Where(pw => pw.UserId == userId)
+                    .Select(pw => pw.Id)
+                    .FirstOrDefault(),
+                p.ProjectWorkers
+                    .Where(pw => pw.UserId == userId)
                     .Select(pw => pw.RoleOnProject)
                     .FirstOrDefault()))
             .ToListAsync(ct);
@@ -392,6 +396,10 @@ public class ProjectService
             ?? throw new NotFoundException($"Project worker assignment {projectWorkerId} was not found.");
 
         var project = await _db.Projects.FirstAsync(p => p.Id == projectId, ct);
+        if (!ProjectStatuses.IsOpen(project.Status))
+            throw new ValidationException(
+                "Неможливо прибрати працівника з завершеного проекту. Спочатку поверніть проект у роботу.");
+
         project.UpdatedAt = DateTime.UtcNow;
 
         _db.ProjectWorkers.Remove(entity);

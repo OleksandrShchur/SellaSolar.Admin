@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import {
   Alert,
   Box,
@@ -29,10 +29,11 @@ import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined'
 import CheckOutlinedIcon from '@mui/icons-material/CheckOutlined'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import LockResetOutlinedIcon from '@mui/icons-material/LockResetOutlined'
+import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined'
 import LockOpenOutlinedIcon from '@mui/icons-material/LockOpenOutlined'
 import PersonOffOutlinedIcon from '@mui/icons-material/PersonOffOutlined'
 import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined'
-import { usersApi } from '../api'
+import { projectsApi, usersApi } from '../api'
 import type { AppRole, AssignedProjectListItem, UserListItem, WorkerType } from '../api/types'
 import {
   appRoleLabel,
@@ -63,6 +64,7 @@ const roles: AppRole[] = ['Admin', 'Worker']
 
 type PendingUserAction = 'deactivate' | 'unblock'
 type ProjectScope = 'active' | 'finished'
+type PendingUnassign = AssignedProjectListItem
 
 const toggleButtonSx = {
   flexShrink: 0,
@@ -188,6 +190,8 @@ export default function UserDetailPage() {
   const [projects, setProjects] = useState<AssignedProjectListItem[]>([])
   const [projectsLoading, setProjectsLoading] = useState(false)
   const [projectsError, setProjectsError] = useState<string | null>(null)
+  const [pendingUnassign, setPendingUnassign] = useState<PendingUnassign | null>(null)
+  const [unassigning, setUnassigning] = useState(false)
 
   const [editOpen, setEditOpen] = useState(false)
   const [editForm, setEditForm] = useState({
@@ -291,6 +295,24 @@ export default function UserDetailPage() {
       setError(err instanceof Error ? err.message : 'Не вдалося скинути пароль')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const confirmUnassign = async () => {
+    if (!user || !pendingUnassign) return
+    setUnassigning(true)
+    setProjectsError(null)
+    try {
+      await projectsApi.removeWorker(pendingUnassign.id, pendingUnassign.assignmentId)
+      setPendingUnassign(null)
+      await loadProjects(user.id, projectScope)
+    } catch (err) {
+      setProjectsError(
+        err instanceof Error ? err.message : 'Не вдалося прибрати з проекту',
+      )
+      setPendingUnassign(null)
+    } finally {
+      setUnassigning(false)
     }
   }
 
@@ -493,18 +515,26 @@ export default function UserDetailPage() {
             {projects.map((row) => {
               const dates = projectDatesSecondary(row)
               const secondaryParts = [row.address, row.customerName, dates].filter(Boolean)
+              const canUnassign = row.status === 'Awaiting' || row.status === 'InProgress'
               return (
                 <Box
                   key={row.id}
-                  component={RouterLink}
-                  to={`/projects/${row.id}`}
+                  role="link"
+                  tabIndex={0}
+                  onClick={() => navigate(`/projects/${row.id}`)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      navigate(`/projects/${row.id}`)
+                    }
+                  }}
                   sx={{
                     p: { xs: 1.5, sm: 2 },
                     borderRadius: 2,
                     border: '1.5px solid',
                     borderColor: 'divider',
                     bgcolor: 'rgba(243, 235, 220, 0.45)',
-                    textDecoration: 'none',
+                    cursor: 'pointer',
                     color: 'inherit',
                     '&:hover': { boxShadow: 1, borderColor: 'primary.dark' },
                   }}
@@ -529,7 +559,22 @@ export default function UserDetailPage() {
                         {secondaryParts.join(' · ')}
                       </Typography>
                     </Box>
-                    <ProjectStatusChip status={row.status} />
+                    <Stack direction="row" spacing={0.5} alignItems="center" sx={{ flexShrink: 0 }}>
+                      <ProjectStatusChip status={row.status} />
+                      {canUnassign ? (
+                        <RowActionsMenu
+                          items={[
+                            {
+                              key: 'unassign',
+                              label: 'Прибрати з проекту',
+                              icon: <DeleteOutlinedIcon fontSize="small" />,
+                              onClick: () => setPendingUnassign(row),
+                              tone: 'danger',
+                            },
+                          ]}
+                        />
+                      ) : null}
+                    </Stack>
                   </Stack>
                 </Box>
               )
@@ -691,6 +736,21 @@ export default function UserDetailPage() {
         confirming={confirmingAction}
         onCancel={() => setPendingAction(null)}
         onConfirm={() => void confirmPendingAction()}
+      />
+
+      <ConfirmDialog
+        open={Boolean(pendingUnassign)}
+        title="Прибрати з проекту?"
+        message={
+          pendingUnassign
+            ? `Прибрати «${user.fullName}» з проекту «${pendingUnassign.name}»?`
+            : undefined
+        }
+        confirmLabel="Прибрати"
+        confirmingLabel="Прибирання…"
+        confirming={unassigning}
+        onCancel={() => setPendingUnassign(null)}
+        onConfirm={() => void confirmUnassign()}
       />
     </Stack>
   )
