@@ -85,8 +85,17 @@ export default function AppLayout() {
   }, [hasRole])
 
   const drawerWidth = desktopCollapsed ? DRAWER_WIDTH_COLLAPSED : DRAWER_WIDTH
-  const title = useMemo(() => sectionTitle(location.pathname), [location.pathname])
-  const activeIndex = navItems.findIndex((item) => location.pathname.startsWith(item.to))
+  const isFieldWorker = hasRole('Worker') && !hasRole('Admin')
+  const title = useMemo(() => {
+    if (isFieldWorker && location.pathname.startsWith('/projects/')) return 'Мої завдання'
+    return sectionTitle(location.pathname)
+  }, [location.pathname, isFieldWorker])
+  const activeIndex = navItems.findIndex((item) => {
+    if (item.to === '/my-jobs' && isFieldWorker && location.pathname.startsWith('/projects/')) {
+      return true
+    }
+    return location.pathname.startsWith(item.to)
+  })
 
   const mobileNavRef = useRef<HTMLDivElement>(null)
   const prevNavIndexRef = useRef(-1)

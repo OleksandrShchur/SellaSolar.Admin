@@ -27,4 +27,15 @@ public class MyJobsController : ControllerBase
 
         return Ok(await _projects.GetAssignedToUserAsync(userId, ct));
     }
+
+    [HttpGet("{id:int}")]
+    public async Task<ActionResult<ProjectDetailDto>> GetMineById(int id, CancellationToken ct)
+    {
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized();
+
+        var project = await _projects.GetWorkerAssignedDetailAsync(id, userId, ct);
+        return project is null ? NotFound() : Ok(project);
+    }
 }

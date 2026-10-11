@@ -57,6 +57,7 @@ import { useAuth } from '../auth/AuthContext'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { DetailField, DetailFieldGrid, DetailPanel, DetailSection, panelPad } from '../components/DetailPanel'
 import { DetailPageSkeleton } from '../components/PageSkeletons'
+import PhotoLightbox from '../components/PhotoLightbox'
 import PhotoUploadDialog from '../components/PhotoUploadDialog'
 import RowActionsMenu, { type RowActionItem } from '../components/RowActionsMenu'
 import ScrollableTabs from '../components/ScrollableTabs'
@@ -88,11 +89,12 @@ function materialCoverage(item: ProjectItem) {
   return { toOrder, unallocated }
 }
 
-const PROJECT_TABS = ['info', 'materials', 'expenses', 'workers', 'photos'] as const
+const ADMIN_PROJECT_TABS = ['info', 'materials', 'expenses', 'workers', 'photos'] as const
+const WORKER_PROJECT_TABS = ['info', 'materials', 'photos'] as const
 
-function tabIndexFromParam(param: string | null): number {
+function tabIndexFromParam(param: string | null, tabs: readonly string[]): number {
   if (!param) return 0
-  const idx = (PROJECT_TABS as readonly string[]).indexOf(param)
+  const idx = tabs.indexOf(param)
   return idx >= 0 ? idx : 0
 }
 
@@ -102,18 +104,24 @@ export default function ProjectDetailPage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const { hasRole } = useAuth()
-  const canManageUsers = hasRole('Admin')
+  const canManageProject = hasRole('Admin')
+  const canManageUsers = canManageProject
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const isSmUp = useMediaQuery(theme.breakpoints.up('sm'))
 
+  const projectTabs = canManageProject ? ADMIN_PROJECT_TABS : WORKER_PROJECT_TABS
+  const tabLabels = canManageProject
+    ? ['Загальна інформація', 'Матеріали', 'Витрати', 'Працівники', 'Фото']
+    : ['Загальна інформація', 'Матеріали', 'Фото']
+
   const [project, setProject] = useState<ProjectDetail | null>(null)
-  const tab = tabIndexFromParam(searchParams.get('tab'))
+  const tab = tabIndexFromParam(searchParams.get('tab'), projectTabs)
   const setTab = (index: number) => {
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev)
-        const key = PROJECT_TABS[index]
+        const key = projectTabs[index]
         if (!key || index === 0) next.delete('tab')
         else next.set('tab', key)
         return next
@@ -170,6 +178,7 @@ export default function ProjectDetailPage() {
   const [roleOnProject, setRoleOnProject] = useState('')
 
   const [uploadFiles, setUploadFiles] = useState<File[] | null>(null)
+  const [photoViewerIndex, setPhotoViewerIndex] = useState<number | null>(null)
 
   const [expenseOpen, setExpenseOpen] = useState(false)
   const [editingExpense, setEditingExpense] = useState<ProjectExpense | null>(null)
@@ -194,7 +203,9 @@ export default function ProjectDetailPage() {
   const load = async () => {
     setError(null)
     try {
-      const data = await projectsApi.get(projectId)
+      const data = canManageProject
+        ? await projectsApi.get(projectId)
+        : await projectsApi.getMine(projectId)
       setProject(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Не вдалося завантажити проект')
@@ -205,7 +216,7 @@ export default function ProjectDetailPage() {
     if (!Number.isFinite(projectId)) return
     setProject(null)
     void load()
-  }, [projectId])
+  }, [projectId, canManageProject])
 
   useEffect(() => {
     return () => {
@@ -486,12 +497,12 @@ export default function ProjectDetailPage() {
 
   const goBack = () => {
     // React Router stores a stack index on history.state; use it so deep links
-    // still fall back to the projects list instead of leaving the app.
+    // still fall back to the list instead of leaving the app.
     const idx = (window.history.state as { idx?: number } | null)?.idx
     if (typeof idx === 'number' && idx > 0) {
       navigate(-1)
     } else {
-      navigate('/projects')
+      navigate(canManageProject ? '/projects' : '/my-jobs')
     }
   }
 
@@ -821,11 +832,11 @@ export default function ProjectDetailPage() {
               <ProjectStatusChip status={project.status} />
             </Box>
           </Box>
-          {isMobile && (
+          {canManageProject && isMobile && (
             <RowActionsMenu trigger="icon" size="medium" items={headerMenuItems} />
           )}
         </Stack>
-        {!isMobile && (
+        {canManageProject && !isMobile && (
           <RowActionsMenu trigger="button" size="medium" items={headerMenuItems} />
         )}
       </Stack>
@@ -841,7 +852,7 @@ export default function ProjectDetailPage() {
           <ScrollableTabs
             value={tab}
             onChange={(_, v) => setTab(v)}
-            labels={['Загальна інформація', 'Матеріали', 'Витрати', 'Працівники', 'Фото']}
+            labels={tabLabels}
           />
         </Box>
         <Box sx={{ borderBottom: '1px solid', borderColor: 'divider' }} />
@@ -913,7 +924,7 @@ export default function ProjectDetailPage() {
               <Typography variant="subtitle1" fontWeight={800} sx={{ letterSpacing: '-0.01em' }}>
                 Матеріали проекту
               </Typography>
-              {project.status !== 'Completed' && (
+              {canManageProject && project.status !== 'Completed' && (
                 <Button variant="contained" color="primary" onClick={() => void openAddItem()}>
                   Додати матеріал
                 </Button>
@@ -921,6 +932,31 @@ export default function ProjectDetailPage() {
             </Stack>
             <Stack spacing={1.25}>
               {project.items.map((item) => {
+                if (!canManageProject) {
+                  return (
+                    <Box
+                      key={item.id}
+                      sx={{
+                        p: { xs: 1.5, sm: 2 },
+                        borderRadius: 2,
+                        border: '1.5px solid',
+                        borderColor: 'divider',
+                        bgcolor: 'rgba(243, 235, 220, 0.45)',
+                      }}
+                    >
+                      <Typography fontWeight={700}>
+                        {item.name}{' '}
+                        <Typography component="span" color="text.secondary">
+                          ({item.category}, {item.unit})
+                        </Typography>
+                      </Typography>
+                      <Typography variant="body2" mt={0.5}>
+                        {inventoryLabels.needed}: {formatNumber(item.quantityNeeded)}
+                      </Typography>
+                    </Box>
+                  )
+                }
+
                 const { toOrder, unallocated } = materialCoverage(item)
                 const showPurchaseHint = toOrder > 0
                 const showAllocHint = !item.isNonCatalog && unallocated > 0
@@ -1080,214 +1116,220 @@ export default function ProjectDetailPage() {
             </Stack>
           </TabPanel>
 
-          <TabPanel value={tab} index={2}>
-            <Stack spacing={2.5}>
-              <DetailFieldGrid columns={{ xs: 1, sm: 3 }}>
-                <DetailField label="Матеріали зі складу" value={formatMoney(materialsCostTotal)} />
-                <DetailField label="Інші витрати" value={formatMoney(manualExpensesTotal)} />
-                <DetailField label="Разом" value={formatMoney(expensesGrandTotal)} />
-              </DetailFieldGrid>
+          {canManageProject && (
+            <TabPanel value={tab} index={2}>
+              <Stack spacing={2.5}>
+                <DetailFieldGrid columns={{ xs: 1, sm: 3 }}>
+                  <DetailField label="Матеріали зі складу" value={formatMoney(materialsCostTotal)} />
+                  <DetailField label="Інші витрати" value={formatMoney(manualExpensesTotal)} />
+                  <DetailField label="Разом" value={formatMoney(expensesGrandTotal)} />
+                </DetailFieldGrid>
 
-              <DetailSection title="Матеріали зі складу">
-                <Stack spacing={1.5}>
-                  {stockExpenseItems.map((item) => (
-                    <Box
-                      key={`stock-${item.id}`}
-                      sx={{
-                        p: 2,
-                        borderRadius: 2,
-                        border: '1.5px solid',
-                        borderColor: 'divider',
-                        bgcolor: 'rgba(243, 235, 220, 0.45)',
-                      }}
-                    >
-                      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ sm: 'center' }}>
-                        <Box flex={1}>
-                          <Typography fontWeight={700}>
-                            {item.name}{' '}
-                            <Typography component="span" color="text.secondary">
-                              ({item.category}, {item.unit})
+                <DetailSection title="Матеріали зі складу">
+                  <Stack spacing={1.5}>
+                    {stockExpenseItems.map((item) => (
+                      <Box
+                        key={`stock-${item.id}`}
+                        sx={{
+                          p: 2,
+                          borderRadius: 2,
+                          border: '1.5px solid',
+                          borderColor: 'divider',
+                          bgcolor: 'rgba(243, 235, 220, 0.45)',
+                        }}
+                      >
+                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ sm: 'center' }}>
+                          <Box flex={1}>
+                            <Typography fontWeight={700}>
+                              {item.name}{' '}
+                              <Typography component="span" color="text.secondary">
+                                ({item.category}, {item.unit})
+                              </Typography>
                             </Typography>
-                          </Typography>
-                          <Typography variant="body2" mt={0.5} color="text.secondary">
-                            {inventoryLabels.fromStock}: {formatNumber(item.quantityFromStock)}
-                            {formatCostBreakdown(item) && <> · {formatCostBreakdown(item)}</>}
-                          </Typography>
-                        </Box>
-                        <Typography fontWeight={800}>{formatMoney(item.costFromStock)}</Typography>
-                        <Chip size="small" variant="outlined" label="Склад" />
-                      </Stack>
-                    </Box>
-                  ))}
-                  {stockExpenseItems.length === 0 && (
-                    <Typography color="text.secondary">
-                      Немає вартості зі складу. Розподіліть партії на вкладці «Матеріали».
-                    </Typography>
-                  )}
-                </Stack>
-              </DetailSection>
-
-              <DetailSection>
-                <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1}>
-                  <Typography variant="subtitle1" fontWeight={800} sx={{ letterSpacing: '-0.01em' }}>
-                    Інші витрати
-                  </Typography>
-                  {project.status !== 'Completed' && (
-                    <Button variant="contained" color="primary" onClick={openAddExpense}>
-                      Додати витрату
-                    </Button>
-                  )}
-                </Stack>
-                <Stack spacing={1.25}>
-                  {(project.expenses ?? []).map((expense) => (
-                    <Box
-                      key={expense.id}
-                      sx={{
-                        p: { xs: 1.5, sm: 2 },
-                        borderRadius: 2,
-                        border: '1.5px solid',
-                        borderColor: 'divider',
-                        bgcolor: 'rgba(243, 235, 220, 0.45)',
-                        '&:hover': { boxShadow: 1, borderColor: 'primary.dark' },
-                      }}
-                    >
-                      <Stack direction="row" spacing={1} alignItems="flex-start">
-                        <Box flex={1} sx={{ minWidth: 0 }}>
-                          <Typography fontWeight={700}>{expense.category}</Typography>
-                          <Typography variant="body2" mt={0.5} color="text.secondary">
-                            {expense.expenseDate
-                              ? formatDate(expense.expenseDate)
-                              : 'Дата не вказана'}
-                            {expense.notes ? ` · ${expense.notes}` : ''}
-                          </Typography>
-                        </Box>
-                        <Typography fontWeight={800} sx={{ flexShrink: 0, pt: 0.25 }}>
-                          {formatMoney(expense.amount)}
-                        </Typography>
-                        {project.status !== 'Completed' && (
-                          <RowActionsMenu
-                            items={[
-                              {
-                                key: 'edit',
-                                label: 'Редагувати',
-                                icon: <EditOutlinedIcon fontSize="small" />,
-                                onClick: () => openEditExpense(expense),
-                              },
-                              { kind: 'divider', key: 'del-div' },
-                              {
-                                key: 'delete',
-                                label: 'Видалити',
-                                icon: <DeleteIcon fontSize="small" />,
-                                onClick: () => setPendingDelete({ kind: 'expense', expense }),
-                                tone: 'danger',
-                              },
-                            ]}
-                          />
-                        )}
-                      </Stack>
-                    </Box>
-                  ))}
-                  {(project.expenses ?? []).length === 0 && (
-                    <Typography color="text.secondary">Інших витрат ще немає</Typography>
-                  )}
-                </Stack>
-              </DetailSection>
-            </Stack>
-          </TabPanel>
-
-          <TabPanel value={tab} index={3}>
-            <Stack direction="row" justifyContent="space-between" mb={2} alignItems="center" gap={1}>
-              <Typography variant="subtitle1" fontWeight={800} sx={{ letterSpacing: '-0.01em' }}>
-                Призначені працівники
-              </Typography>
-              <Button variant="contained" color="primary" onClick={() => void openAddWorker()}>
-                Призначити
-              </Button>
-            </Stack>
-            <Stack spacing={1.25}>
-              {project.workers.map((worker) => (
-                <Box
-                  key={worker.id}
-                  role="link"
-                  tabIndex={0}
-                  onClick={() => navigate(`/users/${worker.userId}`)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault()
-                      navigate(`/users/${worker.userId}`)
-                    }
-                  }}
-                  sx={{
-                    p: { xs: 1.5, sm: 2 },
-                    borderRadius: 2,
-                    border: '1.5px solid',
-                    borderColor: 'divider',
-                    bgcolor: 'rgba(243, 235, 220, 0.45)',
-                    cursor: 'pointer',
-                    '&:hover': { boxShadow: 1, borderColor: 'primary.dark' },
-                  }}
-                >
-                  <Stack direction="row" alignItems="flex-start" spacing={1}>
-                    <Box flex={1} sx={{ minWidth: 0 }}>
-                      <Typography fontWeight={700}>
-                        {worker.fullName}
-                        {worker.workerType ? ` · ${workerTypeLabel(worker.workerType)}` : ''}
+                            <Typography variant="body2" mt={0.5} color="text.secondary">
+                              {inventoryLabels.fromStock}: {formatNumber(item.quantityFromStock)}
+                              {formatCostBreakdown(item) && <> · {formatCostBreakdown(item)}</>}
+                            </Typography>
+                          </Box>
+                          <Typography fontWeight={800}>{formatMoney(item.costFromStock)}</Typography>
+                          <Chip size="small" variant="outlined" label="Склад" />
+                        </Stack>
+                      </Box>
+                    ))}
+                    {stockExpenseItems.length === 0 && (
+                      <Typography color="text.secondary">
+                        Немає вартості зі складу. Розподіліть партії на вкладці «Матеріали».
                       </Typography>
-                      <Typography variant="body2">
-                        {worker.phone && toTelHref(worker.phone) ? (
-                          <Link
-                            href={toTelHref(worker.phone)!}
-                            underline="hover"
-                            color="inherit"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            {formatPhone(worker.phone)}
-                          </Link>
-                        ) : (
-                          '—'
-                        )}
-                        {worker.roleOnProject ? ` · Роль: ${worker.roleOnProject}` : ''} ·{' '}
-                        {formatDateTime(worker.assignedAt)}
-                      </Typography>
-                    </Box>
-                    {project.status !== 'Completed' && (
-                      <RowActionsMenu
-                        items={[
-                          {
-                            key: 'remove',
-                            label: 'Прибрати з проекту',
-                            icon: <DeleteIcon fontSize="small" />,
-                            onClick: () => setPendingDelete({ kind: 'worker', worker }),
-                            tone: 'danger',
-                          },
-                        ]}
-                      />
                     )}
                   </Stack>
-                </Box>
-              ))}
-              {project.workers.length === 0 && (
-                <Typography color="text.secondary">Працівників ще не призначено</Typography>
-              )}
-            </Stack>
-          </TabPanel>
+                </DetailSection>
 
-          <TabPanel value={tab} index={4}>
-            <Stack spacing={2} mb={2} alignItems="flex-start">
-              <Button variant="outlined" color="primary" component="label">
-                Завантажити фото
-                <input
-                  hidden
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={(e) => {
-                    openPhotoUpload(e.target.files)
-                    e.target.value = ''
-                  }}
-                />
-              </Button>
-            </Stack>
+                <DetailSection>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1}>
+                    <Typography variant="subtitle1" fontWeight={800} sx={{ letterSpacing: '-0.01em' }}>
+                      Інші витрати
+                    </Typography>
+                    {project.status !== 'Completed' && (
+                      <Button variant="contained" color="primary" onClick={openAddExpense}>
+                        Додати витрату
+                      </Button>
+                    )}
+                  </Stack>
+                  <Stack spacing={1.25}>
+                    {(project.expenses ?? []).map((expense) => (
+                      <Box
+                        key={expense.id}
+                        sx={{
+                          p: { xs: 1.5, sm: 2 },
+                          borderRadius: 2,
+                          border: '1.5px solid',
+                          borderColor: 'divider',
+                          bgcolor: 'rgba(243, 235, 220, 0.45)',
+                          '&:hover': { boxShadow: 1, borderColor: 'primary.dark' },
+                        }}
+                      >
+                        <Stack direction="row" spacing={1} alignItems="flex-start">
+                          <Box flex={1} sx={{ minWidth: 0 }}>
+                            <Typography fontWeight={700}>{expense.category}</Typography>
+                            <Typography variant="body2" mt={0.5} color="text.secondary">
+                              {expense.expenseDate
+                                ? formatDate(expense.expenseDate)
+                                : 'Дата не вказана'}
+                              {expense.notes ? ` · ${expense.notes}` : ''}
+                            </Typography>
+                          </Box>
+                          <Typography fontWeight={800} sx={{ flexShrink: 0, pt: 0.25 }}>
+                            {formatMoney(expense.amount)}
+                          </Typography>
+                          {project.status !== 'Completed' && (
+                            <RowActionsMenu
+                              items={[
+                                {
+                                  key: 'edit',
+                                  label: 'Редагувати',
+                                  icon: <EditOutlinedIcon fontSize="small" />,
+                                  onClick: () => openEditExpense(expense),
+                                },
+                                { kind: 'divider', key: 'del-div' },
+                                {
+                                  key: 'delete',
+                                  label: 'Видалити',
+                                  icon: <DeleteIcon fontSize="small" />,
+                                  onClick: () => setPendingDelete({ kind: 'expense', expense }),
+                                  tone: 'danger',
+                                },
+                              ]}
+                            />
+                          )}
+                        </Stack>
+                      </Box>
+                    ))}
+                    {(project.expenses ?? []).length === 0 && (
+                      <Typography color="text.secondary">Інших витрат ще немає</Typography>
+                    )}
+                  </Stack>
+                </DetailSection>
+              </Stack>
+            </TabPanel>
+          )}
+
+          {canManageProject && (
+            <TabPanel value={tab} index={3}>
+              <Stack direction="row" justifyContent="space-between" mb={2} alignItems="center" gap={1}>
+                <Typography variant="subtitle1" fontWeight={800} sx={{ letterSpacing: '-0.01em' }}>
+                  Призначені працівники
+                </Typography>
+                <Button variant="contained" color="primary" onClick={() => void openAddWorker()}>
+                  Призначити
+                </Button>
+              </Stack>
+              <Stack spacing={1.25}>
+                {project.workers.map((worker) => (
+                  <Box
+                    key={worker.id}
+                    role="link"
+                    tabIndex={0}
+                    onClick={() => navigate(`/users/${worker.userId}`)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        navigate(`/users/${worker.userId}`)
+                      }
+                    }}
+                    sx={{
+                      p: { xs: 1.5, sm: 2 },
+                      borderRadius: 2,
+                      border: '1.5px solid',
+                      borderColor: 'divider',
+                      bgcolor: 'rgba(243, 235, 220, 0.45)',
+                      cursor: 'pointer',
+                      '&:hover': { boxShadow: 1, borderColor: 'primary.dark' },
+                    }}
+                  >
+                    <Stack direction="row" alignItems="flex-start" spacing={1}>
+                      <Box flex={1} sx={{ minWidth: 0 }}>
+                        <Typography fontWeight={700}>
+                          {worker.fullName}
+                          {worker.workerType ? ` · ${workerTypeLabel(worker.workerType)}` : ''}
+                        </Typography>
+                        <Typography variant="body2">
+                          {worker.phone && toTelHref(worker.phone) ? (
+                            <Link
+                              href={toTelHref(worker.phone)!}
+                              underline="hover"
+                              color="inherit"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {formatPhone(worker.phone)}
+                            </Link>
+                          ) : (
+                            '—'
+                          )}
+                          {worker.roleOnProject ? ` · Роль: ${worker.roleOnProject}` : ''} ·{' '}
+                          {formatDateTime(worker.assignedAt)}
+                        </Typography>
+                      </Box>
+                      {project.status !== 'Completed' && (
+                        <RowActionsMenu
+                          items={[
+                            {
+                              key: 'remove',
+                              label: 'Прибрати з проекту',
+                              icon: <DeleteIcon fontSize="small" />,
+                              onClick: () => setPendingDelete({ kind: 'worker', worker }),
+                              tone: 'danger',
+                            },
+                          ]}
+                        />
+                      )}
+                    </Stack>
+                  </Box>
+                ))}
+                {project.workers.length === 0 && (
+                  <Typography color="text.secondary">Працівників ще не призначено</Typography>
+                )}
+              </Stack>
+            </TabPanel>
+          )}
+
+          <TabPanel value={tab} index={canManageProject ? 4 : 2}>
+            {canManageProject && (
+              <Stack spacing={2} mb={2} alignItems="flex-start">
+                <Button variant="outlined" color="primary" component="label">
+                  Завантажити фото
+                  <input
+                    hidden
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={(e) => {
+                      openPhotoUpload(e.target.files)
+                      e.target.value = ''
+                    }}
+                  />
+                </Button>
+              </Stack>
+            )}
             <Box
               sx={{
                 display: 'grid',
@@ -1295,7 +1337,7 @@ export default function ProjectDetailPage() {
                 gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr' },
               }}
             >
-              {project.photos.map((photo) => (
+              {project.photos.map((photo, photoIndex) => (
                 <Box
                   key={photo.id}
                   sx={{
@@ -1310,7 +1352,23 @@ export default function ProjectDetailPage() {
                     component="img"
                     src={photo.url}
                     alt={photo.caption ?? 'Фото проекту'}
-                    sx={{ width: '100%', height: 180, objectFit: 'cover', display: 'block' }}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setPhotoViewerIndex(photoIndex)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        setPhotoViewerIndex(photoIndex)
+                      }
+                    }}
+                    sx={{
+                      width: '100%',
+                      height: 180,
+                      objectFit: 'cover',
+                      display: 'block',
+                      cursor: 'pointer',
+                      '&:hover': { opacity: 0.92 },
+                    }}
                   />
                   <Stack direction="row" alignItems="center" p={1.5} spacing={1}>
                     <Box flex={1}>
@@ -1319,13 +1377,15 @@ export default function ProjectDetailPage() {
                         {formatDateTime(photo.uploadedAt)}
                       </Typography>
                     </Box>
-                    <IconButton
-                      color="error"
-                      onClick={() => setPendingDelete({ kind: 'photo', photo })}
-                      aria-label="Видалити фото"
-                    >
-                      <DeleteIcon />
-                    </IconButton>
+                    {canManageProject && (
+                      <IconButton
+                        color="error"
+                        onClick={() => setPendingDelete({ kind: 'photo', photo })}
+                        aria-label="Видалити фото"
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    )}
                   </Stack>
                 </Box>
               ))}
@@ -1868,6 +1928,16 @@ export default function ProjectDetailPage() {
             setUploadFiles(null)
             await load()
           }}
+        />
+      )}
+
+      {photoViewerIndex != null && project.photos.length > 0 && (
+        <PhotoLightbox
+          open
+          photos={project.photos}
+          index={Math.min(photoViewerIndex, project.photos.length - 1)}
+          onClose={() => setPhotoViewerIndex(null)}
+          onIndexChange={setPhotoViewerIndex}
         />
       )}
 

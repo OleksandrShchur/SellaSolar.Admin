@@ -15,11 +15,8 @@ import { formatDate } from '../utils/labels'
 import { ProjectStatusChip } from '../components/StatusChips'
 import { surfaceSx, panelPad } from '../components/DetailPanel'
 import { JobListSkeleton } from '../components/PageSkeletons'
-import { useAuth } from '../auth/AuthContext'
 
 export default function MyJobsPage() {
-  const { hasRole } = useAuth()
-  const canOpenDetail = hasRole('Admin')
   const [rows, setRows] = useState<ProjectListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -68,8 +65,8 @@ export default function MyJobsPage() {
             {rows.map((row) => (
               <ListItemButton
                 key={row.id}
-                component={canOpenDetail ? RouterLink : 'div'}
-                to={canOpenDetail ? `/projects/${row.id}` : undefined}
+                component={RouterLink}
+                to={`/projects/${row.id}`}
                 divider
               >
                 <ListItemText

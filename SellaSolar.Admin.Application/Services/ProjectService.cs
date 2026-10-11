@@ -84,7 +84,9 @@ public class ProjectService
     {
         return await _db.Projects
             .AsNoTracking()
-            .Where(p => p.ProjectWorkers.Any(pw => pw.UserId == userId))
+            .Where(p =>
+                p.ProjectWorkers.Any(pw => pw.UserId == userId)
+                && (p.Status == ProjectStatuses.Awaiting || p.Status == ProjectStatuses.InProgress))
             .OrderByDescending(p => p.CreatedAt)
             .Select(p => new ProjectListItemDto(
                 p.Id,
@@ -97,19 +99,47 @@ public class ProjectService
                 p.EndDate,
                 p.CreatedAt,
                 p.ProjectWorkers.Count,
-                (p.Status == ProjectStatuses.Awaiting || p.Status == ProjectStatuses.InProgress)
-                    && p.ProjectItems.Any(i =>
-                        i.WarehouseItemId == null
-                            ? i.NeedsPurchase
-                            : i.QuantityNeeded >
-                              i.WarehouseItem!.QuantityInStock
-                              - (i.WarehouseItem.ProjectItems
-                                  .Where(o =>
-                                      o.ProjectId != p.Id
-                                      && (o.Project.Status == ProjectStatuses.Awaiting
-                                          || o.Project.Status == ProjectStatuses.InProgress))
-                                  .Sum(o => (decimal?)o.QuantityFromStock) ?? 0m))))
+                p.ProjectItems.Any(i =>
+                    i.WarehouseItemId == null
+                        ? i.NeedsPurchase
+                        : i.QuantityNeeded >
+                          i.WarehouseItem!.QuantityInStock
+                          - (i.WarehouseItem.ProjectItems
+                              .Where(o =>
+                                  o.ProjectId != p.Id
+                                  && (o.Project.Status == ProjectStatuses.Awaiting
+                                      || o.Project.Status == ProjectStatuses.InProgress))
+                              .Sum(o => (decimal?)o.QuantityFromStock) ?? 0m))))
             .ToListAsync(ct);
+    }
+
+    /// <summary>
+    /// Read-only project detail for an assigned worker. Only open projects (Awaiting / InProgress).
+    /// Strips costs, lot allocations, expenses, and co-workers.
+    /// </summary>
+    public async Task<ProjectDetailDto?> GetWorkerAssignedDetailAsync(
+        int id,
+        string userId,
+        CancellationToken ct = default)
+    {
+        var project = await _db.Projects
+            .AsNoTracking()
+            .Include(p => p.ProjectCustomData)
+            .Include(p => p.ProjectItems).ThenInclude(i => i.WarehouseItem)
+            .Include(p => p.ProjectWorkers)
+            .Include(p => p.ProjectPhotos)
+            .FirstOrDefaultAsync(p => p.Id == id, ct);
+
+        if (project is null)
+            return null;
+
+        if (!ProjectStatuses.IsOpen(project.Status))
+            return null;
+
+        if (!project.ProjectWorkers.Any(pw => pw.UserId == userId))
+            return null;
+
+        return MapWorkerDetail(project);
     }
 
     public async Task<ProjectDetailDto?> GetByIdAsync(int id, CancellationToken ct = default)
@@ -488,6 +518,63 @@ public class ProjectService
                 Value = item.Value ?? string.Empty
             });
         }
+    }
+
+    private static ProjectDetailDto MapWorkerDetail(Project project)
+    {
+        return new ProjectDetailDto(
+            project.Id,
+            project.Name,
+            project.Description,
+            project.Address,
+            project.Status,
+            project.CustomerName,
+            project.CustomerPhone,
+            project.CustomerEmail,
+            project.StartDate,
+            project.EndDate,
+            project.CreatedAt,
+            project.UpdatedAt,
+            project.ProjectCustomData
+                .OrderBy(c => c.Key)
+                .Select(c => new CustomDataDto(c.Key, c.Value))
+                .ToList(),
+            project.ProjectItems
+                .OrderBy(i => i.WarehouseItemId == null
+                    ? i.RequestedName
+                    : i.WarehouseItem!.Name)
+                .Select(MapWorkerItem)
+                .ToList(),
+            Array.Empty<ProjectWorkerDto>(),
+            project.ProjectPhotos
+                .OrderByDescending(p => p.UploadedAt)
+                .Select(p => new ProjectPhotoDto(p.Id, p.FilePathOrUrl, p.Caption, p.UploadedAt))
+                .ToList(),
+            Array.Empty<ProjectExpenseDto>());
+    }
+
+    private static ProjectItemDto MapWorkerItem(ProjectItem i)
+    {
+        var isNonCatalog = i.WarehouseItemId is null || i.WarehouseItem is null;
+        var name = isNonCatalog ? (i.RequestedName ?? string.Empty) : i.WarehouseItem!.Name;
+        var category = isNonCatalog ? (i.RequestedCategory ?? string.Empty) : i.WarehouseItem!.Category;
+        var unit = isNonCatalog ? (i.RequestedUnit ?? string.Empty) : i.WarehouseItem!.Unit;
+
+        return new ProjectItemDto(
+            i.Id,
+            WarehouseItemId: null,
+            name,
+            category,
+            unit,
+            i.QuantityNeeded,
+            QuantityFromStock: 0,
+            QuantityToPurchase: 0,
+            NeedsPurchase: false,
+            QuantityInStock: 0,
+            QuantityAvailable: 0,
+            isNonCatalog,
+            Allocations: Array.Empty<ProjectItemLotAllocationDto>(),
+            CostFromStock: null);
     }
 
     private async Task<ProjectDetailDto> MapDetailAsync(Project project, CancellationToken ct)
