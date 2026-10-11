@@ -57,6 +57,7 @@ import { useAuth } from '../auth/AuthContext'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { DetailField, DetailFieldGrid, DetailPanel, DetailSection, panelPad } from '../components/DetailPanel'
 import { DetailPageSkeleton } from '../components/PageSkeletons'
+import PhotoLightbox from '../components/PhotoLightbox'
 import PhotoUploadDialog from '../components/PhotoUploadDialog'
 import RowActionsMenu, { type RowActionItem } from '../components/RowActionsMenu'
 import ScrollableTabs from '../components/ScrollableTabs'
@@ -177,6 +178,7 @@ export default function ProjectDetailPage() {
   const [roleOnProject, setRoleOnProject] = useState('')
 
   const [uploadFiles, setUploadFiles] = useState<File[] | null>(null)
+  const [photoViewerIndex, setPhotoViewerIndex] = useState<number | null>(null)
 
   const [expenseOpen, setExpenseOpen] = useState(false)
   const [editingExpense, setEditingExpense] = useState<ProjectExpense | null>(null)
@@ -1335,7 +1337,7 @@ export default function ProjectDetailPage() {
                 gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr' },
               }}
             >
-              {project.photos.map((photo) => (
+              {project.photos.map((photo, photoIndex) => (
                 <Box
                   key={photo.id}
                   sx={{
@@ -1350,7 +1352,23 @@ export default function ProjectDetailPage() {
                     component="img"
                     src={photo.url}
                     alt={photo.caption ?? 'Фото проекту'}
-                    sx={{ width: '100%', height: 180, objectFit: 'cover', display: 'block' }}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setPhotoViewerIndex(photoIndex)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        setPhotoViewerIndex(photoIndex)
+                      }
+                    }}
+                    sx={{
+                      width: '100%',
+                      height: 180,
+                      objectFit: 'cover',
+                      display: 'block',
+                      cursor: 'pointer',
+                      '&:hover': { opacity: 0.92 },
+                    }}
                   />
                   <Stack direction="row" alignItems="center" p={1.5} spacing={1}>
                     <Box flex={1}>
@@ -1910,6 +1928,16 @@ export default function ProjectDetailPage() {
             setUploadFiles(null)
             await load()
           }}
+        />
+      )}
+
+      {photoViewerIndex != null && project.photos.length > 0 && (
+        <PhotoLightbox
+          open
+          photos={project.photos}
+          index={Math.min(photoViewerIndex, project.photos.length - 1)}
+          onClose={() => setPhotoViewerIndex(null)}
+          onIndexChange={setPhotoViewerIndex}
         />
       )}
 
