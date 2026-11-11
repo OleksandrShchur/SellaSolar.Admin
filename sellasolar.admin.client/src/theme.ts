@@ -169,6 +169,21 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           borderBottom: `1px solid ${brandColors.border}`,
+          padding: '16px 24px',
+        },
+      },
+    },
+    MuiDialogContent: {
+      styleOverrides: {
+        root: {
+          // Match title/actions horizontal inset; keep top padding even after
+          // DialogTitle (MUI would otherwise set padding-top: 0).
+          paddingLeft: 24,
+          paddingRight: 24,
+          paddingBottom: 20,
+          '&&': {
+            paddingTop: 20,
+          },
         },
       },
     },
@@ -176,6 +191,7 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           borderTop: `1px solid ${brandColors.border}`,
+          padding: '12px 24px',
         },
       },
     },

@@ -14,9 +14,6 @@ import {
   IconButton,
   InputLabel,
   Link,
-  List,
-  ListItem,
-  ListItemText,
   MenuItem,
   Select,
   Snackbar,
@@ -2027,27 +2024,38 @@ export default function ProjectDetailPage() {
         open={reportBlockedOpen}
         onClose={() => setReportBlockedOpen(false)}
         fullWidth
-        maxWidth="sm"
+        maxWidth="xs"
       >
         <DialogTitle>{inventoryLabels.generateReportBlockedTitle}</DialogTitle>
         <DialogContent>
-          <Typography variant="body2" color="text.secondary">
-            {reportBlockedMessage ?? inventoryLabels.generateReportBlockedHint}
-          </Typography>
-          {reportBlockedItems.length > 0 && (
-            <Box mt={2}>
-              <Typography variant="subtitle2" fontWeight={700} gutterBottom>
-                {inventoryLabels.generateReportBlockedItems}
-              </Typography>
-              <List dense disablePadding>
-                {reportBlockedItems.map((name) => (
-                  <ListItem key={name} disableGutters sx={{ py: 0.25 }}>
-                    <ListItemText primary={`• ${name}`} primaryTypographyProps={{ variant: 'body2' }} />
-                  </ListItem>
-                ))}
-              </List>
-            </Box>
-          )}
+          <Stack spacing={2}>
+            <Typography variant="body2" color="text.secondary">
+              {reportBlockedMessage ?? inventoryLabels.generateReportBlockedHint}
+            </Typography>
+            {reportBlockedItems.length > 0 && (
+              <Box>
+                <Typography variant="subtitle2" fontWeight={700} mb={1}>
+                  {inventoryLabels.generateReportBlockedItems}
+                </Typography>
+                <Box
+                  component="ul"
+                  sx={{
+                    m: 0,
+                    pl: 2.5,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 0.75,
+                  }}
+                >
+                  {reportBlockedItems.map((name) => (
+                    <Typography key={name} component="li" variant="body2">
+                      {name}
+                    </Typography>
+                  ))}
+                </Box>
+              </Box>
+            )}
+          </Stack>
         </DialogContent>
         <DialogActions>
           <Button variant="contained" color="primary" onClick={() => setReportBlockedOpen(false)}>
