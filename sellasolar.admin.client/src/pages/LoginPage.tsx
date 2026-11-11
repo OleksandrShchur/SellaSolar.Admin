@@ -6,7 +6,6 @@ import {
   Button,
   Card,
   CardContent,
-  Fade,
   IconButton,
   InputAdornment,
   Stack,
@@ -64,85 +63,83 @@ export default function LoginPage() {
         placeItems: 'center',
         px: 2,
         py: 4,
-        background: `linear-gradient(160deg, ${brandColors.morningBg} 0%, ${brandColors.surface} 45%, ${brandColors.cream} 100%)`,
+        backgroundColor: brandColors.morningBg,
       }}
     >
-      <Fade in timeout={400}>
-        <Card
-          sx={{
-            width: '100%',
-            maxWidth: 420,
-            borderRadius: 3,
-            boxShadow: `0 20px 50px -24px ${brandColors.softShadow}`,
-          }}
-        >
-          <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
-            <Stack spacing={3} component="form" onSubmit={submit}>
-              <Stack spacing={1} alignItems="center" textAlign="center">
-                <Box
-                  component="img"
-                  src="/sella-solar-sticker.png"
-                  alt="Sella Solar"
-                  sx={{ height: 72, width: 'auto', display: 'block' }}
-                />
-                <Typography variant="h5" fontWeight={800} sx={{ fontFamily: '"Sora", system-ui, sans-serif' }}>
-                  SellaSolar Admin
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Увійдіть за номером телефону та паролем
-                </Typography>
-              </Stack>
-
-              {error && (
-                <Alert severity="error" variant="outlined">
-                  {error}
-                </Alert>
-              )}
-
-              <TextField
-                label="Телефон"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                autoComplete="tel"
-                inputMode="numeric"
-                placeholder="0982441170"
-                helperText="Формат: 0XXXXXXXXX"
-                required
-                fullWidth
-                disabled={loading}
+      <Card
+        elevation={1}
+        sx={{
+          width: '100%',
+          maxWidth: 420,
+          borderRadius: 2,
+        }}
+      >
+        <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
+          <Stack spacing={3} component="form" onSubmit={submit}>
+            <Stack spacing={1} alignItems="center" textAlign="center">
+              <Box
+                component="img"
+                src="/sella-solar-sticker.png"
+                alt="Sella Solar"
+                sx={{ height: 72, width: 'auto', display: 'block' }}
               />
-
-              <TextField
-                label="Пароль"
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
-                required
-                fullWidth
-                disabled={loading}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        aria-label={showPassword ? 'Приховати пароль' : 'Показати пароль'}
-                        onClick={() => setShowPassword((v) => !v)}
-                        edge="end"
-                      >
-                        {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-
-              <Button type="submit" variant="contained" color="primary" size="large" disabled={loading}>
-                {loading ? 'Вхід…' : 'Увійти'}
-              </Button>
+              <Typography variant="h5" fontWeight={800} sx={{ fontFamily: '"Sora", system-ui, sans-serif' }}>
+                SellaSolar Admin
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Увійдіть за номером телефону та паролем
+              </Typography>
             </Stack>
-          </CardContent>
-        </Card>
-      </Fade>
+
+            {error && (
+              <Alert severity="error" variant="outlined">
+                {error}
+              </Alert>
+            )}
+
+            <TextField
+              label="Телефон"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+              autoComplete="tel"
+              inputMode="numeric"
+              placeholder="0982441170"
+              helperText="Формат: 0XXXXXXXXX"
+              required
+              fullWidth
+              disabled={loading}
+            />
+
+            <TextField
+              label="Пароль"
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+              required
+              fullWidth
+              disabled={loading}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label={showPassword ? 'Приховати пароль' : 'Показати пароль'}
+                      onClick={() => setShowPassword((v) => !v)}
+                      edge="end"
+                    >
+                      {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
+
+            <Button type="submit" variant="contained" color="primary" size="large" disabled={loading}>
+              {loading ? 'Вхід…' : 'Увійти'}
+            </Button>
+          </Stack>
+        </CardContent>
+      </Card>
     </Box>
   )
 }
