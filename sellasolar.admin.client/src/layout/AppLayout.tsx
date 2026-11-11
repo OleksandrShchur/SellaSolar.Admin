@@ -2,8 +2,6 @@ import { useMemo, useState } from 'react'
 import { Link as RouterLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   AppBar,
-  BottomNavigation,
-  BottomNavigationAction,
   Box,
   Divider,
   Drawer,
@@ -29,12 +27,11 @@ import AssignmentIndIcon from '@mui/icons-material/AssignmentInd'
 import AccountCircleIcon from '@mui/icons-material/AccountCircle'
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined'
 import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined'
-import { alpha } from '@mui/material/styles'
-import { brandColors } from '../theme'
 import { useAuth } from '../auth/AuthContext'
 import ChangePasswordDialog from '../components/ChangePasswordDialog'
 import { formatPhone } from '../utils/labels'
-import { BOTTOM_NAV_HEIGHT, bottomNavClearance } from './bottomNav'
+import { bottomNavClearance } from './bottomNav'
+import MobileBottomNav from './MobileBottomNav'
 
 const DRAWER_WIDTH = 260
 const DRAWER_WIDTH_COLLAPSED = 72
@@ -362,66 +359,7 @@ export default function AppLayout() {
         <Outlet />
       </Box>
 
-      {/* Mobile: solid cream bottom nav */}
-      {isMobile && (
-        <Box
-          sx={{
-            position: 'fixed',
-            left: 0,
-            right: 0,
-            bottom: 0,
-            height: `calc(${BOTTOM_NAV_HEIGHT}px + env(safe-area-inset-bottom, 0px))`,
-            pb: 'env(safe-area-inset-bottom, 0px)',
-            zIndex: (t) => t.zIndex.appBar,
-            borderTop: `1px solid ${brandColors.border}`,
-            backgroundColor: brandColors.cream,
-          }}
-        >
-          <BottomNavigation
-            value={activeIndex === -1 ? false : activeIndex}
-            showLabels
-            sx={{
-              width: '100%',
-              height: BOTTOM_NAV_HEIGHT,
-              justifyContent: 'space-between',
-              backgroundColor: brandColors.cream,
-              '& .MuiBottomNavigationAction-root': {
-                minWidth: 0,
-                maxWidth: 'none',
-                flex: 1,
-                minHeight: '100%',
-                px: 0.5,
-                py: 0.75,
-                borderRadius: 1.5,
-                color: 'text.secondary',
-                alignItems: 'center',
-                justifyContent: 'center',
-                '&.Mui-selected': {
-                  color: 'primary.dark',
-                  backgroundColor: alpha(brandColors.primary, 0.18),
-                },
-              },
-              '& .MuiBottomNavigationAction-label': {
-                fontSize: '0.7rem',
-                fontWeight: 600,
-                '&.Mui-selected': {
-                  fontSize: '0.7rem',
-                },
-              },
-            }}
-          >
-            {navItems.map((item) => (
-              <BottomNavigationAction
-                key={item.to}
-                label={item.label}
-                icon={item.icon}
-                component={RouterLink}
-                to={item.to}
-              />
-            ))}
-          </BottomNavigation>
-        </Box>
-      )}
+      {isMobile && <MobileBottomNav navItems={navItems} activeIndex={activeIndex} />}
     </Box>
   )
 }

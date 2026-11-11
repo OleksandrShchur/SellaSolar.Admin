@@ -527,7 +527,7 @@ const theme = createTheme({
     MuiBottomNavigation: {
       styleOverrides: {
         root: {
-          backgroundColor: brandColors.cream,
+          backgroundColor: 'transparent',
         },
       },
     },
