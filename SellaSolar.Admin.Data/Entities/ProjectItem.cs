@@ -32,6 +32,12 @@ public partial class ProjectItem
     [Column(TypeName = "decimal(18, 2)")]
     public decimal? CostFromStock { get; set; }
 
+    /// <summary>
+    /// Persisted Σ allocation qty × lot unit sell price. Null if any allocated lot lacks sell price.
+    /// </summary>
+    [Column(TypeName = "decimal(18, 2)")]
+    public decimal? SellFromStock { get; set; }
+
     [StringLength(200)]
     public string? RequestedName { get; set; }
 

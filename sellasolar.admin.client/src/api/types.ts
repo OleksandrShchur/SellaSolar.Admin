@@ -61,6 +61,7 @@ export interface AssignedProjectListItem {
 export interface ProjectItemLotAllocation {
   lotId: number
   unitCost: number
+  unitSellPrice?: number | null
   quantity: number
   receivedAt: string
   quantityFreeOnLot?: number | null
@@ -83,6 +84,8 @@ export interface ProjectItem {
   allocations: ProjectItemLotAllocation[]
   /** Sum of quantity × unitCost over allocations. */
   costFromStock?: number | null
+  /** Sum of quantity × unitSellPrice when all lots have sell price. */
+  sellFromStock?: number | null
 }
 
 export interface ProjectWorker {
@@ -164,6 +167,7 @@ export interface WarehouseLotProjectUsage {
 export interface WarehouseStockLot {
   lotId: number
   unitCost: number
+  unitSellPrice?: number | null
   quantityOnHand: number
   quantityReserved: number
   quantityFree: number

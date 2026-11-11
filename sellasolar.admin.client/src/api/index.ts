@@ -179,6 +179,7 @@ export const warehouseApi = {
     body: {
       quantity: number
       unitCost: number
+      unitSellPrice: number
       supplier?: string | null
       notes?: string | null
       receivedAt?: string | null
@@ -189,6 +190,8 @@ export const warehouseApi = {
   create: (body: unknown) => apiSend<WarehouseItemDetail>('/api/warehouse-items', 'POST', body),
   update: (id: number, body: unknown) =>
     apiSend<WarehouseItemDetail>(`/api/warehouse-items/${id}`, 'PUT', body),
+  updateLot: (id: number, lotId: number, body: { unitSellPrice: number }) =>
+    apiSend<WarehouseItemDetail>(`/api/warehouse-items/${id}/lots/${lotId}`, 'PUT', body),
   remove: (id: number) => apiSend<void>(`/api/warehouse-items/${id}`, 'DELETE'),
   removeLot: (id: number, lotId: number) =>
     apiSend<WarehouseItemDetail>(`/api/warehouse-items/${id}/lots/${lotId}`, 'DELETE'),

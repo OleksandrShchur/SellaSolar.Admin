@@ -17,6 +17,10 @@ public partial class WarehouseStockLot
     [Column(TypeName = "decimal(18, 2)")]
     public decimal UnitCost { get; set; }
 
+    /// <summary>Customer-facing unit sell price. Null until set (legacy lots).</summary>
+    [Column(TypeName = "decimal(18, 2)")]
+    public decimal? UnitSellPrice { get; set; }
+
     [Column(TypeName = "decimal(18, 2)")]
     public decimal QuantityOnHand { get; set; }
 

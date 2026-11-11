@@ -630,7 +630,8 @@ public class ProjectService
             QuantityAvailable: 0,
             isNonCatalog,
             Allocations: Array.Empty<ProjectItemLotAllocationDto>(),
-            CostFromStock: null);
+            CostFromStock: null,
+            SellFromStock: null);
     }
 
     private async Task<ProjectDetailDto> MapDetailAsync(Project project, CancellationToken ct)
