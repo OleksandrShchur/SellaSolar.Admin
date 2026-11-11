@@ -82,7 +82,8 @@ public class ProjectReportService
                 Array.Empty<string>());
         }
 
-        var blocking = new List<string>();
+        var blockingAllocation = new List<string>();
+        var blockingSellPrice = new List<string>();
 
         foreach (var item in project.ProjectItems.OrderBy(i => i.Id))
         {
@@ -93,7 +94,7 @@ public class ProjectReportService
             if (item.WarehouseItemId is null)
             {
                 if (item.NeedsPurchase || item.QuantityToPurchase > 0)
-                    blocking.Add(name);
+                    blockingAllocation.Add(name);
                 continue;
             }
 
@@ -103,16 +104,30 @@ public class ProjectReportService
                 || item.NeedsPurchase
                 || item.QuantityToPurchase > 0)
             {
-                blocking.Add(name);
+                blockingAllocation.Add(name);
+                continue;
             }
+
+            var missingSell = item.ProjectItemLotAllocations?
+                .Any(a => a.Quantity > 0 && a.WarehouseStockLot?.UnitSellPrice is null) == true;
+            if (missingSell)
+                blockingSellPrice.Add(name);
         }
 
-        if (blocking.Count > 0)
+        if (blockingAllocation.Count > 0)
         {
             return new ProjectReportReadinessDto(
                 false,
                 "Не всі матеріали закуплені та розподілені по партіях. Завершіть закупівлю й розподіл, щоб згенерувати накладну.",
-                blocking);
+                blockingAllocation);
+        }
+
+        if (blockingSellPrice.Count > 0)
+        {
+            return new ProjectReportReadinessDto(
+                false,
+                "Не для всіх розподілених партій вказано ціну продажу. Додайте ціну продажу в картці складу, щоб згенерувати накладну.",
+                blockingSellPrice);
         }
 
         return new ProjectReportReadinessDto(true, null, Array.Empty<string>());
@@ -128,8 +143,9 @@ public class ProjectReportService
         {
             var qty = item.QuantityNeeded;
             var total = item.ProjectItemLotAllocations is { Count: > 0 }
-                ? item.ProjectItemLotAllocations.Sum(a => a.Quantity * a.WarehouseStockLot.UnitCost)
-                : item.CostFromStock ?? 0m;
+                ? item.ProjectItemLotAllocations.Sum(a =>
+                    a.Quantity * (a.WarehouseStockLot.UnitSellPrice ?? 0m))
+                : item.SellFromStock ?? 0m;
             var unitPrice = qty > 0 ? Math.Round(total / qty, 2, MidpointRounding.AwayFromZero) : 0m;
             var unit = item.WarehouseItem?.Unit ?? string.Empty;
             var name = item.WarehouseItem?.Name ?? item.RequestedName ?? $"#{item.Id}";

@@ -51,6 +51,8 @@ export default function WarehouseDetailPage() {
   const [saving, setSaving] = useState(false)
   const [lotPendingDelete, setLotPendingDelete] = useState<WarehouseStockLot | null>(null)
   const [lotInUse, setLotInUse] = useState<WarehouseStockLot | null>(null)
+  const [lotEditSell, setLotEditSell] = useState<WarehouseStockLot | null>(null)
+  const [lotSellPrice, setLotSellPrice] = useState('')
   const [deletingLot, setDeletingLot] = useState(false)
   const [itemDeleteOpen, setItemDeleteOpen] = useState(false)
   const [deletingItem, setDeletingItem] = useState(false)
@@ -65,6 +67,7 @@ export default function WarehouseDetailPage() {
   const [receiveForm, setReceiveForm] = useState({
     quantity: '1',
     unitCost: '',
+    unitSellPrice: '',
     supplier: '',
     notes: '',
   })
@@ -106,10 +109,16 @@ export default function WarehouseDetailPage() {
     setReceiveForm({
       quantity: '1',
       unitCost: '',
+      unitSellPrice: '',
       supplier: item?.supplier ?? '',
       notes: '',
     })
     setReceiveOpen(true)
+  }
+
+  const openEditSellPrice = (lot: WarehouseStockLot) => {
+    setLotEditSell(lot)
+    setLotSellPrice(lot.unitSellPrice != null ? String(lot.unitSellPrice) : '')
   }
 
   const save = async () => {
@@ -136,12 +145,21 @@ export default function WarehouseDetailPage() {
   const saveReceive = async () => {
     const quantity = Number(receiveForm.quantity)
     const unitCost = Number(receiveForm.unitCost)
+    const unitSellPrice = Number(receiveForm.unitSellPrice)
     if (!Number.isFinite(quantity) || quantity <= 0) {
       setError('Кількість повинна бути більшою за нуль')
       return
     }
     if (!Number.isFinite(unitCost) || unitCost < 0) {
-      setError('Вкажіть коректну ціну за одиницю')
+      setError('Вкажіть коректну закупівельну ціну')
+      return
+    }
+    if (!Number.isFinite(unitSellPrice) || unitSellPrice < 0) {
+      setError('Вкажіть коректну ціну продажу')
+      return
+    }
+    if (unitSellPrice < unitCost) {
+      setError(inventoryLabels.sellPriceBelowCost)
       return
     }
     setSaving(true)
@@ -150,6 +168,7 @@ export default function WarehouseDetailPage() {
       const updated = await warehouseApi.receive(itemId, {
         quantity,
         unitCost,
+        unitSellPrice,
         supplier: receiveForm.supplier || null,
         notes: receiveForm.notes || null,
       })
@@ -157,6 +176,30 @@ export default function WarehouseDetailPage() {
       setReceiveOpen(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Не вдалося додати на склад')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const saveLotSellPrice = async () => {
+    if (!lotEditSell) return
+    const unitSellPrice = Number(lotSellPrice)
+    if (!Number.isFinite(unitSellPrice) || unitSellPrice < 0) {
+      setError('Вкажіть коректну ціну продажу')
+      return
+    }
+    if (unitSellPrice < lotEditSell.unitCost) {
+      setError(inventoryLabels.sellPriceBelowCost)
+      return
+    }
+    setSaving(true)
+    setError(null)
+    try {
+      const updated = await warehouseApi.updateLot(itemId, lotEditSell.lotId, { unitSellPrice })
+      setItem(updated ?? null)
+      setLotEditSell(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не вдалося зберегти ціну продажу')
     } finally {
       setSaving(false)
     }
@@ -300,11 +343,12 @@ export default function WarehouseDetailPage() {
                 <TableRow>
                   <TableCell>Дата додавання на склад</TableCell>
                   <TableCell align="right">{inventoryLabels.unitCost}</TableCell>
+                  <TableCell align="right">{inventoryLabels.unitSellPrice}</TableCell>
                   <TableCell align="right">{inventoryLabels.onHand}</TableCell>
                   <TableCell align="right">{inventoryLabels.reserved}</TableCell>
                   <TableCell align="right">{inventoryLabels.available}</TableCell>
                   <TableCell>Постачальник</TableCell>
-                  <TableCell align="right" width={56} />
+                  <TableCell align="right" width={96} />
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -312,11 +356,23 @@ export default function WarehouseDetailPage() {
                   <TableRow key={lot.lotId}>
                     <TableCell>{formatDateTime(lot.receivedAt)}</TableCell>
                     <TableCell align="right">{formatNumber(lot.unitCost)}</TableCell>
+                    <TableCell align="right">
+                      {lot.unitSellPrice != null ? formatNumber(lot.unitSellPrice) : '—'}
+                    </TableCell>
                     <TableCell align="right">{formatNumber(lot.quantityOnHand)}</TableCell>
                     <TableCell align="right">{formatNumber(lot.quantityReserved)}</TableCell>
                     <TableCell align="right">{formatNumber(lot.quantityFree)}</TableCell>
                     <TableCell>{lot.supplier || '—'}</TableCell>
                     <TableCell align="right">
+                      <Tooltip title={inventoryLabels.editSellPrice}>
+                        <IconButton
+                          size="small"
+                          aria-label={inventoryLabels.editSellPrice}
+                          onClick={() => openEditSellPrice(lot)}
+                        >
+                          <EditOutlinedIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
                       <Tooltip title={inventoryLabels.deleteLot}>
                         <IconButton
                           size="small"
@@ -474,6 +530,30 @@ export default function WarehouseDetailPage() {
               inputProps={{ min: 0, step: 'any' }}
             />
             <TextField
+              label={inventoryLabels.unitSellPrice}
+              type="number"
+              required
+              fullWidth
+              value={receiveForm.unitSellPrice}
+              onChange={(e) => setReceiveForm({ ...receiveForm, unitSellPrice: e.target.value })}
+              inputProps={{
+                min: receiveForm.unitCost === '' ? 0 : Number(receiveForm.unitCost),
+                step: 'any',
+              }}
+              error={
+                receiveForm.unitSellPrice !== '' &&
+                receiveForm.unitCost !== '' &&
+                Number(receiveForm.unitSellPrice) < Number(receiveForm.unitCost)
+              }
+              helperText={
+                receiveForm.unitSellPrice !== '' &&
+                receiveForm.unitCost !== '' &&
+                Number(receiveForm.unitSellPrice) < Number(receiveForm.unitCost)
+                  ? inventoryLabels.sellPriceBelowCost
+                  : undefined
+              }
+            />
+            <TextField
               label="Постачальник"
               fullWidth
               value={receiveForm.supplier}
@@ -497,9 +577,69 @@ export default function WarehouseDetailPage() {
             variant="contained"
             color="primary"
             onClick={() => void saveReceive()}
-            disabled={saving || !receiveForm.quantity || receiveForm.unitCost === ''}
+            disabled={
+              saving ||
+              !receiveForm.quantity ||
+              receiveForm.unitCost === '' ||
+              receiveForm.unitSellPrice === '' ||
+              Number(receiveForm.unitSellPrice) < Number(receiveForm.unitCost)
+            }
           >
             {inventoryLabels.receive}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(lotEditSell)}
+        onClose={() => !saving && setLotEditSell(null)}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>{inventoryLabels.editSellPrice}</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} mt={1}>
+            <TextField
+              label={inventoryLabels.unitSellPrice}
+              type="number"
+              required
+              fullWidth
+              value={lotSellPrice}
+              onChange={(e) => setLotSellPrice(e.target.value)}
+              inputProps={{
+                min: lotEditSell?.unitCost ?? 0,
+                step: 'any',
+              }}
+              error={
+                lotEditSell != null &&
+                lotSellPrice !== '' &&
+                Number(lotSellPrice) < lotEditSell.unitCost
+              }
+              helperText={
+                lotEditSell == null
+                  ? undefined
+                  : lotSellPrice !== '' && Number(lotSellPrice) < lotEditSell.unitCost
+                    ? inventoryLabels.sellPriceBelowCost
+                    : `${inventoryLabels.unitCost}: ${formatNumber(lotEditSell.unitCost)}`
+              }
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button variant="text" onClick={() => setLotEditSell(null)} disabled={saving}>
+            Скасувати
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => void saveLotSellPrice()}
+            disabled={
+              saving ||
+              lotSellPrice === '' ||
+              (lotEditSell != null && Number(lotSellPrice) < lotEditSell.unitCost)
+            }
+          >
+            Зберегти
           </Button>
         </DialogActions>
       </Dialog>

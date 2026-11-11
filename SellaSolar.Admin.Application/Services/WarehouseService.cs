@@ -196,7 +196,13 @@ public class WarehouseService
         if (request.QuantityInStock < 0)
             throw new ValidationException("Кількість на складі не може бути від’ємною.");
         if (request.Price is < 0)
-            throw new ValidationException("Ціна не може бути від’ємною.");
+            throw new ValidationException("Закупівельна ціна не може бути від’ємною.");
+        if (request.UnitSellPrice is < 0)
+            throw new ValidationException("Ціна продажу не може бути від’ємною.");
+        if (request.QuantityInStock > 0 && request.UnitSellPrice is null)
+            throw new ValidationException("Ціна продажу обов’язкова при додаванні на склад.");
+        if (request.UnitSellPrice is not null && request.UnitSellPrice < (request.Price ?? 0m))
+            throw new ValidationException("Ціна продажу не може бути нижчою за закупівельну.");
 
         var supplier = string.IsNullOrWhiteSpace(request.Supplier) ? null : request.Supplier.Trim();
         var entity = new WarehouseItem
@@ -219,6 +225,7 @@ public class WarehouseService
             {
                 WarehouseItem = entity,
                 UnitCost = request.Price ?? 0m,
+                UnitSellPrice = request.UnitSellPrice,
                 QuantityOnHand = request.QuantityInStock,
                 QuantityReceived = request.QuantityInStock,
                 ReceivedAt = DateTime.UtcNow,
@@ -262,7 +269,11 @@ public class WarehouseService
         if (request.Quantity <= 0)
             throw new ValidationException("Кількість додавання на склад повинна бути більшою за нуль.");
         if (request.UnitCost < 0)
-            throw new ValidationException("Ціна за одиницю не може бути від’ємною.");
+            throw new ValidationException("Закупівельна ціна не може бути від’ємною.");
+        if (request.UnitSellPrice < 0)
+            throw new ValidationException("Ціна продажу не може бути від’ємною.");
+        if (request.UnitSellPrice < request.UnitCost)
+            throw new ValidationException("Ціна продажу не може бути нижчою за закупівельну.");
 
         var hasAllocateId = request.AllocateToProjectItemId is > 0;
         var hasAllocateQty = request.AllocateQuantity is > 0;
@@ -280,6 +291,7 @@ public class WarehouseService
         {
             WarehouseItemId = entity.Id,
             UnitCost = request.UnitCost,
+            UnitSellPrice = request.UnitSellPrice,
             QuantityOnHand = request.Quantity,
             QuantityReceived = request.Quantity,
             ReceivedAt = receivedAt,
@@ -321,9 +333,48 @@ public class WarehouseService
     }
 
     /// <summary>
+    /// Sets the customer sell price on an existing lot and refreshes
+    /// <see cref="ProjectItem.SellFromStock"/> for lines that allocate from it.
+    /// </summary>
+    public async Task<WarehouseItemDetailDto> UpdateLotAsync(
+        int warehouseItemId,
+        int lotId,
+        UpdateWarehouseStockLotRequest request,
+        CancellationToken ct = default)
+    {
+        if (request.UnitSellPrice < 0)
+            throw new ValidationException("Ціна продажу не може бути від’ємною.");
+
+        var exists = await _db.WarehouseItems.AnyAsync(w => w.Id == warehouseItemId, ct);
+        if (!exists)
+            throw new NotFoundException($"Warehouse item {warehouseItemId} was not found.");
+
+        var lot = await _db.WarehouseStockLots
+            .FirstOrDefaultAsync(l => l.Id == lotId && l.WarehouseItemId == warehouseItemId, ct)
+            ?? throw new NotFoundException($"Lot {lotId} was not found.");
+
+        if (request.UnitSellPrice < lot.UnitCost)
+            throw new ValidationException("Ціна продажу не може бути нижчою за закупівельну.");
+
+        lot.UnitSellPrice = request.UnitSellPrice;
+
+        var affectedItems = await _db.ProjectItems
+            .Include(pi => pi.ProjectItemLotAllocations)
+                .ThenInclude(a => a.WarehouseStockLot)
+            .Where(pi => pi.ProjectItemLotAllocations.Any(a => a.WarehouseStockLotId == lotId))
+            .ToListAsync(ct);
+
+        foreach (var item in affectedItems)
+            RefreshSellFromStock(item);
+
+        await _db.SaveChangesAsync(ct);
+        return (await GetByIdAsync(warehouseItemId, ct))!;
+    }
+
+    /// <summary>
     /// Deletes a stock lot when it is not allocated by any open project.
     /// Completed-project allocation rows are removed so the FK allows delete;
-    /// <see cref="ProjectItem.CostFromStock"/> snapshots are kept.
+    /// <see cref="ProjectItem.CostFromStock"/> / <see cref="ProjectItem.SellFromStock"/> snapshots are kept.
     /// </summary>
     public async Task<WarehouseItemDetailDto> DeleteLotAsync(
         int warehouseItemId,
@@ -454,6 +505,40 @@ public class WarehouseService
             usedCount,
             quantityToOrder);
 
+    /// <summary>
+    /// Recomputes SellFromStock from loaded allocations + lots.
+    /// Null when there are no allocations or any allocated lot lacks UnitSellPrice.
+    /// </summary>
+    internal static void RefreshSellFromStock(ProjectItem item)
+    {
+        var allocations = item.ProjectItemLotAllocations;
+        if (allocations is null || allocations.Count == 0)
+        {
+            item.SellFromStock = null;
+            return;
+        }
+
+        decimal total = 0;
+        var any = false;
+        foreach (var a in allocations)
+        {
+            if (a.Quantity <= 0)
+                continue;
+            if (a.WarehouseStockLot is null)
+                return;
+            if (a.WarehouseStockLot.UnitSellPrice is null)
+            {
+                item.SellFromStock = null;
+                return;
+            }
+
+            any = true;
+            total += a.Quantity * a.WarehouseStockLot.UnitSellPrice.Value;
+        }
+
+        item.SellFromStock = any ? total : null;
+    }
+
     private static WarehouseStockLotDto MapLot(
         WarehouseStockLot lot,
         decimal reserved,
@@ -461,6 +546,7 @@ public class WarehouseService
         new(
             lot.Id,
             lot.UnitCost,
+            lot.UnitSellPrice,
             lot.QuantityOnHand,
             reserved,
             Math.Max(0, lot.QuantityOnHand - reserved),

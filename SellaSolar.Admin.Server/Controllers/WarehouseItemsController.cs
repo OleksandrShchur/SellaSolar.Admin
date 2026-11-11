@@ -86,6 +86,27 @@ public class WarehouseItemsController : ControllerBase
         }
     }
 
+    [HttpPut("{id:int}/lots/{lotId:int}")]
+    public async Task<ActionResult<WarehouseItemDetailDto>> UpdateLot(
+        int id,
+        int lotId,
+        [FromBody] UpdateWarehouseStockLotRequest request,
+        CancellationToken ct)
+    {
+        try
+        {
+            return Ok(await _warehouse.UpdateLotAsync(id, lotId, request, ct));
+        }
+        catch (NotFoundException)
+        {
+            return NotFound();
+        }
+        catch (ValidationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     [HttpDelete("{id:int}/lots/{lotId:int}")]
     public async Task<ActionResult<WarehouseItemDetailDto>> DeleteLot(int id, int lotId, CancellationToken ct)
     {

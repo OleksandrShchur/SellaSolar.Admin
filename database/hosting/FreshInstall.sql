@@ -214,12 +214,14 @@ BEGIN
         QuantityToPurchase  DECIMAL(18,2)   NOT NULL CONSTRAINT DF_ProjectItems_ToPurchase DEFAULT (0),
         NeedsPurchase       BIT             NOT NULL CONSTRAINT DF_ProjectItems_NeedsPurchase DEFAULT (0),
         CostFromStock       DECIMAL(18,2)   NULL,
+        SellFromStock       DECIMAL(18,2)   NULL,
         RequestedName       NVARCHAR(200)   NULL,
         RequestedCategory   NVARCHAR(100)   NULL,
         RequestedUnit       NVARCHAR(50)    NULL,
         CONSTRAINT FK_ProjectItems_Projects FOREIGN KEY (ProjectId) REFERENCES dbo.Projects(Id) ON DELETE CASCADE,
         CONSTRAINT FK_ProjectItems_WarehouseItems FOREIGN KEY (WarehouseItemId) REFERENCES dbo.WarehouseItems(Id),
         CONSTRAINT CK_ProjectItems_CostFromStock CHECK (CostFromStock IS NULL OR CostFromStock >= 0),
+        CONSTRAINT CK_ProjectItems_SellFromStock CHECK (SellFromStock IS NULL OR SellFromStock >= 0),
         CONSTRAINT CK_ProjectItems_CatalogOrRequested CHECK (
             (WarehouseItemId IS NOT NULL
              AND RequestedName IS NULL
@@ -249,6 +251,7 @@ BEGIN
         Id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_WarehouseStockLots PRIMARY KEY,
         WarehouseItemId INT NOT NULL,
         UnitCost DECIMAL(18,2) NOT NULL,
+        UnitSellPrice DECIMAL(18,2) NULL,
         QuantityOnHand DECIMAL(18,2) NOT NULL,
         QuantityReceived DECIMAL(18,2) NOT NULL,
         ReceivedAt DATETIME2 NOT NULL,
@@ -258,6 +261,8 @@ BEGIN
         CONSTRAINT FK_WarehouseStockLots_WarehouseItems
             FOREIGN KEY (WarehouseItemId) REFERENCES dbo.WarehouseItems (Id),
         CONSTRAINT CK_WarehouseStockLots_UnitCost CHECK (UnitCost >= 0),
+        CONSTRAINT CK_WarehouseStockLots_UnitSellPrice CHECK (UnitSellPrice IS NULL OR UnitSellPrice >= 0),
+        CONSTRAINT CK_WarehouseStockLots_UnitSellPrice_GteUnitCost CHECK (UnitSellPrice IS NULL OR UnitSellPrice >= UnitCost),
         CONSTRAINT CK_WarehouseStockLots_QuantityOnHand CHECK (QuantityOnHand >= 0),
         CONSTRAINT CK_WarehouseStockLots_QuantityReceived CHECK (QuantityReceived > 0)
     )
@@ -356,5 +361,11 @@ IF NOT EXISTS (SELECT 1 FROM dbo.__SchemaPatches WHERE PatchName = N'014_Warehou
 
 IF NOT EXISTS (SELECT 1 FROM dbo.__SchemaPatches WHERE PatchName = N'016_ProjectItemCostFromStock_Backfill')
     INSERT INTO dbo.__SchemaPatches (PatchName) VALUES (N'016_ProjectItemCostFromStock_Backfill')
+
+IF NOT EXISTS (SELECT 1 FROM dbo.__SchemaPatches WHERE PatchName = N'018_WarehouseLotUnitSellPrice')
+    INSERT INTO dbo.__SchemaPatches (PatchName) VALUES (N'018_WarehouseLotUnitSellPrice')
+
+IF NOT EXISTS (SELECT 1 FROM dbo.__SchemaPatches WHERE PatchName = N'019_UnitSellPriceNotBelowUnitCost')
+    INSERT INTO dbo.__SchemaPatches (PatchName) VALUES (N'019_UnitSellPriceNotBelowUnitCost')
 
 PRINT N'FreshInstall completed. Connect the app and set Auth:SeedAdmins passwords.'

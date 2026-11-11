@@ -617,8 +617,9 @@ public class ProjectMaterialsService
     }
 
     /// <summary>
-    /// Persists project material cost from loaded allocations + lots.
+    /// Persists project material cost and sell totals from loaded allocations + lots.
     /// Call after allocations are replaced/updated and lots are available.
+    /// SellFromStock is null when any allocated lot lacks UnitSellPrice.
     /// </summary>
     private static void ApplyCostFromStock(ProjectItem item)
     {
@@ -626,24 +627,34 @@ public class ProjectMaterialsService
         if (allocations is null || allocations.Count == 0)
         {
             item.CostFromStock = null;
+            item.SellFromStock = null;
             return;
         }
 
-        decimal? total = 0;
+        decimal costTotal = 0;
+        decimal sellTotal = 0;
+        var any = false;
+        var allHaveSell = true;
         foreach (var a in allocations)
         {
             if (a.Quantity <= 0)
                 continue;
             if (a.WarehouseStockLot is null)
             {
-                // Incomplete graph — leave existing snapshot untouched.
+                // Incomplete graph — leave existing snapshots untouched.
                 return;
             }
 
-            total += a.Quantity * a.WarehouseStockLot.UnitCost;
+            any = true;
+            costTotal += a.Quantity * a.WarehouseStockLot.UnitCost;
+            if (a.WarehouseStockLot.UnitSellPrice is null)
+                allHaveSell = false;
+            else
+                sellTotal += a.Quantity * a.WarehouseStockLot.UnitSellPrice.Value;
         }
 
-        item.CostFromStock = total == 0 ? null : total;
+        item.CostFromStock = any && costTotal != 0 ? costTotal : null;
+        item.SellFromStock = any && allHaveSell ? sellTotal : null;
     }
 
     private static void ConsumeAllocations(ProjectItem item)
@@ -785,6 +796,7 @@ public class ProjectMaterialsService
                 return new ProjectItemLotAllocationDto(
                     lot.Id,
                     lot.UnitCost,
+                    lot.UnitSellPrice,
                     a.Quantity,
                     lot.ReceivedAt,
                     freeIncludingThis);
@@ -794,6 +806,12 @@ public class ProjectMaterialsService
         decimal? costFromStock = allocationDtos.Count > 0
             ? allocationDtos.Sum(a => a.Quantity * a.UnitCost)
             : entity.CostFromStock;
+
+        decimal? sellFromStock = allocationDtos.Count > 0
+            ? (allocationDtos.All(a => a.UnitSellPrice is not null)
+                ? allocationDtos.Sum(a => a.Quantity * a.UnitSellPrice!.Value)
+                : null)
+            : entity.SellFromStock;
 
         // NeedsPurchase = must buy (needed exceeds free stock), not merely unallocated.
         var needsPurchase = entity.QuantityNeeded > available;
@@ -812,7 +830,8 @@ public class ProjectMaterialsService
             available,
             IsNonCatalog: false,
             allocationDtos,
-            costFromStock);
+            costFromStock,
+            sellFromStock);
     }
 
     /// <summary>
@@ -843,6 +862,7 @@ public class ProjectMaterialsService
                 return new ProjectItemLotAllocationDto(
                     lot.Id,
                     lot.UnitCost,
+                    lot.UnitSellPrice,
                     a.Quantity,
                     lot.ReceivedAt,
                     free);
@@ -854,6 +874,12 @@ public class ProjectMaterialsService
         decimal? costFromStock = allocationDtos.Count > 0
             ? allocationDtos.Sum(a => a.Quantity * a.UnitCost)
             : entity.CostFromStock;
+
+        decimal? sellFromStock = allocationDtos.Count > 0
+            ? (allocationDtos.All(a => a.UnitSellPrice is not null)
+                ? allocationDtos.Sum(a => a.Quantity * a.UnitSellPrice!.Value)
+                : null)
+            : entity.SellFromStock;
 
         var needsPurchase = entity.QuantityNeeded > quantityAvailable;
 
@@ -871,7 +897,8 @@ public class ProjectMaterialsService
             quantityAvailable,
             IsNonCatalog: false,
             allocationDtos,
-            costFromStock);
+            costFromStock,
+            sellFromStock);
     }
 
     internal static ProjectItemDto MapNonCatalog(ProjectItem entity) =>
@@ -889,5 +916,6 @@ public class ProjectMaterialsService
             QuantityAvailable: 0,
             IsNonCatalog: true,
             Allocations: Array.Empty<ProjectItemLotAllocationDto>(),
-            CostFromStock: null);
+            CostFromStock: null,
+            SellFromStock: null);
 }

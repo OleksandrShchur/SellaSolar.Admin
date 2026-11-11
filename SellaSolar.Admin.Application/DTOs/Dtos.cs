@@ -32,6 +32,7 @@ public record AssignedProjectListItemDto(
 public record ProjectItemLotAllocationDto(
     int LotId,
     decimal UnitCost,
+    decimal? UnitSellPrice,
     decimal Quantity,
     DateTime ReceivedAt,
     /// <summary>Free qty on lot for new/changed allocations (includes this item's current allocation on the lot).</summary>
@@ -53,7 +54,9 @@ public record ProjectItemDto(
     bool IsNonCatalog,
     IReadOnlyList<ProjectItemLotAllocationDto> Allocations,
     /// <summary>Sum of quantity × unitCost over allocations. Null when no allocations.</summary>
-    decimal? CostFromStock);
+    decimal? CostFromStock,
+    /// <summary>Sum of quantity × unitSellPrice when all allocated lots have sell price. Null otherwise.</summary>
+    decimal? SellFromStock);
 
 public record ProjectWorkerDto(
     int Id,
@@ -175,6 +178,7 @@ public record WarehouseLotProjectUsageDto(
 public record WarehouseStockLotDto(
     int LotId,
     decimal UnitCost,
+    decimal? UnitSellPrice,
     decimal QuantityOnHand,
     decimal QuantityReserved,
     decimal QuantityFree,
@@ -214,6 +218,8 @@ public record CreateWarehouseItemRequest(
     decimal QuantityInStock,
     /// <summary>Optional initial lot unit cost when QuantityInStock &gt; 0. Also stored as last purchase price.</summary>
     decimal? Price,
+    /// <summary>Required when QuantityInStock &gt; 0. Initial lot customer sell price.</summary>
+    decimal? UnitSellPrice,
     string? Supplier,
     string? Notes,
     decimal? LowStockThreshold);
@@ -229,11 +235,14 @@ public record UpdateWarehouseItemRequest(
 public record ReceiveWarehouseStockRequest(
     decimal Quantity,
     decimal UnitCost,
+    decimal UnitSellPrice,
     string? Supplier,
     string? Notes,
     DateTime? ReceivedAt,
     int? AllocateToProjectItemId,
     decimal? AllocateQuantity);
+
+public record UpdateWarehouseStockLotRequest(decimal UnitSellPrice);
 
 public record NonCatalogPurchaseRequestDto(
     int ProjectItemId,

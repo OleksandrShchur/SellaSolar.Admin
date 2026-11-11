@@ -14,9 +14,6 @@ import {
   IconButton,
   InputLabel,
   Link,
-  List,
-  ListItem,
-  ListItemText,
   MenuItem,
   Select,
   Snackbar,
@@ -275,12 +272,19 @@ export default function ProjectDetailPage() {
     return project.items.reduce((sum, item) => sum + (item.costFromStock ?? 0), 0)
   }, [project])
 
+  const materialsSellTotal = useMemo(() => {
+    if (!project) return 0
+    return project.items.reduce((sum, item) => sum + (item.sellFromStock ?? 0), 0)
+  }, [project])
+
+  const materialsMarginTotal = materialsSellTotal - materialsCostTotal
+
   const manualExpensesTotal = useMemo(() => {
     if (!project) return 0
     return (project.expenses ?? []).reduce((sum, e) => sum + e.amount, 0)
   }, [project])
 
-  const expensesGrandTotal = materialsCostTotal + manualExpensesTotal
+  const expensesGrandTotal = materialsSellTotal + manualExpensesTotal
 
   const stockExpenseItems = useMemo(() => {
     if (!project) return []
@@ -447,9 +451,11 @@ export default function ProjectDetailPage() {
   const formatCostBreakdown = (item: ProjectItem) => {
     const allocs = item.allocations ?? []
     if (allocs.length === 0) return null
-    const parts = allocs.map(
-      (a) => `${formatNumber(a.quantity)}×${formatNumber(a.unitCost)}`,
-    )
+    const parts = allocs.map((a) => {
+      const sell =
+        a.unitSellPrice != null ? `/${formatNumber(a.unitSellPrice)}` : '/—'
+      return `${formatNumber(a.quantity)}×${formatNumber(a.unitCost)}${sell}`
+    })
     return parts.join(' + ')
   }
 
@@ -1048,6 +1054,13 @@ export default function ProjectDetailPage() {
                               <>
                                 {' '}
                                 · {inventoryLabels.costFromStock}: {formatNumber(item.costFromStock)}
+                                {item.sellFromStock != null && (
+                                  <>
+                                    {' · '}
+                                    {inventoryLabels.sellFromStock}:{' '}
+                                    {formatNumber(item.sellFromStock)}
+                                  </>
+                                )}
                                 {formatCostBreakdown(item) && (
                                   <Typography component="span" color="text.secondary">
                                     {' '}
@@ -1089,6 +1102,13 @@ export default function ProjectDetailPage() {
                               <>
                                 {' '}
                                 · {inventoryLabels.costFromStock}: {formatNumber(item.costFromStock)}
+                                {item.sellFromStock != null && (
+                                  <>
+                                    {' · '}
+                                    {inventoryLabels.sellFromStock}:{' '}
+                                    {formatNumber(item.sellFromStock)}
+                                  </>
+                                )}
                                 {formatCostBreakdown(item) && (
                                   <Typography component="span" color="text.secondary">
                                     {' '}
@@ -1138,10 +1158,18 @@ export default function ProjectDetailPage() {
           {canManageProject && (
             <TabPanel value={tab} index={2}>
               <Stack spacing={2.5}>
-                <DetailFieldGrid columns={{ xs: 1, sm: 3 }}>
-                  <DetailField label="Матеріали зі складу" value={formatMoney(materialsCostTotal)} />
+                <DetailFieldGrid columns={{ xs: 1, sm: 2, md: 5 }}>
+                  <DetailField
+                    label={inventoryLabels.costFromStock}
+                    value={formatMoney(materialsCostTotal)}
+                  />
+                  <DetailField
+                    label={inventoryLabels.sellFromStock}
+                    value={formatMoney(materialsSellTotal)}
+                  />
+                  <DetailField label={inventoryLabels.margin} value={formatMoney(materialsMarginTotal)} />
                   <DetailField label="Інші витрати" value={formatMoney(manualExpensesTotal)} />
-                  <DetailField label="Разом" value={formatMoney(expensesGrandTotal)} />
+                  <DetailField label="Разом (накладна)" value={formatMoney(expensesGrandTotal)} />
                 </DetailFieldGrid>
 
                 <DetailSection title="Матеріали зі складу">
@@ -1169,8 +1197,18 @@ export default function ProjectDetailPage() {
                               {inventoryLabels.fromStock}: {formatNumber(item.quantityFromStock)}
                               {formatCostBreakdown(item) && <> · {formatCostBreakdown(item)}</>}
                             </Typography>
+                            <Typography variant="body2" mt={0.5} color="text.secondary">
+                              {inventoryLabels.costFromStock}: {formatMoney(item.costFromStock)}
+                              {' · '}
+                              {inventoryLabels.sellFromStock}: {formatMoney(item.sellFromStock)}
+                              {' · '}
+                              {inventoryLabels.margin}:{' '}
+                              {formatMoney(
+                                (item.sellFromStock ?? 0) - (item.costFromStock ?? 0),
+                              )}
+                            </Typography>
                           </Box>
-                          <Typography fontWeight={800}>{formatMoney(item.costFromStock)}</Typography>
+                          <Typography fontWeight={800}>{formatMoney(item.sellFromStock)}</Typography>
                           <Chip size="small" variant="outlined" label="Склад" />
                         </Stack>
                       </Box>
@@ -1720,6 +1758,9 @@ export default function ProjectDetailPage() {
                       <Typography fontWeight={600}>
                         {formatDateTime(lot.receivedAt)} · {inventoryLabels.unitCost}:{' '}
                         {formatNumber(lot.unitCost)}
+                        {' · '}
+                        {inventoryLabels.unitSellPrice}:{' '}
+                        {lot.unitSellPrice != null ? formatNumber(lot.unitSellPrice) : '—'}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
                         {inventoryLabels.onHand}: {formatNumber(lot.quantityOnHand)} ·{' '}
@@ -1983,27 +2024,38 @@ export default function ProjectDetailPage() {
         open={reportBlockedOpen}
         onClose={() => setReportBlockedOpen(false)}
         fullWidth
-        maxWidth="sm"
+        maxWidth="xs"
       >
         <DialogTitle>{inventoryLabels.generateReportBlockedTitle}</DialogTitle>
         <DialogContent>
-          <Typography variant="body2" color="text.secondary">
-            {reportBlockedMessage ?? inventoryLabels.generateReportBlockedHint}
-          </Typography>
-          {reportBlockedItems.length > 0 && (
-            <Box mt={2}>
-              <Typography variant="subtitle2" fontWeight={700} gutterBottom>
-                {inventoryLabels.generateReportBlockedItems}
-              </Typography>
-              <List dense disablePadding>
-                {reportBlockedItems.map((name) => (
-                  <ListItem key={name} disableGutters sx={{ py: 0.25 }}>
-                    <ListItemText primary={`• ${name}`} primaryTypographyProps={{ variant: 'body2' }} />
-                  </ListItem>
-                ))}
-              </List>
-            </Box>
-          )}
+          <Stack spacing={2}>
+            <Typography variant="body2" color="text.secondary">
+              {reportBlockedMessage ?? inventoryLabels.generateReportBlockedHint}
+            </Typography>
+            {reportBlockedItems.length > 0 && (
+              <Box>
+                <Typography variant="subtitle2" fontWeight={700} mb={1}>
+                  {inventoryLabels.generateReportBlockedItems}
+                </Typography>
+                <Box
+                  component="ul"
+                  sx={{
+                    m: 0,
+                    pl: 2.5,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 0.75,
+                  }}
+                >
+                  {reportBlockedItems.map((name) => (
+                    <Typography key={name} component="li" variant="body2">
+                      {name}
+                    </Typography>
+                  ))}
+                </Box>
+              </Box>
+            )}
+          </Stack>
         </DialogContent>
         <DialogActions>
           <Button variant="contained" color="primary" onClick={() => setReportBlockedOpen(false)}>

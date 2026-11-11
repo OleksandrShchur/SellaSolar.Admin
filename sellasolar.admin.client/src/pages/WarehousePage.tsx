@@ -60,6 +60,7 @@ const emptyForm = {
   unit: 'шт',
   quantityInStock: '0',
   unitCost: '',
+  unitSellPrice: '',
   supplier: '',
   notes: '',
   lowStockThreshold: '',
@@ -193,15 +194,29 @@ export default function WarehousePage() {
   const save = async () => {
     setSaving(true)
     setError(null)
+    const qty = Number(form.quantityInStock)
     const body = {
       name: form.name,
       category: form.category,
       unit: form.unit,
-      quantityInStock: Number(form.quantityInStock),
+      quantityInStock: qty,
       price: form.unitCost === '' ? null : Number(form.unitCost),
+      unitSellPrice: form.unitSellPrice === '' ? null : Number(form.unitSellPrice),
       supplier: form.supplier || null,
       notes: form.notes || null,
       lowStockThreshold: form.lowStockThreshold === '' ? null : Number(form.lowStockThreshold),
+    }
+    if (qty > 0 && form.unitSellPrice === '') {
+      setError('Вкажіть ціну продажу для початкової партії')
+      setSaving(false)
+      return
+    }
+    const buy = form.unitCost === '' ? 0 : Number(form.unitCost)
+    const sell = form.unitSellPrice === '' ? null : Number(form.unitSellPrice)
+    if (sell != null && Number.isFinite(sell) && Number.isFinite(buy) && sell < buy) {
+      setError(inventoryLabels.sellPriceBelowCost)
+      setSaving(false)
+      return
     }
     try {
       await warehouseApi.create(body)
@@ -681,6 +696,30 @@ export default function WarehousePage() {
               helperText="Для початкової партії (необов’язково)"
             />
             <TextField
+              label={inventoryLabels.unitSellPrice}
+              type="number"
+              fullWidth
+              required={Number(form.quantityInStock) > 0}
+              value={form.unitSellPrice}
+              onChange={(e) => setForm({ ...form, unitSellPrice: e.target.value })}
+              inputProps={{
+                min: form.unitCost === '' ? 0 : Number(form.unitCost),
+                step: 'any',
+              }}
+              error={
+                form.unitSellPrice !== '' &&
+                form.unitCost !== '' &&
+                Number(form.unitSellPrice) < Number(form.unitCost)
+              }
+              helperText={
+                form.unitSellPrice !== '' &&
+                form.unitCost !== '' &&
+                Number(form.unitSellPrice) < Number(form.unitCost)
+                  ? inventoryLabels.sellPriceBelowCost
+                  : 'Обов’язково, якщо кількість > 0'
+              }
+            />
+            <TextField
               label="Постачальник"
               fullWidth
               value={form.supplier}
@@ -707,7 +746,17 @@ export default function WarehousePage() {
           <Button variant="text" onClick={() => setOpen(false)}>
             Скасувати
           </Button>
-          <Button variant="contained" color="primary" onClick={() => void save()} disabled={saving}>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => void save()}
+            disabled={
+              saving ||
+              (form.unitSellPrice !== '' &&
+                form.unitCost !== '' &&
+                Number(form.unitSellPrice) < Number(form.unitCost))
+            }
+          >
             Зберегти
           </Button>
         </DialogActions>
