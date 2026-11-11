@@ -22,9 +22,7 @@ export const brandColors = {
   border: 'rgba(21, 18, 14, 0.12)',
   borderStrong: 'rgba(21, 18, 14, 0.22)',
   selection: 'rgba(240, 166, 31, 0.28)',
-  glow: 'rgba(240, 166, 31, 0.48)',
   softShadow: 'rgba(21, 18, 14, 0.16)',
-  ctaGradient: 'linear-gradient(135deg, #F6C85A 0%, #F0A61F 48%, #E07B3A 100%)',
 } as const
 
 const theme = createTheme({
@@ -92,8 +90,6 @@ const theme = createTheme({
     },
   },
   shape: {
-    // Landing uses rounded-full CTAs and rounded-3xl cards (~24px);
-    // 12px keeps admin tables/forms readable while staying soft.
     borderRadius: 12,
   },
   shadows: [
@@ -106,22 +102,22 @@ const theme = createTheme({
     `0 14px 44px -18px ${brandColors.softShadow}`,
     `0 14px 44px -18px ${brandColors.softShadow}`,
     `0 14px 44px -18px ${brandColors.softShadow}`,
-    `0 0 36px ${brandColors.glow}`,
-    `0 0 36px ${brandColors.glow}`,
-    `0 0 36px ${brandColors.glow}`,
-    `0 0 36px ${brandColors.glow}`,
-    `0 0 36px ${brandColors.glow}`,
-    `0 0 36px ${brandColors.glow}`,
-    `0 0 36px ${brandColors.glow}`,
-    `0 0 36px ${brandColors.glow}`,
-    `0 0 36px ${brandColors.glow}`,
-    `0 0 36px ${brandColors.glow}`,
-    `0 0 36px ${brandColors.glow}`,
-    `0 0 36px ${brandColors.glow}`,
-    `0 0 36px ${brandColors.glow}`,
-    `0 0 36px ${brandColors.glow}`,
-    `0 0 36px ${brandColors.glow}`,
-    `0 0 44px rgba(240, 166, 31, 0.62)`,
+    `0 14px 44px -18px ${brandColors.softShadow}`,
+    `0 14px 44px -18px ${brandColors.softShadow}`,
+    `0 14px 44px -18px ${brandColors.softShadow}`,
+    `0 14px 44px -18px ${brandColors.softShadow}`,
+    `0 14px 44px -18px ${brandColors.softShadow}`,
+    `0 14px 44px -18px ${brandColors.softShadow}`,
+    `0 14px 44px -18px ${brandColors.softShadow}`,
+    `0 14px 44px -18px ${brandColors.softShadow}`,
+    `0 14px 44px -18px ${brandColors.softShadow}`,
+    `0 14px 44px -18px ${brandColors.softShadow}`,
+    `0 14px 44px -18px ${brandColors.softShadow}`,
+    `0 14px 44px -18px ${brandColors.softShadow}`,
+    `0 14px 44px -18px ${brandColors.softShadow}`,
+    `0 14px 44px -18px ${brandColors.softShadow}`,
+    `0 14px 44px -18px ${brandColors.softShadow}`,
+    `0 14px 44px -18px ${brandColors.softShadow}`,
   ],
   transitions: {
     duration: {
@@ -206,17 +202,14 @@ const theme = createTheme({
       },
     },
     MuiButton: {
-      defaultProps: { variant: 'contained', disableElevation: false },
+      defaultProps: { variant: 'contained', disableElevation: true },
       styleOverrides: {
         root: {
-          borderRadius: 999,
+          borderRadius: 8,
           fontWeight: 600,
           letterSpacing: '0.01em',
           transition:
-            'background-color 200ms ease-in-out, border-color 200ms ease-in-out, box-shadow 200ms ease-in-out, transform 150ms ease-in-out, filter 200ms ease-in-out, color 200ms ease-in-out',
-          '&:active': {
-            transform: 'scale(0.98)',
-          },
+            'background-color 200ms ease-in-out, border-color 200ms ease-in-out, box-shadow 200ms ease-in-out, color 200ms ease-in-out',
         },
         sizeMedium: {
           minHeight: 40,
@@ -227,51 +220,40 @@ const theme = createTheme({
           paddingInline: 22,
         },
         containedPrimary: {
-          background: brandColors.ctaGradient,
+          backgroundColor: brandColors.primary,
           color: brandColors.slateInk,
-          boxShadow: `0 8px 24px rgba(240, 166, 31, 0.38)`,
           '&:hover': {
-            background: brandColors.ctaGradient,
-            filter: 'brightness(1.06)',
-            boxShadow: `0 10px 28px rgba(240, 166, 31, 0.48)`,
+            backgroundColor: brandColors.primaryDark,
           },
         },
         containedSuccess: {
           backgroundColor: '#3D6B4F',
           color: '#FFFFFF',
-          boxShadow: '0 6px 18px rgba(61, 107, 79, 0.28)',
           '&:hover': {
             backgroundColor: '#335A43',
-            boxShadow: '0 8px 22px rgba(61, 107, 79, 0.36)',
           },
         },
         containedError: {
           backgroundColor: '#B42318',
           color: '#FFFFFF',
-          boxShadow: '0 6px 18px rgba(180, 35, 24, 0.28)',
           '&:hover': {
             backgroundColor: '#912018',
-            boxShadow: '0 8px 22px rgba(180, 35, 24, 0.36)',
           },
         },
         containedWarning: {
           backgroundColor: brandColors.secondary,
           color: '#FFFFFF',
-          boxShadow: `0 6px 18px ${alpha(brandColors.secondary, 0.32)}`,
           '&:hover': {
             backgroundColor: brandColors.secondaryDark,
-            boxShadow: `0 8px 22px ${alpha(brandColors.secondary, 0.4)}`,
           },
         },
         // Soft filled outlines — readable on cream surfaces (avoids pale yellow-on-beige)
         outlined: {
           borderWidth: 1.5,
           backgroundColor: brandColors.morningBg,
-          boxShadow: `0 1px 2px ${alpha(brandColors.slateInk, 0.04)}`,
           '&:hover': {
             borderWidth: 1.5,
             backgroundColor: brandColors.morningBg,
-            boxShadow: `0 4px 12px ${alpha(brandColors.slateInk, 0.1)}`,
           },
         },
         outlinedPrimary: {
@@ -356,12 +338,6 @@ const theme = createTheme({
         root: {
           borderRadius: 16,
           border: `1px solid ${brandColors.border}`,
-          transition:
-            'box-shadow 200ms ease-in-out, transform 200ms ease-in-out, border-color 200ms ease-in-out',
-          '&:hover': {
-            boxShadow: `0 14px 44px -18px ${brandColors.softShadow}`,
-            borderColor: brandColors.borderStrong,
-          },
         },
       },
     },
@@ -550,10 +526,21 @@ const theme = createTheme({
     },
     MuiBottomNavigation: {
       styleOverrides: {
-        // Glass pill styles live on the mobile dock in AppLayout;
-        // keep theme root transparent so overrides do not fight blur.
         root: {
           backgroundColor: 'transparent',
+        },
+      },
+    },
+    MuiFab: {
+      styleOverrides: {
+        primary: {
+          backgroundColor: brandColors.primary,
+          color: brandColors.slateInk,
+          boxShadow: `0 2px 8px -2px ${brandColors.softShadow}`,
+          '&:hover': {
+            backgroundColor: brandColors.primaryDark,
+            boxShadow: `0 6px 20px -10px ${brandColors.softShadow}`,
+          },
         },
       },
     },
