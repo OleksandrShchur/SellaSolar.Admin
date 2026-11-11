@@ -158,6 +158,10 @@ export default function WarehouseDetailPage() {
       setError('Вкажіть коректну ціну продажу')
       return
     }
+    if (unitSellPrice < unitCost) {
+      setError(inventoryLabels.sellPriceBelowCost)
+      return
+    }
     setSaving(true)
     setError(null)
     try {
@@ -182,6 +186,10 @@ export default function WarehouseDetailPage() {
     const unitSellPrice = Number(lotSellPrice)
     if (!Number.isFinite(unitSellPrice) || unitSellPrice < 0) {
       setError('Вкажіть коректну ціну продажу')
+      return
+    }
+    if (unitSellPrice < lotEditSell.unitCost) {
+      setError(inventoryLabels.sellPriceBelowCost)
       return
     }
     setSaving(true)
@@ -528,7 +536,22 @@ export default function WarehouseDetailPage() {
               fullWidth
               value={receiveForm.unitSellPrice}
               onChange={(e) => setReceiveForm({ ...receiveForm, unitSellPrice: e.target.value })}
-              inputProps={{ min: 0, step: 'any' }}
+              inputProps={{
+                min: receiveForm.unitCost === '' ? 0 : Number(receiveForm.unitCost),
+                step: 'any',
+              }}
+              error={
+                receiveForm.unitSellPrice !== '' &&
+                receiveForm.unitCost !== '' &&
+                Number(receiveForm.unitSellPrice) < Number(receiveForm.unitCost)
+              }
+              helperText={
+                receiveForm.unitSellPrice !== '' &&
+                receiveForm.unitCost !== '' &&
+                Number(receiveForm.unitSellPrice) < Number(receiveForm.unitCost)
+                  ? inventoryLabels.sellPriceBelowCost
+                  : undefined
+              }
             />
             <TextField
               label="Постачальник"
@@ -558,7 +581,8 @@ export default function WarehouseDetailPage() {
               saving ||
               !receiveForm.quantity ||
               receiveForm.unitCost === '' ||
-              receiveForm.unitSellPrice === ''
+              receiveForm.unitSellPrice === '' ||
+              Number(receiveForm.unitSellPrice) < Number(receiveForm.unitCost)
             }
           >
             {inventoryLabels.receive}
@@ -582,11 +606,21 @@ export default function WarehouseDetailPage() {
               fullWidth
               value={lotSellPrice}
               onChange={(e) => setLotSellPrice(e.target.value)}
-              inputProps={{ min: 0, step: 'any' }}
+              inputProps={{
+                min: lotEditSell?.unitCost ?? 0,
+                step: 'any',
+              }}
+              error={
+                lotEditSell != null &&
+                lotSellPrice !== '' &&
+                Number(lotSellPrice) < lotEditSell.unitCost
+              }
               helperText={
-                lotEditSell
-                  ? `${inventoryLabels.unitCost}: ${formatNumber(lotEditSell.unitCost)}`
-                  : undefined
+                lotEditSell == null
+                  ? undefined
+                  : lotSellPrice !== '' && Number(lotSellPrice) < lotEditSell.unitCost
+                    ? inventoryLabels.sellPriceBelowCost
+                    : `${inventoryLabels.unitCost}: ${formatNumber(lotEditSell.unitCost)}`
               }
             />
           </Stack>
@@ -599,7 +633,11 @@ export default function WarehouseDetailPage() {
             variant="contained"
             color="primary"
             onClick={() => void saveLotSellPrice()}
-            disabled={saving || lotSellPrice === ''}
+            disabled={
+              saving ||
+              lotSellPrice === '' ||
+              (lotEditSell != null && Number(lotSellPrice) < lotEditSell.unitCost)
+            }
           >
             Зберегти
           </Button>

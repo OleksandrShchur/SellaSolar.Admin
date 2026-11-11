@@ -208,6 +208,7 @@ export const inventoryLabels = {
   receiveStock: 'Додати на склад',
   unitCost: 'Закупівельна ціна',
   unitSellPrice: 'Ціна продажу',
+  sellPriceBelowCost: 'Ціна продажу не може бути нижчою за закупівельну.',
   freeOnLot: 'Вільно в партії',
   allocateLots: 'Розподілити партії',
   costFromStock: 'Собівартість зі складу',

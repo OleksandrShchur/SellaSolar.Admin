@@ -262,6 +262,7 @@ BEGIN
             FOREIGN KEY (WarehouseItemId) REFERENCES dbo.WarehouseItems (Id),
         CONSTRAINT CK_WarehouseStockLots_UnitCost CHECK (UnitCost >= 0),
         CONSTRAINT CK_WarehouseStockLots_UnitSellPrice CHECK (UnitSellPrice IS NULL OR UnitSellPrice >= 0),
+        CONSTRAINT CK_WarehouseStockLots_UnitSellPrice_GteUnitCost CHECK (UnitSellPrice IS NULL OR UnitSellPrice >= UnitCost),
         CONSTRAINT CK_WarehouseStockLots_QuantityOnHand CHECK (QuantityOnHand >= 0),
         CONSTRAINT CK_WarehouseStockLots_QuantityReceived CHECK (QuantityReceived > 0)
     )
@@ -363,5 +364,8 @@ IF NOT EXISTS (SELECT 1 FROM dbo.__SchemaPatches WHERE PatchName = N'016_Project
 
 IF NOT EXISTS (SELECT 1 FROM dbo.__SchemaPatches WHERE PatchName = N'018_WarehouseLotUnitSellPrice')
     INSERT INTO dbo.__SchemaPatches (PatchName) VALUES (N'018_WarehouseLotUnitSellPrice')
+
+IF NOT EXISTS (SELECT 1 FROM dbo.__SchemaPatches WHERE PatchName = N'019_UnitSellPriceNotBelowUnitCost')
+    INSERT INTO dbo.__SchemaPatches (PatchName) VALUES (N'019_UnitSellPriceNotBelowUnitCost')
 
 PRINT N'FreshInstall completed. Connect the app and set Auth:SeedAdmins passwords.'

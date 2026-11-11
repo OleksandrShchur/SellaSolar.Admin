@@ -201,6 +201,8 @@ public class WarehouseService
             throw new ValidationException("Ціна продажу не може бути від’ємною.");
         if (request.QuantityInStock > 0 && request.UnitSellPrice is null)
             throw new ValidationException("Ціна продажу обов’язкова при додаванні на склад.");
+        if (request.UnitSellPrice is not null && request.UnitSellPrice < (request.Price ?? 0m))
+            throw new ValidationException("Ціна продажу не може бути нижчою за закупівельну.");
 
         var supplier = string.IsNullOrWhiteSpace(request.Supplier) ? null : request.Supplier.Trim();
         var entity = new WarehouseItem
@@ -270,6 +272,8 @@ public class WarehouseService
             throw new ValidationException("Закупівельна ціна не може бути від’ємною.");
         if (request.UnitSellPrice < 0)
             throw new ValidationException("Ціна продажу не може бути від’ємною.");
+        if (request.UnitSellPrice < request.UnitCost)
+            throw new ValidationException("Ціна продажу не може бути нижчою за закупівельну.");
 
         var hasAllocateId = request.AllocateToProjectItemId is > 0;
         var hasAllocateQty = request.AllocateQuantity is > 0;
@@ -348,6 +352,9 @@ public class WarehouseService
         var lot = await _db.WarehouseStockLots
             .FirstOrDefaultAsync(l => l.Id == lotId && l.WarehouseItemId == warehouseItemId, ct)
             ?? throw new NotFoundException($"Lot {lotId} was not found.");
+
+        if (request.UnitSellPrice < lot.UnitCost)
+            throw new ValidationException("Ціна продажу не може бути нижчою за закупівельну.");
 
         lot.UnitSellPrice = request.UnitSellPrice;
 

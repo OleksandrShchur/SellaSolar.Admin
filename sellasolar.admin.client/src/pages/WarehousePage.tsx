@@ -211,6 +211,13 @@ export default function WarehousePage() {
       setSaving(false)
       return
     }
+    const buy = form.unitCost === '' ? 0 : Number(form.unitCost)
+    const sell = form.unitSellPrice === '' ? null : Number(form.unitSellPrice)
+    if (sell != null && Number.isFinite(sell) && Number.isFinite(buy) && sell < buy) {
+      setError(inventoryLabels.sellPriceBelowCost)
+      setSaving(false)
+      return
+    }
     try {
       await warehouseApi.create(body)
       setOpen(false)
@@ -695,7 +702,22 @@ export default function WarehousePage() {
               required={Number(form.quantityInStock) > 0}
               value={form.unitSellPrice}
               onChange={(e) => setForm({ ...form, unitSellPrice: e.target.value })}
-              helperText="Обов’язково, якщо кількість > 0"
+              inputProps={{
+                min: form.unitCost === '' ? 0 : Number(form.unitCost),
+                step: 'any',
+              }}
+              error={
+                form.unitSellPrice !== '' &&
+                form.unitCost !== '' &&
+                Number(form.unitSellPrice) < Number(form.unitCost)
+              }
+              helperText={
+                form.unitSellPrice !== '' &&
+                form.unitCost !== '' &&
+                Number(form.unitSellPrice) < Number(form.unitCost)
+                  ? inventoryLabels.sellPriceBelowCost
+                  : 'Обов’язково, якщо кількість > 0'
+              }
             />
             <TextField
               label="Постачальник"
@@ -724,7 +746,17 @@ export default function WarehousePage() {
           <Button variant="text" onClick={() => setOpen(false)}>
             Скасувати
           </Button>
-          <Button variant="contained" color="primary" onClick={() => void save()} disabled={saving}>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => void save()}
+            disabled={
+              saving ||
+              (form.unitSellPrice !== '' &&
+                form.unitCost !== '' &&
+                Number(form.unitSellPrice) < Number(form.unitCost))
+            }
+          >
             Зберегти
           </Button>
         </DialogActions>
