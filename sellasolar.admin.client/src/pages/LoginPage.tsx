@@ -18,6 +18,7 @@ import { useAuth } from '../auth/AuthContext'
 import { resolvePostLoginPath } from '../auth/routeAccess'
 import { brandColors } from '../theme'
 import { ensureCsrfToken } from '../api/client'
+import { digitsOnly, formatPhoneInput } from '../utils/labels'
 
 export default function LoginPage() {
   const { user, login } = useAuth()
@@ -46,7 +47,7 @@ export default function LoginPage() {
     setLoading(true)
     setError(null)
     try {
-      const currentUser = await login(phone.trim(), password)
+      const currentUser = await login(digitsOnly(phone), password)
       navigate(resolvePostLoginPath(requestedFrom, currentUser.roles), { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Не вдалося увійти')
@@ -84,7 +85,7 @@ export default function LoginPage() {
                 sx={{ height: 72, width: 'auto', display: 'block' }}
               />
               <Typography variant="h5" fontWeight={800} sx={{ fontFamily: '"Sora", system-ui, sans-serif' }}>
-                SellaSolar Admin
+                Sella Solar
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 Увійдіть за номером телефону та паролем
@@ -100,11 +101,11 @@ export default function LoginPage() {
             <TextField
               label="Телефон"
               value={phone}
-              onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+              onChange={(e) => setPhone(formatPhoneInput(e.target.value))}
               autoComplete="tel"
               inputMode="numeric"
-              placeholder="0982441170"
-              helperText="Формат: 0XXXXXXXXX"
+              placeholder="098 244 11 70"
+              helperText="Формат: 0XX XXX XX XX"
               required
               fullWidth
               disabled={loading}

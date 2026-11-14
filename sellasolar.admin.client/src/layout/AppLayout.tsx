@@ -101,7 +101,7 @@ export default function AppLayout() {
       />
       {!desktopCollapsed && (
         <Typography variant="caption" color="text.secondary" noWrap>
-          Адмін-панель
+          Sella Solar
         </Typography>
       )}
     </Toolbar>
