@@ -24,3 +24,24 @@ body {
 a {
   color: #d4890a;
 }
+
+/*
+  liquid-glass-react's inner .glass is `inline-flex` (content-sized), which left-aligns
+  the pill inside a full-width fixed wrapper. Force a full-width dock for mobile nav.
+*/
+.mobile-liquid-nav.relative,
+.mobile-liquid-nav {
+  box-sizing: border-box;
+}
+
+.mobile-liquid-nav .glass {
+  display: flex !important;
+  width: 100%;
+  box-sizing: border-box;
+  gap: 0 !important;
+}
+
+.mobile-liquid-nav .glass > div {
+  width: 100%;
+  min-width: 0;
+}

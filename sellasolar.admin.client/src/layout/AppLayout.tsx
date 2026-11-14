@@ -1,9 +1,7 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link as RouterLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   AppBar,
-  BottomNavigation,
-  BottomNavigationAction,
   Box,
   Divider,
   Drawer,
@@ -29,37 +27,14 @@ import AssignmentIndIcon from '@mui/icons-material/AssignmentInd'
 import AccountCircleIcon from '@mui/icons-material/AccountCircle'
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined'
 import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined'
-import { brandColors } from '../theme'
 import { useAuth } from '../auth/AuthContext'
 import ChangePasswordDialog from '../components/ChangePasswordDialog'
 import { formatPhone } from '../utils/labels'
-import { BOTTOM_NAV_HEIGHT, BOTTOM_NAV_OFFSET, bottomNavClearance } from './bottomNav'
+import { bottomNavClearance } from './bottomNav'
+import MobileBottomNav from './MobileBottomNav'
 
 const DRAWER_WIDTH = 260
 const DRAWER_WIDTH_COLLAPSED = 72
-/** Inner padding of the floating nav track (matches `p: 0.5` ≈ 4px). */
-const MOBILE_NAV_PAD = 4
-const LIQUID_PILL_MS = 350
-const LIQUID_PILL_EASE = 'cubic-bezier(0.32, 0.72, 0, 1)'
-
-function measureNavTab(trackWidth: number, tabCount: number, index: number) {
-  const inner = Math.max(0, trackWidth - MOBILE_NAV_PAD * 2)
-  const width = tabCount > 0 ? inner / tabCount : 0
-  return { left: MOBILE_NAV_PAD + index * width, width }
-}
-
-/** Prefer real action bounds so the liquid pill matches each tab slot. */
-function measureNavTabFromDom(track: HTMLElement, index: number, tabCount: number) {
-  const action = track.querySelectorAll<HTMLElement>('.MuiBottomNavigationAction-root')[index]
-  if (!action) return measureNavTab(track.clientWidth, tabCount, index)
-
-  const trackRect = track.getBoundingClientRect()
-  const actionRect = action.getBoundingClientRect()
-  return {
-    left: actionRect.left - trackRect.left,
-    width: actionRect.width,
-  }
-}
 
 function sectionTitle(pathname: string): string {
   if (pathname.startsWith('/users')) return 'Співробітники'
@@ -108,68 +83,6 @@ export default function AppLayout() {
     }
     return location.pathname.startsWith(item.to)
   })
-
-  const mobileNavRef = useRef<HTMLDivElement>(null)
-  const prevNavIndexRef = useRef(-1)
-  const liquidAnimRef = useRef(0)
-  const activeIndexRef = useRef(activeIndex)
-  const tabCountRef = useRef(navItems.length)
-  activeIndexRef.current = activeIndex
-  tabCountRef.current = navItems.length
-  const [liquidPill, setLiquidPill] = useState({ left: MOBILE_NAV_PAD, width: 0, visible: false })
-  const [liquidTransition, setLiquidTransition] = useState('none')
-
-  useLayoutEffect(() => {
-    if (!isMobile || activeIndex < 0 || navItems.length === 0) {
-      prevNavIndexRef.current = -1
-      setLiquidPill((prev) => (prev.visible ? { ...prev, visible: false } : prev))
-      setLiquidTransition('none')
-      return
-    }
-
-    const track = mobileNavRef.current
-    if (!track) return
-
-    const target = measureNavTabFromDom(track, activeIndex, navItems.length)
-    const prevIndex = prevNavIndexRef.current
-    liquidAnimRef.current += 1
-
-    const shouldAnimate = prevIndex >= 0 && prevIndex !== activeIndex
-    setLiquidTransition(
-      shouldAnimate ? `left ${LIQUID_PILL_MS}ms ${LIQUID_PILL_EASE}, width ${LIQUID_PILL_MS}ms ${LIQUID_PILL_EASE}` : 'none',
-    )
-    setLiquidPill({ ...target, visible: true })
-    prevNavIndexRef.current = activeIndex
-  }, [activeIndex, isMobile, navItems.length])
-
-  // Realign only when the track width actually changes (rotate / breakpoint),
-  // not on every tab navigation — that would cancel the liquid morph.
-  useEffect(() => {
-    if (!isMobile) return
-    const track = mobileNavRef.current
-    if (!track) return
-
-    let lastWidth = track.clientWidth
-
-    const observer = new ResizeObserver(() => {
-      const width = track.clientWidth
-      if (Math.abs(width - lastWidth) < 1) return
-      lastWidth = width
-
-      const index = activeIndexRef.current
-      const count = tabCountRef.current
-      if (index < 0 || count === 0) return
-
-      liquidAnimRef.current += 1
-      const target = measureNavTabFromDom(track, index, count)
-      setLiquidTransition('none')
-      setLiquidPill({ ...target, visible: true })
-      prevNavIndexRef.current = index
-    })
-
-    observer.observe(track)
-    return () => observer.disconnect()
-  }, [isMobile])
 
   const brandBlock = (
     <Toolbar
@@ -446,92 +359,7 @@ export default function AppLayout() {
         <Outlet />
       </Box>
 
-      {/* Mobile: floating liquid-glass bottom nav pill */}
-      {isMobile && (
-        <Box
-          ref={mobileNavRef}
-          sx={{
-            position: 'fixed',
-            left: { xs: 16, sm: 20 },
-            right: { xs: 16, sm: 20 },
-            bottom: `calc(${BOTTOM_NAV_OFFSET}px + env(safe-area-inset-bottom, 0px))`,
-            height: BOTTOM_NAV_HEIGHT,
-            zIndex: (t) => t.zIndex.appBar,
-            borderRadius: 999,
-            p: 0.5,
-            border: '1px solid rgba(255, 255, 255, 0.55)',
-            backgroundColor: 'rgba(248, 242, 230, 0.72)',
-            backdropFilter: 'blur(24px) saturate(1.4)',
-            WebkitBackdropFilter: 'blur(24px) saturate(1.4)',
-            boxShadow: `0 8px 28px ${brandColors.softShadow}, inset 0 1px 0 rgba(255, 255, 255, 0.65)`,
-            overflow: 'hidden',
-          }}
-        >
-          {liquidPill.visible && (
-            <Box
-              aria-hidden
-              sx={{
-                position: 'absolute',
-                top: MOBILE_NAV_PAD,
-                bottom: MOBILE_NAV_PAD,
-                left: liquidPill.left,
-                width: liquidPill.width,
-                borderRadius: 999,
-                backgroundColor: 'rgba(240, 166, 31, 0.22)',
-                transition: liquidTransition,
-                pointerEvents: 'none',
-                zIndex: 0,
-                willChange: 'left, width',
-              }}
-            />
-          )}
-          <BottomNavigation
-            value={activeIndex === -1 ? false : activeIndex}
-            showLabels
-            sx={{
-              position: 'relative',
-              zIndex: 1,
-              width: '100%',
-              height: '100%',
-              // MUI defaults to center; with maxWidth:168 that clusters tabs mid-bar.
-              justifyContent: 'space-between',
-              backgroundColor: 'transparent',
-              '& .MuiBottomNavigationAction-root': {
-                minWidth: 0,
-                maxWidth: 'none',
-                flex: 1,
-                minHeight: '100%',
-                px: 0.5,
-                py: 0.75,
-                borderRadius: 999,
-                color: 'text.secondary',
-                alignItems: 'center',
-                justifyContent: 'center',
-                '&.Mui-selected': {
-                  color: 'primary.dark',
-                },
-              },
-              '& .MuiBottomNavigationAction-label': {
-                fontSize: '0.7rem',
-                fontWeight: 600,
-                '&.Mui-selected': {
-                  fontSize: '0.7rem',
-                },
-              },
-            }}
-          >
-            {navItems.map((item) => (
-              <BottomNavigationAction
-                key={item.to}
-                label={item.label}
-                icon={item.icon}
-                component={RouterLink}
-                to={item.to}
-              />
-            ))}
-          </BottomNavigation>
-        </Box>
-      )}
+      {isMobile && <MobileBottomNav navItems={navItems} activeIndex={activeIndex} />}
     </Box>
   )
 }

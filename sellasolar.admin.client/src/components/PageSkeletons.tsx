@@ -119,7 +119,7 @@ export function DetailPageSkeleton({
           variant="rounded"
           width={108}
           height={36}
-          sx={{ display: { xs: 'none', sm: 'block' }, flexShrink: 0, borderRadius: 999 }}
+          sx={{ display: { xs: 'none', sm: 'block' }, flexShrink: 0, borderRadius: 1 }}
         />
       </Stack>
 
