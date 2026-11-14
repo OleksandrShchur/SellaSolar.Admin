@@ -85,7 +85,7 @@ export default function LoginPage() {
                 sx={{ height: 72, width: 'auto', display: 'block' }}
               />
               <Typography variant="h5" fontWeight={800} sx={{ fontFamily: '"Sora", system-ui, sans-serif' }}>
-                SellaSolar
+                Sella Solar
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 Увійдіть за номером телефону та паролем
