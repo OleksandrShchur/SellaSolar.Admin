@@ -184,6 +184,10 @@ export default function MobileBottomNav({ navItems, activeIndex }: MobileBottomN
             '& .MuiSvgIcon-root': {
               fontSize: '1.35rem',
             },
+            // Groups sits in more empty space than the folder and warehouse glyphs.
+            '& .MuiBottomNavigationAction-root[href="/users"] .MuiSvgIcon-root': {
+              transform: 'scale(1.35)',
+            },
           }}
         >
           {navItems.map((item) => (
