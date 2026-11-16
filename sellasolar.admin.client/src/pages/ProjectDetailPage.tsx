@@ -2090,9 +2090,6 @@ export default function ProjectDetailPage() {
             overflow: 'hidden',
           }}
         >
-          <Typography variant="body2" color="text.secondary" mb={1.5}>
-            {inventoryLabels.generateReportPreview}
-          </Typography>
           {reportPreviewUrl ? (
             <Suspense
               fallback={
@@ -2116,7 +2113,7 @@ export default function ProjectDetailPage() {
           <Button variant="text" color="primary" onClick={closeReportPreview}>
             {inventoryLabels.generateReportClose}
           </Button>
-          {canShareReport ? (
+          {isMobile && canShareReport ? (
             <Button
               variant="contained"
               color="primary"
