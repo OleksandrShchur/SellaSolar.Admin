@@ -7,8 +7,8 @@ import { brandColors } from '../theme'
 import {
   BOTTOM_NAV_DOCK_HEIGHT,
   BOTTOM_NAV_HEIGHT,
-  BOTTOM_NAV_INSET_BOTTOM,
   BOTTOM_NAV_INSET_X,
+  bottomNavBottomOffset,
 } from './bottomNav'
 
 export type MobileNavItem = {
@@ -106,7 +106,7 @@ export default function MobileBottomNav({ navItems, activeIndex }: MobileBottomN
       style={{
         position: 'fixed',
         left: '50%',
-        top: `calc(100dvh - ${BOTTOM_NAV_INSET_BOTTOM}px - env(safe-area-inset-bottom, 0px) - ${halfDock}px)`,
+        top: `calc(100dvh - ${bottomNavBottomOffset()} - ${halfDock}px)`,
         width: `calc(100vw - ${BOTTOM_NAV_INSET_X * 2}px)`,
         zIndex: 1100,
       }}
@@ -183,6 +183,10 @@ export default function MobileBottomNav({ navItems, activeIndex }: MobileBottomN
             },
             '& .MuiSvgIcon-root': {
               fontSize: '1.35rem',
+            },
+            // Groups sits in more empty space than the folder and warehouse glyphs.
+            '& .MuiBottomNavigationAction-root[href="/users"] .MuiSvgIcon-root': {
+              transform: 'scale(1.35)',
             },
           }}
         >
