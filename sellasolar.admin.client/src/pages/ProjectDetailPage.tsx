@@ -214,7 +214,7 @@ export default function ProjectDetailPage() {
   const [reportPreviewOpen, setReportPreviewOpen] = useState(false)
   const [reportPreviewUrl, setReportPreviewUrl] = useState<string | null>(null)
   const [reportFile, setReportFile] = useState<File | null>(null)
-  const [reportFileName, setReportFileName] = useState('nakladna.pdf')
+  const [reportFileName, setReportFileName] = useState('akt.pdf')
   const [reportGenerating, setReportGenerating] = useState(false)
   const [shareError, setShareError] = useState<string | null>(null)
 
@@ -738,7 +738,7 @@ export default function ProjectDetailPage() {
       // Ensure MIME type so PDF.js accepts the blob on all browsers.
       const pdfBlob =
         blob.type === 'application/pdf' ? blob : new Blob([blob], { type: 'application/pdf' })
-      const resolvedName = fileName ?? `nakladna-project-${projectId}.pdf`
+      const resolvedName = fileName ?? `akt-project-${projectId}.pdf`
       const file = new File([pdfBlob], resolvedName, { type: 'application/pdf' })
       const url = URL.createObjectURL(file)
       setReportFile(file)
@@ -746,7 +746,7 @@ export default function ProjectDetailPage() {
       setReportFileName(resolvedName)
       setReportPreviewOpen(true)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Не вдалося згенерувати накладну')
+      setError(err instanceof Error ? err.message : 'Не вдалося згенерувати акт')
     } finally {
       setReportGenerating(false)
     }
@@ -1169,7 +1169,7 @@ export default function ProjectDetailPage() {
                   />
                   <DetailField label={inventoryLabels.margin} value={formatMoney(materialsMarginTotal)} />
                   <DetailField label="Інші витрати" value={formatMoney(manualExpensesTotal)} />
-                  <DetailField label="Разом (накладна)" value={formatMoney(expensesGrandTotal)} />
+                  <DetailField label="Разом (акт)" value={formatMoney(expensesGrandTotal)} />
                 </DetailFieldGrid>
 
                 <DetailSection title="Матеріали зі складу">
@@ -2090,9 +2090,6 @@ export default function ProjectDetailPage() {
             overflow: 'hidden',
           }}
         >
-          <Typography variant="body2" color="text.secondary" mb={1.5}>
-            {inventoryLabels.generateReportPreview}
-          </Typography>
           {reportPreviewUrl ? (
             <Suspense
               fallback={
@@ -2116,7 +2113,7 @@ export default function ProjectDetailPage() {
           <Button variant="text" color="primary" onClick={closeReportPreview}>
             {inventoryLabels.generateReportClose}
           </Button>
-          {canShareReport ? (
+          {isMobile && canShareReport ? (
             <Button
               variant="contained"
               color="primary"

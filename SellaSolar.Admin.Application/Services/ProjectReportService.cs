@@ -17,11 +17,28 @@ public class ProjectReportService
     public static readonly string BrandOrange = "#E6670C";
 
     private static readonly CultureInfo Uk = CultureInfo.GetCultureInfo("uk-UA");
-    private static readonly string[] UkMonths =
+    private static readonly string[] UkMonthsTitle =
     [
-        "СІЧНЯ", "ЛЮТОГО", "БЕРЕЗНЯ", "КВІТНЯ", "ТРАВНЯ", "ЧЕРВНЯ",
-        "ЛИПНЯ", "СЕРПНЯ", "ВЕРЕСНЯ", "ЖОВТНЯ", "ЛИСТОПАДА", "ГРУДНЯ"
+        "Січня", "Лютого", "Березня", "Квітня", "Травня", "Червня",
+        "Липня", "Серпня", "Вересня", "Жовтня", "Листопада", "Грудня"
     ];
+
+    private static readonly string[] SellerLines =
+    [
+        "ФОП Карлічук Я.В.",
+        "АТ «УНІВЕРСАЛ БАНК»",
+        "IBAN: UA233220010000026000350064724",
+        "ЄДРПОУ: 3695303673",
+        "МФО: 322001",
+        "тел. 068 66 96 774",
+        "селище Товсте, вул.С.Наливайка 67",
+        "e.mail: sella.solarix@gmail.com",
+    ];
+
+    private const string AcceptanceText =
+        "Замовник підтверджує, що роботи виконані в повному обсязі, а обладнання передане відповідно до погодженої специфікації. " +
+        "Зауважень щодо якості виконаних робіт, комплектності та стану переданого обладнання не має. " +
+        "Претензій до Виконавця не висуває.";
 
     private readonly SellaSolarAdminContext _db;
     private readonly IHostEnvironment _env;
@@ -58,7 +75,7 @@ public class ProjectReportService
         var logoPath = ResolveLogoPath();
         var pdf = BuildPdf(project, lines, generatedAt, logoPath);
         var safeName = SanitizeFileName(project.Name);
-        var fileName = $"nakladna-{safeName}-{generatedAt:yyyyMMdd}.pdf";
+        var fileName = $"akt-{safeName}-{generatedAt:yyyyMMdd}.pdf";
         return (pdf, fileName);
     }
 
@@ -78,7 +95,7 @@ public class ProjectReportService
         {
             return new ProjectReportReadinessDto(
                 false,
-                "Накладну можна згенерувати лише для проєкту в статусі «У роботі» або «Завершено».",
+                "Акт можна згенерувати лише для проєкту в статусі «У роботі» або «Завершено».",
                 Array.Empty<string>());
         }
 
@@ -118,7 +135,7 @@ public class ProjectReportService
         {
             return new ProjectReportReadinessDto(
                 false,
-                "Не всі матеріали закуплені та розподілені по партіях. Завершіть закупівлю й розподіл, щоб згенерувати накладну.",
+                "Не всі матеріали закуплені та розподілені по партіях. Завершіть закупівлю й розподіл, щоб згенерувати акт.",
                 blockingAllocation);
         }
 
@@ -126,7 +143,7 @@ public class ProjectReportService
         {
             return new ProjectReportReadinessDto(
                 false,
-                "Не для всіх розподілених партій вказано ціну продажу. Додайте ціну продажу в картці складу, щоб згенерувати накладну.",
+                "Не для всіх розподілених партій вказано ціну продажу. Додайте ціну продажу в картці складу, щоб згенерувати акт.",
                 blockingSellPrice);
         }
 
@@ -176,104 +193,117 @@ public class ProjectReportService
         QuestPDF.Settings.License = LicenseType.Community;
 
         var brand = Color.FromHex(BrandOrange);
+        var sectionBg = Colors.Grey.Lighten3;
         var grandTotal = lines.Sum(l => l.Total);
-        var dateLabel = FormatWorkDateRange(project, generatedAt);
+        var commissionDate = ResolveCommissionDate(project, generatedAt);
+        var warrantyEnd = commissionDate.AddYears(1);
 
         return Document.Create(container =>
         {
             container.Page(page =>
             {
                 page.Size(PageSizes.A4);
-                page.MarginHorizontal(40);
-                page.MarginVertical(36);
-                page.DefaultTextStyle(x => x.FontFamily("Lato").FontSize(10).FontColor(Colors.Black));
+                page.MarginHorizontal(36);
+                page.MarginVertical(28);
+                page.DefaultTextStyle(x => x.FontFamily("Lato").FontSize(9).FontColor(Colors.Black));
 
-                page.Header().Element(header =>
+                page.Content().Column(col =>
                 {
-                    header.Row(row =>
+                    // Brand header
+                    col.Item().Row(row =>
                     {
-                        row.RelativeItem().Column(col =>
+                        row.RelativeItem().AlignMiddle().AlignCenter().Column(headerCol =>
                         {
-                            col.Item().Text("INVOICE")
-                                .FontSize(28)
+                            headerCol.Item().AlignCenter().Text("SELLA SOLAR")
+                                .FontSize(26)
                                 .Bold()
                                 .FontColor(brand);
 
-                            col.Item().PaddingTop(8).Text(text =>
-                            {
-                                text.Span("ДАТА ВИКОНАНИХ РОБІТ ТА ЗАПУСК СТАНЦІЇ: ")
-                                    .FontSize(9)
-                                    .FontColor(Colors.Black);
-                                text.Span(dateLabel)
-                                    .FontSize(9)
-                                    .Bold()
-                                    .FontColor(brand);
-                            });
-
-                            if (!string.IsNullOrWhiteSpace(project.CustomerName)
-                                || !string.IsNullOrWhiteSpace(project.Address))
-                            {
-                                col.Item().PaddingTop(6).Text(project.Name)
-                                    .FontSize(9)
-                                    .SemiBold();
-                                if (!string.IsNullOrWhiteSpace(project.CustomerName))
-                                {
-                                    col.Item().Text(project.CustomerName)
-                                        .FontSize(8)
-                                        .FontColor(Colors.Grey.Darken2);
-                                }
-                                if (!string.IsNullOrWhiteSpace(project.Address))
-                                {
-                                    col.Item().Text(project.Address)
-                                        .FontSize(8)
-                                        .FontColor(Colors.Grey.Darken2);
-                                }
-                            }
+                            headerCol.Item().PaddingTop(4).AlignCenter().Text(
+                                    $"АКТ ПРИЙМАННЯ-ПЕРЕДАЧІ ОБЛАДНАННЯ\nТА ВИКОНАНИХ РОБІТ №{project.Id}")
+                                .FontSize(11)
+                                .Bold()
+                                .AlignCenter();
                         });
 
-                        row.ConstantItem(90).AlignRight().Column(col =>
+                        if (logoPath is not null)
                         {
-                            if (logoPath is not null)
-                            {
-                                col.Item().AlignRight().Width(56).Image(logoPath);
-                            }
+                            row.ConstantItem(52).AlignRight().AlignMiddle().Width(48).Image(logoPath);
+                        }
+                    });
 
-                            col.Item().PaddingTop(4).AlignRight().Text("SELLA SOLAR")
+                    col.Item().PaddingTop(6).PaddingBottom(8)
+                        .LineHorizontal(1.25f)
+                        .LineColor(brand);
+
+                    // 1. Parties
+                    col.Item().Element(c => SectionHeader(c, "1. СТОРОНИ ТА ОБ'ЄКТ", sectionBg));
+
+                    col.Item().PaddingTop(6).Row(row =>
+                    {
+                        row.RelativeItem().PaddingRight(8).Column(left =>
+                        {
+                            left.Item().Text("ПРОДАВЕЦЬ/ВИКОНАВЕЦЬ")
                                 .FontSize(9)
                                 .Bold()
                                 .FontColor(brand);
+
+                            foreach (var line in SellerLines)
+                            {
+                                left.Item().PaddingTop(1).Text(line).FontSize(8);
+                            }
+                        });
+
+                        row.RelativeItem().PaddingLeft(8).Column(right =>
+                        {
+                            right.Item().Text("КЛІЄНТ/ЗАМОВНИК")
+                                .FontSize(9)
+                                .Bold()
+                                .FontColor(brand);
+
+                            right.Item().PaddingTop(1).Text(project.CustomerName).FontSize(8);
+
+                            if (!string.IsNullOrWhiteSpace(project.Address))
+                                right.Item().PaddingTop(1).Text(project.Address).FontSize(8);
+
+                            if (!string.IsNullOrWhiteSpace(project.CustomerPhone))
+                                right.Item().PaddingTop(1).Text($"тел.{FormatPhone(project.CustomerPhone)}").FontSize(8);
                         });
                     });
-                });
 
-                page.Content().PaddingTop(20).Column(col =>
-                {
-                    col.Item().Table(table =>
+                    // 2. Equipment / works table
+                    col.Item().PaddingTop(10)
+                        .Element(c => SectionHeader(
+                            c,
+                            "2. ПЕРЕДАНЕ ОБЛАДНАННЯ ТА МАТЕРІАЛИ. ВИКОНАНІ РОБОТИ",
+                            sectionBg));
+
+                    col.Item().PaddingTop(6).Table(table =>
                     {
                         table.ColumnsDefinition(columns =>
                         {
-                            columns.ConstantColumn(28);
-                            columns.RelativeColumn(3.2f);
+                            columns.ConstantColumn(24);
+                            columns.RelativeColumn(3.4f);
                             columns.RelativeColumn(1.1f);
-                            columns.RelativeColumn(0.9f);
-                            columns.RelativeColumn(1.2f);
+                            columns.RelativeColumn(0.85f);
+                            columns.RelativeColumn(1.15f);
                         });
 
                         table.Header(header =>
                         {
                             header.Cell().Element(HeaderCell).AlignCenter().Text("№").Bold();
                             header.Cell().Element(HeaderCell).Text("Найменування").Bold();
-                            header.Cell().Element(HeaderCell).AlignCenter().Text("Ціна").Bold();
+                            header.Cell().Element(HeaderCell).AlignCenter().Text("Ціна | $").Bold();
                             header.Cell().Element(HeaderCell).AlignCenter().Text("К-сть.").Bold();
-                            header.Cell().Element(HeaderCell).AlignCenter().Text("Сума").Bold();
+                            header.Cell().Element(HeaderCell).AlignCenter().Text("Сума | $").Bold();
 
                             IContainer HeaderCell(IContainer c) => c
-                                .Border(0.75f)
+                                .Border(0.6f)
                                 .BorderColor(Colors.Black)
-                                .Background(brand)
-                                .PaddingVertical(6)
-                                .PaddingHorizontal(4)
-                                .DefaultTextStyle(x => x.FontSize(9).FontColor(Colors.Black));
+                                .Background(sectionBg)
+                                .PaddingVertical(4)
+                                .PaddingHorizontal(3)
+                                .DefaultTextStyle(x => x.FontSize(8).FontColor(Colors.Black));
                         });
 
                         var index = 1;
@@ -288,32 +318,98 @@ public class ProjectReportService
                         }
 
                         static IContainer BodyCell(IContainer c) => c
-                            .Border(0.75f)
+                            .Border(0.6f)
                             .BorderColor(Colors.Black)
-                            .PaddingVertical(5)
-                            .PaddingHorizontal(4)
-                            .DefaultTextStyle(x => x.FontSize(9));
+                            .PaddingVertical(3)
+                            .PaddingHorizontal(3)
+                            .DefaultTextStyle(x => x.FontSize(8));
                     });
 
-                    col.Item().PaddingTop(12).AlignRight().Row(row =>
-                    {
-                        row.AutoItem().Background(brand).Border(0.75f).BorderColor(Colors.Black)
-                            .PaddingVertical(8).PaddingHorizontal(14)
-                            .Text("РАЗОМ:")
-                            .Bold()
-                            .FontSize(11)
-                            .FontColor(Colors.Black);
+                    // 3. Serials / warranty (hardcoded warranty; serials blank for now)
+                    col.Item().PaddingTop(10)
+                        .Element(c => SectionHeader(c, "3. СЕРІЙНІ НОМЕРИ ТА ГАРАНТІЯ", sectionBg));
 
-                        row.AutoItem().Border(0.75f).BorderColor(Colors.Black)
-                            .PaddingVertical(8).PaddingHorizontal(14)
+                    col.Item().PaddingTop(6).Column(warranty =>
+                    {
+                        warranty.Item().Text("Гарантія від виробника на обладнання Deye - 10 років.")
+                            .FontSize(8);
+                        warranty.Item().PaddingTop(2)
+                            .Text("Серійний номер інвертора: ________________")
+                            .FontSize(8);
+                        warranty.Item().PaddingTop(2)
+                            .Text("Серійний номер акумулятора: ________________")
+                            .FontSize(8);
+                        warranty.Item().PaddingTop(2).Text(
+                                $"Гарантія на монтаж 1 рік. ({FormatShortDate(commissionDate)} - {FormatShortDate(warrantyEnd)}) " +
+                                $"Введення в експлуатацію СЕС: {FormatCommissionDate(commissionDate)}")
+                            .FontSize(8);
+                    });
+
+                    // 4. Cost summary (total only)
+                    col.Item().PaddingTop(10)
+                        .Element(c => SectionHeader(c, "4. ВАРТІСТЬ ТА РОЗРАХУНКИ", sectionBg));
+
+                    col.Item().PaddingTop(6).Table(table =>
+                    {
+                        table.ColumnsDefinition(columns =>
+                        {
+                            columns.RelativeColumn(3.2f);
+                            columns.RelativeColumn(1.4f);
+                        });
+
+                        table.Cell().Element(SummaryLabelCell)
+                            .Text("Загальна вартість обладнання та робіт")
+                            .FontSize(8);
+                        table.Cell().Element(SummaryValueCell)
+                            .AlignRight()
                             .Text(FormatUsd(grandTotal))
-                            .Bold()
-                            .FontSize(11)
-                            .FontColor(Colors.Black);
+                            .FontSize(9)
+                            .Bold();
+
+                        static IContainer SummaryLabelCell(IContainer c) => c
+                            .Border(0.6f)
+                            .BorderColor(Colors.Black)
+                            .PaddingVertical(5)
+                            .PaddingHorizontal(6);
+
+                        static IContainer SummaryValueCell(IContainer c) => c
+                            .Border(0.6f)
+                            .BorderColor(Colors.Black)
+                            .PaddingVertical(5)
+                            .PaddingHorizontal(6);
+                    });
+
+                    // 5. Acceptance
+                    col.Item().PaddingTop(10)
+                        .Element(c => SectionHeader(c, "5. ПІДТВЕРДЖЕННЯ ПРИЙМАННЯ", sectionBg));
+
+                    col.Item().PaddingTop(6).Text(AcceptanceText).FontSize(8).LineHeight(1.25f);
+
+                    col.Item().PaddingTop(18).Row(row =>
+                    {
+                        row.RelativeItem().Text("ПРОДАВЕЦЬ/ВИКОНАВЕЦЬ: ________________")
+                            .FontSize(9)
+                            .Bold();
+                        row.RelativeItem().AlignRight().Text("ЗАМОВНИК: ________________")
+                            .FontSize(9)
+                            .Bold();
                     });
                 });
             });
         }).GeneratePdf();
+    }
+
+    private static void SectionHeader(IContainer container, string title, string background)
+    {
+        container
+            .Background(background)
+            .Border(0.5f)
+            .BorderColor(Colors.Grey.Medium)
+            .PaddingVertical(4)
+            .PaddingHorizontal(6)
+            .Text(title)
+            .FontSize(9)
+            .Bold();
     }
 
     private static string FormatUsd(decimal value)
@@ -330,29 +426,30 @@ public class ProjectReportService
         return unit is "м" or "м." ? $"{qty}{unit}" : $"{qty} {unit}";
     }
 
-    private static string FormatWorkDateRange(Project project, DateTime today)
+    private static DateTime ResolveCommissionDate(Project project, DateTime today)
     {
-        var start = (project.StartDate ?? project.CreatedAt).Date;
-        var end = project.Status == ProjectStatuses.Completed
-            ? (project.EndDate ?? today).Date
-            : today.Date;
+        if (project.Status == ProjectStatuses.Completed && project.EndDate is not null)
+            return project.EndDate.Value.Date;
 
-        if (end < start)
-            end = start;
-
-        if (start == end)
-            return FormatUkrainianDate(start);
-
-        if (start.Year == end.Year)
-            return $"{start.Day} {UkMonths[start.Month - 1]} — {end.Day} {UkMonths[end.Month - 1]} {end.Year}";
-
-        return $"{FormatUkrainianDate(start)} — {FormatUkrainianDate(end)}";
+        return today.Date;
     }
 
-    private static string FormatUkrainianDate(DateTime date)
+    private static string FormatShortDate(DateTime date) => date.ToString("dd.MM.yy", Uk);
+
+    private static string FormatCommissionDate(DateTime date)
     {
-        var month = UkMonths[date.Month - 1];
-        return $"{date.Day} {month} — {date.Year}";
+        var month = UkMonthsTitle[date.Month - 1];
+        return $"{date.Day} {month} {date.Year}р.";
+    }
+
+    private static string FormatPhone(string phone)
+    {
+        var digits = new string(phone.Where(char.IsDigit).ToArray());
+        if (digits.Length == 10)
+            return $"{digits[..3]} {digits[3..5]} {digits[5..7]} {digits[7..]}";
+        if (digits.Length == 12 && digits.StartsWith("38", StringComparison.Ordinal))
+            return $"{digits[2..5]} {digits[5..7]} {digits[7..9]} {digits[9..]}";
+        return phone;
     }
 
     private static string SanitizeFileName(string name)

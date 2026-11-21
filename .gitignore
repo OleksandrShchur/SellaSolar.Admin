@@ -131,3 +131,6 @@ x86/
 
 # Built Visual Studio Code Extensions
 *.vsix
+SellaSolar.Admin.Server/Properties/PublishProfiles
+SellaSolar.Admin.Server/appsettings.Development.json
+SellaSolar.Admin.Server/appsettings.Production.json
